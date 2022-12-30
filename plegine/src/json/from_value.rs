@@ -1,4 +1,4 @@
-use super::{ParseResult, ParseError, ParseErrorKind, Path, Object, Value};
+use super::{Object, ParseError, ParseErrorKind, ParseResult, Path, Value};
 
 pub trait FromValue: Sized {
     fn from_value(value: Value) -> ParseResult<Self>;
@@ -6,7 +6,10 @@ pub trait FromValue: Sized {
 
 // Helpers
 
-pub fn try_take_optional_key<T: FromValue>(object: &mut Object, key: &str) -> ParseResult<Option<T>> {
+pub fn try_take_optional_key<T: FromValue>(
+    object: &mut Object,
+    key: &str,
+) -> ParseResult<Option<T>> {
     match object.remove(key) {
         Some(value) => Ok(Some(T::from_value(value)?)),
         None => Ok(None),
@@ -161,19 +164,22 @@ impl FromValue for u128 {
 
 impl FromValue for u8 {
     fn from_value(value: Value) -> ParseResult<Self> {
-        u64::from_value(value).and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
+        u64::from_value(value)
+            .and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
     }
 }
 
 impl FromValue for u16 {
     fn from_value(value: Value) -> ParseResult<Self> {
-        u64::from_value(value).and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
+        u64::from_value(value)
+            .and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
     }
 }
 
 impl FromValue for u32 {
     fn from_value(value: Value) -> ParseResult<Self> {
-        u64::from_value(value).and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
+        u64::from_value(value)
+            .and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
     }
 }
 
@@ -194,19 +200,22 @@ impl FromValue for i128 {
 
 impl FromValue for i8 {
     fn from_value(value: Value) -> ParseResult<Self> {
-        i64::from_value(value).and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
+        i64::from_value(value)
+            .and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
     }
 }
 
 impl FromValue for i16 {
     fn from_value(value: Value) -> ParseResult<Self> {
-        i64::from_value(value).and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
+        i64::from_value(value)
+            .and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
     }
 }
 
 impl FromValue for i32 {
     fn from_value(value: Value) -> ParseResult<Self> {
-        i64::from_value(value).and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
+        i64::from_value(value)
+            .and_then(|value| value.try_into().map_err(|_| parse_type_err::<Self>()))
     }
 }
 

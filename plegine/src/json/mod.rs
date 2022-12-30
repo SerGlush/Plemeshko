@@ -1,6 +1,6 @@
-mod path;
-mod parse_error;
 mod from_value;
+mod parse_error;
+mod path;
 
 pub use from_value::*;
 pub use parse_error::*;

@@ -7,3 +7,5 @@ edition = "2021"
 plegine = { version = "0.1", path = "../plegine" }
 plegine_derive = { version = "0.1", path = "../plegine_derive" }
 cursive = "0.20"
+derive_more = "0.99"
+either = "1.8"

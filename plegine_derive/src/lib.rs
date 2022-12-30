@@ -1,8 +1,8 @@
 #![crate_type = "proc-macro"]
 
-use proc_macro2::{TokenStream, Ident};
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::{DataStruct, FieldsNamed, Fields};
+use syn::{DataStruct, Fields, FieldsNamed};
 
 #[proc_macro_derive(Config)]
 pub fn config_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -10,15 +10,22 @@ pub fn config_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     config_derive_impl(&ast).into()
 }
 
-fn config_derive_impl_struct_named(src: TokenStream, con: &Ident, fields: &FieldsNamed) -> proc_macro2::TokenStream {
-    let fields_ts = fields.named.iter().fold(TokenStream::new(), |mut ts, field| {
-        let ident = &field.ident;
-        ts.extend(quote!{
-            #ident : plegine::json::try_take_key(#src, stringify!(#ident))?,
+fn config_derive_impl_struct_named(
+    src: TokenStream,
+    con: &Ident,
+    fields: &FieldsNamed,
+) -> proc_macro2::TokenStream {
+    let fields_ts = fields
+        .named
+        .iter()
+        .fold(TokenStream::new(), |mut ts, field| {
+            let ident = &field.ident;
+            ts.extend(quote! {
+                #ident : plegine::json::try_take_key(#src, stringify!(#ident))?,
+            });
+            ts
         });
-        ts
-    });
-    quote!{
+    quote! {
         Ok(#con {
             #fields_ts
         })
@@ -27,10 +34,13 @@ fn config_derive_impl_struct_named(src: TokenStream, con: &Ident, fields: &Field
 
 fn config_derive_impl(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
-    let src = quote!{ &mut src };
+    let src = quote! { &mut src };
 
     let parse_body = match &ast.data {
-        syn::Data::Struct(DataStruct { fields: Fields::Named(fields), .. }) => config_derive_impl_struct_named(src, name, fields),
+        syn::Data::Struct(DataStruct {
+            fields: Fields::Named(fields),
+            ..
+        }) => config_derive_impl_struct_named(src, name, fields),
         syn::Data::Struct(DataStruct { fields: _, .. }) => todo!(),
         syn::Data::Enum(_) => todo!(),
         syn::Data::Union(_) => quote! { compile_error!("Can't derive Config for unions.") },

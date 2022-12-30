@@ -1,27 +1,33 @@
-use std::{sync::{Arc, Mutex}, rc::Rc, cell::RefCell};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
 
-use cursive::{view::{Nameable, Resizable, IntoBoxedView}, views, Cursive};
+use cursive::{
+    view::{IntoBoxedView, Nameable, Resizable},
+    views, Cursive,
+};
 
-use crate::sim::Sim;
-use crate::sim::depot::Depot;
+use crate::sim::{depot::Depot, Sim};
 
-struct Tui {
-    
-}
+struct Tui {}
 
 impl Default for Tui {
     fn default() -> Self {
-        Tui {  }
+        Tui {}
     }
 }
 
 fn depot_ui_init<S: Into<String>>(name: S) -> impl IntoBoxedView + 'static {
-    views::ListView::new()
-        .with_name(name)
-        .fixed_width(20)
+    views::ListView::new().with_name(name).fixed_width(20)
 }
 
-fn depot_ui_update(siv: &mut Cursive, name: &str, /* assets: &Assets, */ depot: &Depot) -> Option<()> {
+fn depot_ui_update(
+    siv: &mut Cursive,
+    name: &str,
+    /* assets: &Assets, */ depot: &Depot,
+) -> Option<()> {
     siv.call_on_name(name, |list: &mut views::ListView| {
         list.clear();
         for (id, count) in depot.iter() {

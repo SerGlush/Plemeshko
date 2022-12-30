@@ -4,9 +4,11 @@ use std::{
     ops::{AddAssign, SubAssign},
 };
 
-use super::config::resource::{ResourceCount, ResourceId};
+use crate::units::Mass;
 
-pub struct Depot(HashMap<ResourceId, ResourceCount>);
+use super::config::resource::ResourceId;
+
+pub struct Depot(HashMap<ResourceId, Mass>);
 
 impl Depot {
     pub fn new() -> Depot {
@@ -16,7 +18,7 @@ impl Depot {
     pub fn put<I: ?Sized + std::hash::Hash + Eq + ToOwned<Owned = ResourceId>>(
         &mut self,
         id: &I,
-        count: ResourceCount,
+        count: Mass,
     ) where
         ResourceId: Borrow<I>,
     {
@@ -28,15 +30,15 @@ impl Depot {
         }
     }
 
-    pub fn get(&self, id: &ResourceId) -> Option<ResourceCount> {
+    pub fn get(&self, id: &ResourceId) -> Option<Mass> {
         self.0.get(id).map(Clone::clone)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ResourceId, ResourceCount)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&ResourceId, Mass)> {
         self.0.iter().map(|(k, v)| (k, *v))
     }
 
-    pub fn take(&mut self, id: &ResourceId, count: ResourceCount) -> Result<(), ResourceCount> {
+    pub fn take(&mut self, id: &ResourceId, count: Mass) -> Result<(), Mass> {
         match self.0.get_mut(id) {
             Some(stored) => {
                 if *stored >= count {

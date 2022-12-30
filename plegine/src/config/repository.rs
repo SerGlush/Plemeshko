@@ -7,7 +7,7 @@ use super::{Config, ConfigId};
 
 pub(super) type HomoConfigContainer<C> = HashMap<String, C>;
 
-pub struct ConfigRepo(pub(super) HashMap<TypeId, Box<dyn Any>>);
+pub struct ConfigRepository(pub(super) HashMap<TypeId, Box<dyn Any>>);
 
 pub enum ConfigStoreRetrievalError {
     StoreNotRegistered { kind: &'static str },
@@ -31,7 +31,7 @@ impl From<ConfigStoreRetrievalError> for ConfigRetrievalError {
     }
 }
 
-impl ConfigRepo {
+impl ConfigRepository {
     fn get_store<C: Config>(&self) -> Result<&HomoConfigContainer<C>, ConfigStoreRetrievalError> {
         let any_store = self.0.get(&TypeId::of::<C>()).ok_or(
             ConfigStoreRetrievalError::StoreNotRegistered {

@@ -1,7 +1,7 @@
 mod config;
-mod repo;
-mod repo_builder;
+mod repository;
+mod repository_builder;
 
 pub use config::*;
-pub use repo::*;
-pub use repo_builder::*;
+pub use repository::*;
+pub use repository_builder::*;

@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, hash::Hash};
+use std::{hash::Hash, marker::PhantomData};
 
 use crate::json::{self, FromValue};
 
