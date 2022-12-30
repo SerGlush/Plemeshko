@@ -1,0 +1,9 @@
+[package]
+name = "plemeshko"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plegine = { version = "0.1", path = "../plegine" }
+plegine_derive = { version = "0.1", path = "../plegine_derive" }
+cursive = "0.20"

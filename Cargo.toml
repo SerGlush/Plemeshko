@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "plegine",
+    "plegine_derive",
+    "plemeshko",
+]
