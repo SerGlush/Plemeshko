@@ -1,8 +1,8 @@
 use std::{
-    any::{Any, TypeId},
+    any::TypeId,
     collections::HashMap,
     fs::File,
-    io, path,
+    io, path, fmt::Display, error::Error,
 };
 
 use either::Either;
@@ -10,37 +10,65 @@ use either::Either;
 use crate::json::{self, FromValue};
 
 use super::{
-    Config, ConfigId, ConfigRepository, ConfigTag, HomoConfigContainer, CONFIG_RESERVED_FIELD_ID,
-    CONFIG_RESERVED_FIELD_TAG,
+    AnyHomoConfigContainer, Config, ConfigId, ConfigRepository, ConfigTag, HomoConfigContainer,
+    CONFIG_RESERVED_FIELD_ID, CONFIG_RESERVED_FIELD_TAG,
 };
 
 type SomeConfigLoadFn = fn(
-    &mut dyn Any,
+    &mut dyn AnyHomoConfigContainer,
     id: String,
     serde_json::Map<String, serde_json::Value>,
 ) -> Result<(), ConfigLoadError>;
 
 pub struct ConfigRepositoryBuilder {
-    repo: HashMap<TypeId, Box<dyn Any>>,
+    repository: HashMap<TypeId, Box<dyn AnyHomoConfigContainer>>,
     tagged_loaders: HashMap<ConfigTag, (TypeId, SomeConfigLoadFn)>,
 }
 
+#[derive(Debug)]
 pub enum ConfigRegistrationError {
     TypeAlreadyRegistered,
     TagAlreadyRegistered,
 }
 
+impl Display for ConfigRegistrationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConfigRegistrationError::TypeAlreadyRegistered => write!(f, "Type already registered"),
+            ConfigRegistrationError::TagAlreadyRegistered => write!(f, "Tag already registered"),
+        }
+    }
+}
+
+impl Error for ConfigRegistrationError {}
+
+#[derive(Debug)]
 pub enum ConfigLoadError {
     ValueParseFailed(json::ParseError),
     JsonParseFailed(serde_json::Error),
     StoreTypeInvalid,
     ConfigIdentifierOccupied,
-    TagNotRegistered,
+    TagNotRegistered(String),
     NoCorrespondingStore,
 }
 
+impl Display for ConfigLoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConfigLoadError::ValueParseFailed(e) => write!(f, "Json value parsing failed: {e}"),
+            ConfigLoadError::JsonParseFailed(e) => write!(f, "Json deserialization failed: {e}"),
+            ConfigLoadError::StoreTypeInvalid => write!(f, "Attempted to downcast badly typed configuration storage."),
+            ConfigLoadError::ConfigIdentifierOccupied => write!(f, "Attempred to load config with an already existing tag."),
+            ConfigLoadError::TagNotRegistered(tag) => write!(f, "Tag not registered: {tag}"),
+            ConfigLoadError::NoCorrespondingStore => write!(f, "No configuration storage corresponding to the tagged TypeId found"),
+        }
+    }
+}
+
+impl Error for ConfigLoadError {}
+
 fn parse_adding_to_any_store<C: Config>(
-    dst: &mut dyn Any,
+    dst: &mut dyn AnyHomoConfigContainer,
     id: String,
     src: serde_json::Map<String, serde_json::Value>,
 ) -> Result<(), ConfigLoadError> {
@@ -58,18 +86,19 @@ fn parse_adding_to_any_store<C: Config>(
 impl ConfigRepositoryBuilder {
     pub fn new() -> Self {
         ConfigRepositoryBuilder {
-            repo: HashMap::new(),
+            repository: HashMap::new(),
             tagged_loaders: HashMap::new(),
         }
     }
 
     pub fn register<C: Config>(&mut self) -> Result<(), ConfigRegistrationError> {
-        self.repo
-            .try_insert(TypeId::of::<C>(), Box::new(HomoConfigContainer::<C>::new()))
+        let type_id = TypeId::of::<C>();
+        self.repository
+            .try_insert(type_id, Box::new(HomoConfigContainer::<C>::new()))
             .map_err(|_| ConfigRegistrationError::TypeAlreadyRegistered)?;
         match self
             .tagged_loaders
-            .try_insert(C::TAG, (TypeId::of::<C>(), parse_adding_to_any_store::<C>))
+            .try_insert(C::TAG, (type_id, parse_adding_to_any_store::<C>))
         {
             Ok(_) => Ok(()),
             Err(_) => Err(ConfigRegistrationError::TagAlreadyRegistered),
@@ -77,11 +106,11 @@ impl ConfigRepositoryBuilder {
     }
 
     pub fn build(self) -> ConfigRepository {
-        ConfigRepository(self.repo)
+        ConfigRepository(self.repository)
     }
 
     pub fn add<C: Config>(&mut self, id: ConfigId<C>, config: C) -> Result<(), ()> {
-        self.repo
+        self.repository
             .get_mut(&TypeId::of::<C>())
             .ok_or(())
             .and_then(|store| {
@@ -105,12 +134,12 @@ impl ConfigRepositoryBuilder {
         let (type_id, loader) = self
             .tagged_loaders
             .get(tag.as_str())
-            .ok_or(ConfigLoadError::TagNotRegistered)?;
+            .ok_or(ConfigLoadError::TagNotRegistered(tag))?;
         let store = self
-            .repo
+            .repository
             .get_mut(type_id)
             .ok_or(ConfigLoadError::NoCorrespondingStore)?;
-        loader(store, id, src)
+        loader(store.as_mut(), id, src)
     }
 
     pub fn load_file(

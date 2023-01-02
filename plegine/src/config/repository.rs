@@ -7,7 +7,9 @@ use super::{Config, ConfigId};
 
 pub(super) type HomoConfigContainer<C> = HashMap<String, C>;
 
-pub struct ConfigRepository(pub(super) HashMap<TypeId, Box<dyn Any>>);
+pub trait AnyHomoConfigContainer = Any + Send;
+
+pub struct ConfigRepository(pub(super) HashMap<TypeId, Box<dyn AnyHomoConfigContainer>>);
 
 pub enum ConfigStoreRetrievalError {
     StoreNotRegistered { kind: &'static str },

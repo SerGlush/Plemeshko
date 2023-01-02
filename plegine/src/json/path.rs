@@ -1,3 +1,6 @@
+use std::fmt::Display;
+
+#[derive(Debug)]
 pub struct Path(String);
 
 impl Path {
@@ -30,5 +33,11 @@ impl Path {
         self.0.insert_str(0, key);
         self.0.insert(0, Self::DELIMETER);
         self
+    }
+}
+
+impl Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

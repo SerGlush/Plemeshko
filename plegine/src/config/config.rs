@@ -6,9 +6,9 @@ pub type ConfigTag = &'static str;
 
 // Reserved - can't be used for config's field names
 pub const CONFIG_RESERVED_FIELD_TAG: &'static str = "#tag";
-pub const CONFIG_RESERVED_FIELD_ID: &'static str = "#id";
+pub const CONFIG_RESERVED_FIELD_ID: &'static str = "#name";
 
-pub trait Config: Sized + 'static {
+pub trait Config: Sized + Send + 'static {
     const TAG: ConfigTag;
 
     fn parse(src: json::Object) -> Result<Self, json::ParseError>;

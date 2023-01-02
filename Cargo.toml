@@ -4,3 +4,5 @@ members = [
     "plegine_derive",
     "plemeshko",
 ]
+
+resolver = "2"

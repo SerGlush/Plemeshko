@@ -4,7 +4,7 @@ use plegine_derive::Config;
 use super::method::MethodId;
 
 #[derive(Config)]
-struct MethodGroup {
+pub struct MethodGroup {
     pub variants: Vec<MethodId>,
 }
 

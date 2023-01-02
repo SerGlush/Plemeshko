@@ -1,20 +1,22 @@
 pub mod config;
-pub mod depot;
 pub mod erection;
 pub mod error;
 pub mod transport_group;
+pub mod units;
 
-use std::{io, path::PathBuf, time::Duration};
+use std::{error::Error, path::PathBuf, time::Duration};
 
-use depot::Depot;
-use either::Either;
 use erection::ErectionContainer;
-use plegine::config::{ConfigLoadError, ConfigRepository, ConfigRepositoryBuilder};
+use plegine::config::{ConfigRepository, ConfigRepositoryBuilder};
 
-use self::{config::transport::TransportId, erection::Erection, transport_group::TransportGroup};
+use self::{
+    config::{resource::storage::ResourceStorage, transport::TransportId},
+    erection::Erection,
+    transport_group::TransportGroup,
+};
 
 pub struct Sim {
-    depot: Depot,
+    depot: ResourceStorage,
     erections: ErectionContainer,
     configs: ConfigRepository,
 }
@@ -24,10 +26,23 @@ const CONFIG_DIR: &'static str = "config";
 impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
 
-    pub fn init() -> Result<Self, Either<ConfigLoadError, io::Error>> {
-        let config_repo_builder = ConfigRepositoryBuilder::new();
+    pub fn init() -> Result<Self, Box<dyn Error>> {
+        let mut config_repo_builder = ConfigRepositoryBuilder::new();
+        config_repo_builder
+            .register::<config::resource::Resource>()
+            .map_err(Box::new)?;
+        config_repo_builder
+            .register::<config::transport::Transport>()
+            .map_err(Box::new)?;
+        config_repo_builder
+            .register::<config::method::Method>()
+            .map_err(Box::new)?;
+        config_repo_builder
+            .register::<config::method_group::MethodGroup>()
+            .map_err(Box::new)?;
         let config_dir_path = PathBuf::from(CONFIG_DIR);
         config_repo_builder.load_directory(config_dir_path.as_path())?;
+
         Ok(Sim {
             depot: Depot::new(),
             erections: ErectionContainer::new(),
