@@ -44,13 +44,13 @@ impl Sim {
         config_repo_builder.load_directory(config_dir_path.as_path())?;
 
         Ok(Sim {
-            depot: Depot::new(),
+            depot: ResourceStorage::new(),
             erections: ErectionContainer::new(),
             configs: config_repo_builder.build(),
         })
     }
 
-    pub fn depot(&self) -> &Depot {
+    pub fn depot(&self) -> &ResourceStorage {
         &self.depot
     }
 

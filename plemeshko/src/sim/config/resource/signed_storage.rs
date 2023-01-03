@@ -2,7 +2,10 @@ use plegine::json;
 
 use crate::sim::units::ResourceAmount;
 
-use super::{storage::ResourceStorage, ResourceId};
+use super::{
+    storage::{Cor, ResourceStorage},
+    ResourceId,
+};
 
 pub struct ResourceStorageSigned {
     pub positive: ResourceStorage,
@@ -17,9 +20,9 @@ impl json::FromValue for ResourceStorageSigned {
         for delta in deltas.into_iter() {
             let (id, delta) = <(ResourceId, ResourceAmount)>::from_value(delta)?;
             if delta < ResourceAmount::default() {
-                negative.put(&id, -delta);
+                negative.cor_put(&id, -delta);
             } else {
-                positive.put(&id, delta);
+                positive.cor_put(&id, delta);
             }
         }
         Ok(ResourceStorageSigned { positive, negative })

@@ -1,5 +1,6 @@
 #![feature(hash_raw_entry)]
 #![feature(map_try_insert)]
+#![feature(int_roundings)]
 
 use std::{
     sync::{Arc, Mutex},
@@ -9,6 +10,7 @@ use std::{
 use plegine::config::ConfigLoadError;
 use sim::Sim;
 
+mod cor;
 mod gui;
 mod sim;
 

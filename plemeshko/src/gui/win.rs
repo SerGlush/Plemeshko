@@ -15,17 +15,25 @@ const HEIGHT: u32 = 600;
 
 async fn init_wgpu() {
     let wgpu_instance = wgpu::Instance::new(wgpu::Backends::all());
-    let wgpu_adapter = wgpu_instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::LowPower,
-        force_fallback_adapter: false,
-        compatible_surface: None,
-    }).await.expect("Wgpu adapter");
-    let (wgpu_device, wgpu_queue) = wgpu_adapter.request_device(&wgpu::DeviceDescriptor {
-        label: wgpu::Label::None,
-        features: wgpu::Features::default(),
-        limits: wgpu::Limits::default(),
-    }, None).await.expect("Wgpu device");
-    
+    let wgpu_adapter = wgpu_instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::LowPower,
+            force_fallback_adapter: false,
+            compatible_surface: None,
+        })
+        .await
+        .expect("Wgpu adapter");
+    let (wgpu_device, wgpu_queue) = wgpu_adapter
+        .request_device(
+            &wgpu::DeviceDescriptor {
+                label: wgpu::Label::None,
+                features: wgpu::Features::default(),
+                limits: wgpu::Limits::default(),
+            },
+            None,
+        )
+        .await
+        .expect("Wgpu device");
 }
 
 pub(super) fn run<
@@ -69,7 +77,6 @@ pub(super) fn run<
     // };
     // let renderer = Renderer::new(pixels.device(), pixels.render_texture_format(), None, 1);
     // let textures = TexturesDelta::default();
-
 
     event_loop.run(move |event, _, control_flow| {
         // Handle input events

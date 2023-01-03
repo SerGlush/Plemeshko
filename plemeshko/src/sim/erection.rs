@@ -1,26 +1,27 @@
-use crate::sim::units::ResourceAmount;
-use std::{collections::{HashMap, hash_map::{RawEntryMut, Entry}}, ops::{AddAssign, SubAssign}};
+use crate::{cor::Cor, sim::units::ResourceAmount};
+use std::{
+    collections::{
+        hash_map::{Entry, RawEntryMut},
+        HashMap,
+    },
+    ops::{AddAssign, SubAssign},
+};
 
 use super::{
     config::{
         method::{Method, MethodId},
-        resource::{ResourceId, signed_storage::ResourceStorageSigned},
-        transport::{TransportId, TransportMap, Transport},
+        resource::{signed_storage::ResourceStorageSigned, ResourceId},
+        transport::{Transport, TransportId, TransportMap},
     },
     error::{SimError, SimResult},
     transport_group::TransportGroup,
-    Sim, units::{TransportAmount, ResourceWeight},
+    units::ResourceWeight,
+    Sim,
 };
-
-pub struct ErectionTransport {
-    id: TransportId,
-    // max_amount: TransportAmount,
-    single_weight: ResourceWeight,
-}
 
 pub struct Erection {
     method_ids: Vec<MethodId>,
-    transport: TransportMap<ErectionTransport>,
+    transport: TransportMap<TransportId>,
     single_io: ResourceStorageSigned,
     max_io: ResourceStorageSigned,
     storage: ResourceStorageSigned,
@@ -42,17 +43,27 @@ impl Erection {
         let mut total_delta = HashMap::<ResourceId, ResourceAmount>::new();
         for method in iter_methods(&method_ids, sim) {
             for (resource_id, delta) in method?.resources.positive.iter() {
-                total_delta.entry(resource_id.to_owned()).or_default().add_assign(*delta);
+                total_delta
+                    .entry(resource_id.to_owned())
+                    .or_default()
+                    .add_assign(*delta);
             }
             for (resource_id, delta) in method?.resources.negative.iter() {
-                total_delta.entry(resource_id.to_owned()).or_default().sub_assign(*delta);
+                total_delta
+                    .entry(resource_id.to_owned())
+                    .or_default()
+                    .sub_assign(*delta);
             }
         }
 
         let mut transport = HashMap::<TransportGroup, TransportId>::new();
         for (resource_id, delta) in total_delta.iter() {
             if *delta != ResourceAmount::default() {
-                let tg = sim.configs.get(resource_id).map_err(SimError::ConfigRetrievalFailed)?.transport_group;
+                let tg = sim
+                    .configs
+                    .get(resource_id)
+                    .map_err(SimError::ConfigRetrievalFailed)?
+                    .transport_group;
                 let _ = transport.try_insert(tg, sim.default_transport(tg));
             }
         }
@@ -101,66 +112,147 @@ impl Erection {
         self.active = active;
     }
 
-    pub fn step(&mut self, sim: &mut Sim) -> SimResult<()> {
-        let mut planned_input = self.max_io.negative.clone();
-        let todo_erections = self.active as i128;
-        let todo_erections = todo_erections - self.storage.negative.sub_bounded(&self.single_io.negative, todo_erections);
-        if todo_erections == 0 {
-            return Ok(());
-        }
-
-        let req_tr_weight = TransportMap::<ResourceWeight>::with_capacity(self.transport.len());
-        for (res_id, mut res_amount) in self.single_io.negative.iter() {
-            res_amount *= todo_erections;
-            res_amount -= self.storage.negative.get(res_id).unwrap_or_default();
-            let res = sim.configs.get(res_id).map_err(SimError::ConfigRetrievalFailed)?;
-            req_tr_weight.entry(res.transport_group).or_default().add_assign(res.transport_weight * res_amount);
-        }
-
-        let transport = TransportMap::<&Transport>::with_capacity(self.transport.len());
-        for (tr_group, _) in req_tr_weight.iter() {
-            let tr_id = &self.transport.get(&tr_group).unwrap().id;
-            let tr = sim.configs.get(tr_id).map_err(SimError::ConfigRetrievalFailed)?;
-            transport.insert(*tr_group, tr);
-        }
-
-        let mut available_tr_weight = TransportMap::<ResourceWeight>::with_capacity(self.transport.len());
-        'a: while(!req_tr_weight.is_empty()) {
-            for tr_group in self.transport.keys() {
-                let tr = transport.get(tr_group).unwrap();
-                let tr_weight = req_tr_weight.entry(*tr_group);
-                let tr_weight = match tr_weight {
-                    Entry::Occupied(occupied) => occupied,
-                    Entry::Vacant(_) => continue,
-                };
-                if !sim.depot.sub(&tr.fuel.negative) {
-                    tr_weight.remove_entry();
-                    break 'a;
+    fn step_import(&mut self, sim: &mut Sim) -> SimResult<()> {
+        let transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
+        let requested_resources = Vec::with_capacity(self.max_io.negative.len());
+        for (res_id, req_amount) in self.max_io.negative.iter() {
+            let res = sim
+                .configs
+                .get(res_id)
+                .map_err(SimError::ConfigRetrievalFailed)?;
+            let already_stored = self
+                .storage
+                .negative
+                .get(res_id)
+                .map(Clone::clone)
+                .unwrap_or_default();
+            if already_stored >= *req_amount {
+                continue;
+            }
+            let req_amount_transported = *req_amount - already_stored;
+            let transportation_priority =
+                req_amount_transported / *self.single_io.negative.get(res_id).unwrap();
+            requested_resources.push((
+                res_id,
+                res,
+                req_amount_transported,
+                transportation_priority,
+            ));
+            match transport_state.entry(res.transport_group) {
+                Entry::Vacant(vacant) => {
+                    let tr = sim
+                        .configs
+                        .get(self.transport.get(&res.transport_group).unwrap())
+                        .map_err(SimError::ConfigRetrievalFailed)?;
+                    vacant.insert((tr, ResourceWeight(0)));
                 }
-                let available_tr_weight_s = available_tr_weight.entry(*tr_group).or_default();
-                available_tr_weight_s.add_assign(tr.capacity);
-                if *available_tr_weight_s >= *tr_weight.get() {
-                    break 'a;
-                }
+                _ => (),
             }
         }
 
-        // todo: transport resources from sim.depot to self.storage for all available available_tr_weight
-        // then use all available resources to run process
-        // all results go to the output storage
-        // then they are transported to the depot
+        requested_resources
+            .sort_unstable_by_key(|(_, _, _, transportation_priority)| transportation_priority);
 
-
-        // # old outline below
-        // transfer resources to the import storage accordingly
-        // determine how many times (<= active) process can run, needed resources
-        // consume min(available, needed) resources
-        // produce results accordingly, store them in the export storage
-        // determine needed transport to transfer stored export
-        // determine needed fuel
-        // consume min(available, needed) fuel
-        // transfer resources from the export storage accordingly
+        for (res_id, res, req_amount, _) in requested_resources.iter() {
+            let tr_group = res.transport_group;
+            let (tr, tr_remaining) = transport_state.get_mut(&tr_group).unwrap();
+            let mut total_stored = ResourceAmount::default();
+            let mut req_amount = *req_amount;
+            'a: while req_amount > ResourceAmount::default() {
+                {
+                    let amount_ready =
+                        req_amount.min(ResourceAmount(*tr_remaining / res.transport_weight));
+                    let res_depot = match sim.depot.get_mut(res_id) {
+                        Some(res_depot) => res_depot,
+                        None => break 'a, // todo: handle 0-required-res ?
+                    };
+                    if *res_depot == ResourceAmount::default() {
+                        break 'a;
+                    }
+                    let amount_ready = amount_ready.min(*res_depot);
+                    tr_remaining.sub_assign(amount_ready * res.transport_weight);
+                    req_amount.sub_assign(amount_ready);
+                    total_stored += amount_ready;
+                }
+                while *tr_remaining < res.transport_weight {
+                    if !sim.depot.cor_sub_all(&tr.fuel.negative) {
+                        break 'a;
+                    }
+                    sim.depot.cor_put_all(&tr.fuel.positive);
+                }
+            }
+            self.storage.negative.cor_put(res_id, total_stored);
+        }
         Ok(())
+    }
+
+    fn step_process(&mut self) {
+        let activated = self
+            .storage
+            .negative
+            .cor_sub_all_times(&self.single_io.negative, self.active as i128);
+        self.storage
+            .positive
+            .cor_put_all_times(&self.single_io.positive, activated);
+    }
+
+    // todo: fair export scheduler
+    fn step_export(&mut self, sim: &mut Sim) -> SimResult<()> {
+        let mut transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
+        for (res_id, res_amount) in self.storage.positive.iter_mut() {
+            let res = sim
+                .configs
+                .get(res_id)
+                .map_err(SimError::ConfigRetrievalFailed)?;
+            let (tr, transported_weight_already) =
+                transport_state.get_mut(&res.transport_group).unwrap();
+            let mut res_weight = *res_amount * res.transport_weight;
+            let transported_amount = if res_weight <= *transported_weight_already {
+                transported_weight_already.sub_assign(res_weight);
+                *res_amount
+            } else {
+                res_weight.sub_assign(*transported_weight_already);
+                let transported_amount_already =
+                    ResourceAmount(*transported_weight_already / res.transport_weight);
+                *transported_weight_already = ResourceWeight(0);
+                let can_fuel = sim.depot.cor_has_all_times(&tr.fuel.negative, i128::MAX);
+                let req_transport = res_weight.0.div_ceil(tr.capacity.0);
+                let transport = req_transport.min(can_fuel);
+                sim.depot
+                    .cor_sub_all_times_unchecked(&tr.fuel.negative, transport);
+                sim.depot.cor_put_all_times(&tr.fuel.positive, transport);
+                let transported_amount_newly = ResourceAmount(
+                    (*res_amount - transported_amount_already)
+                        .0
+                        .min((tr.capacity * transport) / res.transport_weight),
+                );
+                let transported_amount_total =
+                    transported_amount_already + transported_amount_newly;
+                let transported_weight_newly = tr.capacity * transport;
+                let transported_weight_newly_used = transported_amount_newly * res.transport_weight;
+                let transported_weight_newly_remain =
+                    transported_weight_newly - transported_weight_newly_used;
+                transported_weight_already.add_assign(transported_weight_newly_remain);
+                transported_amount_total
+            };
+            // update storages
+            res_amount.sub_assign(transported_amount);
+            match sim.depot.raw_entry_mut().from_key(res_id) {
+                RawEntryMut::Occupied(occupied) => {
+                    occupied.get_mut().add_assign(transported_amount)
+                }
+                RawEntryMut::Vacant(vacant) => {
+                    vacant.insert(res_id.clone(), transported_amount);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn step(&mut self, sim: &mut Sim) -> SimResult<()> {
+        self.step_import(sim);
+        self.step_process();
+        self.step_export(sim)
     }
 }
 

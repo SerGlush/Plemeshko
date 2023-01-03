@@ -16,4 +16,5 @@ pub struct Transport {
 
 pub type TransportId = ConfigId<Transport>;
 
+// todo: make an array ? (|TG| is small)
 pub type TransportMap<T> = HashMap<TransportGroup, T>;

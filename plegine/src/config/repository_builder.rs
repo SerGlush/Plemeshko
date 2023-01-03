@@ -1,9 +1,4 @@
-use std::{
-    any::TypeId,
-    collections::HashMap,
-    fs::File,
-    io, path, fmt::Display, error::Error,
-};
+use std::{any::TypeId, collections::HashMap, error::Error, fmt::Display, fs::File, io, path};
 
 use either::Either;
 
@@ -57,10 +52,18 @@ impl Display for ConfigLoadError {
         match self {
             ConfigLoadError::ValueParseFailed(e) => write!(f, "Json value parsing failed: {e}"),
             ConfigLoadError::JsonParseFailed(e) => write!(f, "Json deserialization failed: {e}"),
-            ConfigLoadError::StoreTypeInvalid => write!(f, "Attempted to downcast badly typed configuration storage."),
-            ConfigLoadError::ConfigIdentifierOccupied => write!(f, "Attempred to load config with an already existing tag."),
+            ConfigLoadError::StoreTypeInvalid => write!(
+                f,
+                "Attempted to downcast badly typed configuration storage."
+            ),
+            ConfigLoadError::ConfigIdentifierOccupied => {
+                write!(f, "Attempred to load config with an already existing tag.")
+            }
             ConfigLoadError::TagNotRegistered(tag) => write!(f, "Tag not registered: {tag}"),
-            ConfigLoadError::NoCorrespondingStore => write!(f, "No configuration storage corresponding to the tagged TypeId found"),
+            ConfigLoadError::NoCorrespondingStore => write!(
+                f,
+                "No configuration storage corresponding to the tagged TypeId found"
+            ),
         }
     }
 }
