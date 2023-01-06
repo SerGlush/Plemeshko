@@ -11,7 +11,7 @@ pub fn try_take_optional_key<T: FromValue>(
     key: &str,
 ) -> ParseResult<Option<T>> {
     match object.remove(key) {
-        Some(value) => Ok(Some(T::from_value(value)?)),
+        Some(value) => Ok(Some(T::from_value(value).map_err(|e| e.lift(key))?)),
         None => Ok(None),
     }
 }

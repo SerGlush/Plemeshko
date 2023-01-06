@@ -57,27 +57,39 @@ fn from_value_derive_impl_struct_unnamed(
     con: &Ident,
     fields: &FieldsUnnamed,
 ) -> proc_macro2::TokenStream {
-    let (fields_ts, _) =
-        fields
-            .unnamed
-            .iter()
-            .fold((TokenStream::new(), 0usize), |(mut ts, index), field| {
-                let field_ty = &field.ty;
-                ts.extend(quote! {
-                    #field_ty::from_value(src[#index].take())?,
-                });
-                (ts, index + 1)
-            });
-    let fields_len = fields.unnamed.len();
-    quote! {
-        match src {
-            plegine::json::Value::Array(mut src) => {
-                if src.len() != #fields_len {
-                    return plegine::json::parse_type_err_res();
+    match fields.unnamed.len() {
+        0 => quote! { compile_error!("Can't derive FromValue for 0-element tuples.") },
+        1 => {
+            let field = fields.unnamed.first().unwrap();
+            let field_ty = &field.ty;
+            quote! {
+                Ok(#con(#field_ty::from_value(src)?))
+            }
+        }
+        _ => {
+            let (fields_ts, _) =
+                fields
+                    .unnamed
+                    .iter()
+                    .fold((TokenStream::new(), 0usize), |(mut ts, index), field| {
+                        let field_ty = &field.ty;
+                        ts.extend(quote! {
+                            #field_ty::from_value(src[#index].take())?,
+                        });
+                        (ts, index + 1)
+                    });
+            let fields_len = fields.unnamed.len();
+            quote! {
+                match src {
+                    plegine::json::Value::Array(mut src) => {
+                        if src.len() != #fields_len {
+                            return plegine::json::parse_type_err_res();
+                        }
+                        Ok(#con (#fields_ts))
+                    },
+                    _ => plegine::json::parse_type_err_res(),
                 }
-                Ok(#con (#fields_ts))
-            },
-            _ => plegine::json::parse_type_err_res(),
+            }
         }
     }
 }

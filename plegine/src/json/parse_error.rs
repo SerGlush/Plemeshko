@@ -34,8 +34,8 @@ impl Display for ParseError {
             ParseErrorKind::ValidationFailed => write!(f, "Validation failed, "),
             ParseErrorKind::FieldAbsent => write!(f, "Field absent, "),
         }?;
-        write!(f, "expected {}, ", self.expected)?;
-        write!(f, "path {}", self.path)
+        write!(f, "expected \"{}\", ", self.expected)?;
+        write!(f, "path \"{}\"", self.path)
     }
 }
 

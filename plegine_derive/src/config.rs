@@ -39,7 +39,7 @@ fn config_derive_impl_struct_named(
         .fold(TokenStream::new(), |mut ts, field| {
             let ident = &field.ident;
             ts.extend(quote! {
-                #ident : plegine::json::try_take_key(#src, stringify!(#ident)).map_err(|e| e.lift(stringify!(#ident)))?,
+                #ident : plegine::json::try_take_key(#src, stringify!(#ident))?,
             });
             ts
         });

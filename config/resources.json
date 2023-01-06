@@ -1,9 +1,9 @@
 [
     {
         "#tag": "Resource",
-        "#id": "water",
-        "dispensable": true,
-        "transportation_group": "liquid",
-        "density": 1000
+        "#name": "water",
+        "consumable": true,
+        "transport_group": "liquid",
+        "transport_weight": 1
     }
 ]
