@@ -67,17 +67,16 @@ fn from_value_derive_impl_struct_unnamed(
             }
         }
         _ => {
-            let (fields_ts, _) =
-                fields
-                    .unnamed
-                    .iter()
-                    .fold((TokenStream::new(), 0usize), |(mut ts, index), field| {
-                        let field_ty = &field.ty;
-                        ts.extend(quote! {
-                            #field_ty::from_value(src[#index].take())?,
-                        });
-                        (ts, index + 1)
+            let (fields_ts, _) = fields.unnamed.iter().fold(
+                (TokenStream::new(), 0usize),
+                |(mut ts, index), field| {
+                    let field_ty = &field.ty;
+                    ts.extend(quote! {
+                        #field_ty::from_value(src[#index].take())?,
                     });
+                    (ts, index + 1)
+                },
+            );
             let fields_len = fields.unnamed.len();
             quote! {
                 match src {

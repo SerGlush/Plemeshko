@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::sim::Sim;
 
 mod error;
+mod gfx;
 mod gui;
 mod win;
 
