@@ -15,8 +15,8 @@ pub struct ResourceStorageSigned {
 impl json::FromValue for ResourceStorageSigned {
     fn from_value(value: json::Value) -> json::ParseResult<Self> {
         let deltas = json::Array::from_value(value)?;
-        let positive = ResourceStorage::with_capacity(deltas.len() / 2);
-        let negative = ResourceStorage::with_capacity(deltas.len() / 2);
+        let mut positive = ResourceStorage::with_capacity(deltas.len() / 2);
+        let mut negative = ResourceStorage::with_capacity(deltas.len() / 2);
         for delta in deltas.into_iter() {
             let (id, delta) = <(ResourceId, ResourceAmount)>::from_value(delta)?;
             if delta < ResourceAmount::default() {

@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use plegine::config::ConfigLoadError;
 use sim::Sim;
 
 mod cor;

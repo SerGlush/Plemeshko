@@ -71,8 +71,8 @@ fn from_value_derive_impl_struct_unnamed(
     let fields_len = fields.unnamed.len();
     quote! {
         match src {
-            plegine::json::Value::Array(mut values) => {
-                if values.len() != #fields_len {
+            plegine::json::Value::Array(mut src) => {
+                if src.len() != #fields_len {
                     return plegine::json::parse_type_err_res();
                 }
                 Ok(#con (#fields_ts))

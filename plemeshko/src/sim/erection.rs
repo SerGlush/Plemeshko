@@ -38,17 +38,20 @@ fn iter_methods<'a>(
         .map(|id| sim.configs.get(id).map_err(SimError::ConfigRetrievalFailed))
 }
 
+// todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
+
 impl Erection {
     pub fn new(sim: &Sim, method_ids: Vec<MethodId>) -> SimResult<Self> {
         let mut total_delta = HashMap::<ResourceId, ResourceAmount>::new();
         for method in iter_methods(&method_ids, sim) {
-            for (resource_id, delta) in method?.resources.positive.iter() {
+            let method = method?;
+            for (resource_id, delta) in method.resources.positive.iter() {
                 total_delta
                     .entry(resource_id.to_owned())
                     .or_default()
                     .add_assign(*delta);
             }
-            for (resource_id, delta) in method?.resources.negative.iter() {
+            for (resource_id, delta) in method.resources.negative.iter() {
                 total_delta
                     .entry(resource_id.to_owned())
                     .or_default()
@@ -68,23 +71,34 @@ impl Erection {
             }
         }
 
-        let mut import = Vec::with_capacity(total_delta.len() / 2);
-        let mut export = Vec::with_capacity(total_delta.len() / 2);
+        let mut single_import = HashMap::with_capacity(total_delta.len() / 2);
+        let mut single_export = HashMap::with_capacity(total_delta.len() / 2);
+        let mut max_import = HashMap::with_capacity(total_delta.len() / 2);
+        let mut max_export = HashMap::with_capacity(total_delta.len() / 2);
         for (resource_id, delta) in total_delta {
             if delta < ResourceAmount::default() {
-                import.push((resource_id, -delta, ResourceAmount::default()));
+                single_import.insert(resource_id.clone(), -delta);
+                max_import.insert(resource_id, ResourceAmount(0));
             } else if delta > ResourceAmount::default() {
-                export.push((resource_id, delta, ResourceAmount::default()));
+                single_export.insert(resource_id.clone(), delta);
+                max_export.insert(resource_id, ResourceAmount(0));
             }
         }
 
         Ok(Erection {
             method_ids,
             transport,
-            import,
-            export,
+            single_io: ResourceStorageSigned {
+                positive: single_export,
+                negative: single_import,
+            },
             count: 0,
             active: 0,
+            max_io: ResourceStorageSigned {
+                positive: max_export,
+                negative: max_import,
+            },
+            storage: ResourceStorageSigned::new(),
         })
     }
 
@@ -113,8 +127,8 @@ impl Erection {
     }
 
     fn step_import(&mut self, sim: &mut Sim) -> SimResult<()> {
-        let transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
-        let requested_resources = Vec::with_capacity(self.max_io.negative.len());
+        let mut transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
+        let mut requested_resources = Vec::with_capacity(self.max_io.negative.len());
         for (res_id, req_amount) in self.max_io.negative.iter() {
             let res = sim
                 .configs
@@ -151,7 +165,7 @@ impl Erection {
         }
 
         requested_resources
-            .sort_unstable_by_key(|(_, _, _, transportation_priority)| transportation_priority);
+            .sort_unstable_by_key(|(_, _, _, transportation_priority)| *transportation_priority);
 
         for (res_id, res, req_amount, _) in requested_resources.iter() {
             let tr_group = res.transport_group;
@@ -238,7 +252,7 @@ impl Erection {
             // update storages
             res_amount.sub_assign(transported_amount);
             match sim.depot.raw_entry_mut().from_key(res_id) {
-                RawEntryMut::Occupied(occupied) => {
+                RawEntryMut::Occupied(mut occupied) => {
                     occupied.get_mut().add_assign(transported_amount)
                 }
                 RawEntryMut::Vacant(vacant) => {
@@ -250,7 +264,7 @@ impl Erection {
     }
 
     pub fn step(&mut self, sim: &mut Sim) -> SimResult<()> {
-        self.step_import(sim);
+        self.step_import(sim)?;
         self.step_process();
         self.step_export(sim)
     }

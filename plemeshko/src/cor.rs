@@ -10,19 +10,19 @@ pub trait Cor {
 
     fn cor_has(&self, k: &Self::Key, v: Self::Value) -> bool
     where
-        Self::Value: Ord;
+        Self::Value: Copy + Ord;
 
     fn cor_has_times<T: Ord>(&self, key: &Self::Key, value: Self::Value) -> T
     where
-        Self::Value: Ord + Div<Output = T>;
+        Self::Value: Copy + Ord + Div<Output = T>;
 
     fn cor_has_all(&self, req: &Self) -> bool
     where
-        Self::Value: Ord;
+        Self::Value: Copy + Ord;
 
     fn cor_has_all_times<T: Ord>(&self, req: &Self, max: T) -> T
     where
-        Self::Value: Ord + Div<Output = T>;
+        Self::Value: Copy + Ord + Div<Output = T>;
 
     fn cor_sub(&mut self, k: &Self::Key, v: Self::Value) -> bool
     where
@@ -32,30 +32,31 @@ pub trait Cor {
     where
         Self::Value: SubAssign;
 
-    fn cor_sub_times<T: Ord + Default>(
+    fn cor_sub_times<T: Copy + Ord + Default>(
         &mut self,
         key: &Self::Key,
         req_value: Self::Value,
         max_times: T,
     ) -> T
     where
-        Self::Value: Eq + SubAssign + Mul<T, Output = Self::Value> + Div<Self::Value, Output = T>;
+        Self::Value:
+            Copy + Eq + SubAssign + Mul<T, Output = Self::Value> + Div<Self::Value, Output = T>;
 
     fn cor_sub_all(&mut self, req: &Self) -> bool
     where
-        Self::Value: Ord + SubAssign;
+        Self::Value: Copy + Ord + SubAssign;
 
     fn cor_sub_all_unchecked(&mut self, req: &Self)
     where
-        Self::Value: Ord + SubAssign;
+        Self::Value: Copy + Ord + SubAssign;
 
-    fn cor_sub_all_times<T: Ord>(&self, req: &Self, max: T) -> T
+    fn cor_sub_all_times<T: Copy + Ord>(&mut self, req: &Self, max: T) -> T
     where
-        Self::Value: Ord + Mul<T, Output = Self::Value> + SubAssign + Div<Output = T>;
+        Self::Value: Copy + Ord + Mul<T, Output = Self::Value> + SubAssign + Div<Output = T>;
 
-    fn cor_sub_all_times_unchecked<T>(&self, req: &Self, count: T)
+    fn cor_sub_all_times_unchecked<T: Copy>(&mut self, req: &Self, count: T)
     where
-        Self::Value: Mul<T, Output = Self::Value> + SubAssign;
+        Self::Value: Copy + Mul<T, Output = Self::Value> + SubAssign;
 
     fn cor_move_all(&mut self, dst: &mut Self, req: &Self) -> bool
     where
@@ -67,10 +68,10 @@ pub trait Cor {
         Self::Value: SubAssign + AddAssign,
         Self::Key: Clone;
 
-    fn cor_move_all_times<T: Ord>(&mut self, dst: &mut Self, req: &Self, max: T) -> T
+    fn cor_move_all_times<T: Copy + Ord>(&mut self, dst: &mut Self, req: &Self, max: T) -> T
     where
         Self::Value:
-            Ord + Mul<T, Output = Self::Value> + SubAssign + AddAssign + Clone + Div<Output = T>,
+            Copy + Ord + Mul<T, Output = Self::Value> + SubAssign + AddAssign + Div<Output = T>,
         Self::Key: Clone;
 
     fn cor_put(&mut self, key: &Self::Key, value: Self::Value)
@@ -80,12 +81,12 @@ pub trait Cor {
 
     fn cor_put_all(&mut self, all: &Self)
     where
-        Self::Value: AddAssign,
+        Self::Value: Copy + AddAssign,
         Self::Key: Clone;
 
-    fn cor_put_all_times<T>(&mut self, all: &Self, times: T)
+    fn cor_put_all_times<T: Copy>(&mut self, all: &Self, times: T)
     where
-        Self::Value: AddAssign + Mul<T, Output = Self::Value>,
+        Self::Value: Copy + AddAssign + Mul<T, Output = Self::Value>,
         Self::Key: Clone;
 }
 
@@ -95,18 +96,18 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
 
     fn cor_has(&self, req_k: &K, req_v: V) -> bool
     where
-        V: Ord,
+        V: Copy + Ord,
     {
         let available = match self.get(req_k) {
-            Some(available) => available,
-            None => &V::default(),
+            Some(available) => *available,
+            None => V::default(),
         };
-        available >= &req_v
+        available >= req_v
     }
 
     fn cor_has_times<T: Ord>(&self, key: &Self::Key, required: Self::Value) -> T
     where
-        Self::Value: Ord + Div<Output = T>,
+        Self::Value: Copy + Ord + Div<Output = T>,
     {
         let available = match self.get(key) {
             Some(available) => *available,
@@ -117,14 +118,14 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
 
     fn cor_has_all(&self, req: &Self) -> bool
     where
-        V: Ord,
+        V: Copy + Ord,
     {
         for (req_k, req_v) in req.iter() {
             let available = match self.get(req_k) {
-                Some(available) => available,
-                None => &V::default(),
+                Some(available) => *available,
+                None => V::default(),
             };
-            if available < req_v {
+            if available < *req_v {
                 return false;
             }
         }
@@ -133,14 +134,14 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
 
     fn cor_has_all_times<T: Ord>(&self, req: &Self, mut max: T) -> T
     where
-        V: Ord + Div<Output = T>,
+        V: Copy + Ord + Div<Output = T>,
     {
         for (req_k, req_v) in req.iter() {
             let available = match self.get(req_k) {
-                Some(available) => available,
-                None => &V::default(),
+                Some(available) => *available,
+                None => V::default(),
             };
-            max = max.min(*available / *req_v);
+            max = max.min(available / *req_v);
         }
         max
     }
@@ -169,14 +170,14 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
         self.get_mut(req_k).unwrap().sub_assign(req_v)
     }
 
-    fn cor_sub_times<T: Ord + Default>(
+    fn cor_sub_times<T: Copy + Ord + Default>(
         &mut self,
         key: &Self::Key,
         req_value: Self::Value,
         max_times: T,
     ) -> T
     where
-        V: Eq + SubAssign + Mul<T, Output = V> + Div<V, Output = T>,
+        V: Copy + Eq + SubAssign + Mul<T, Output = V> + Div<V, Output = T>,
     {
         match self.get_mut(key) {
             Some(available) => {
@@ -196,7 +197,7 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
 
     fn cor_sub_all(&mut self, req: &Self) -> bool
     where
-        V: Ord + SubAssign,
+        V: Copy + Ord + SubAssign,
     {
         for (req_k, req_v) in req.iter() {
             match self.get_mut(req_k) {
@@ -219,16 +220,16 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
 
     fn cor_sub_all_unchecked(&mut self, req: &Self)
     where
-        V: Ord + SubAssign,
+        V: Copy + Ord + SubAssign,
     {
         for (req_k, req_v) in req.iter() {
             self.get_mut(req_k).unwrap().sub_assign(*req_v);
         }
     }
 
-    fn cor_sub_all_times<T: Ord>(&self, req: &Self, max: T) -> T
+    fn cor_sub_all_times<T: Copy + Ord>(&mut self, req: &Self, max: T) -> T
     where
-        V: Ord + Mul<T, Output = V> + SubAssign + Div<Output = T>,
+        V: Copy + Ord + Mul<T, Output = V> + SubAssign + Div<Output = T>,
     {
         let available = self.cor_has_all_times(req, max);
         for (req_k, req_v) in req.iter() {
@@ -238,9 +239,9 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
         available
     }
 
-    fn cor_sub_all_times_unchecked<T>(&self, req: &Self, count: T)
+    fn cor_sub_all_times_unchecked<T: Copy>(&mut self, req: &Self, count: T)
     where
-        Self::Value: Mul<T, Output = Self::Value> + SubAssign,
+        Self::Value: Copy + Mul<T, Output = Self::Value> + SubAssign,
     {
         for (key, req_value) in req.iter() {
             let req_total = *req_value * count;
@@ -248,17 +249,17 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
         }
     }
 
-    fn cor_move_all(&mut self, dst: &mut Self, req: &Self) -> bool {
+    fn cor_move_all(&mut self, _dst: &mut Self, _req: &Self) -> bool {
         todo!()
     }
 
-    fn cor_move_all_unchecked(&mut self, dst: &mut Self, req: &Self) {
+    fn cor_move_all_unchecked(&mut self, _dst: &mut Self, _req: &Self) {
         todo!()
     }
 
-    fn cor_move_all_times<T: Ord>(&mut self, dst: &mut Self, req: &Self, max: T) -> T
+    fn cor_move_all_times<T: Copy + Ord>(&mut self, dst: &mut Self, req: &Self, max: T) -> T
     where
-        V: Ord + Mul<T, Output = V> + SubAssign + AddAssign + Clone + Div<Output = T>,
+        V: Copy + Ord + Mul<T, Output = V> + SubAssign + AddAssign + Clone + Div<Output = T>,
         Self::Key: Clone,
     {
         let available = self.cor_has_all_times(req, max);
@@ -266,9 +267,9 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
             let given_res_amount = *req_v * available;
             self.get_mut(req_k).unwrap().sub_assign(given_res_amount);
             match dst.raw_entry_mut().from_key(req_k) {
-                RawEntryMut::Occupied(occupied) => occupied.get_mut().add_assign(req_v.clone()),
+                RawEntryMut::Occupied(mut occupied) => occupied.get_mut().add_assign(*req_v),
                 RawEntryMut::Vacant(vacant) => {
-                    vacant.insert(req_k.clone(), req_v.clone());
+                    vacant.insert(req_k.clone(), *req_v);
                 }
             }
         }
@@ -281,7 +282,7 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
         Self::Key: Clone,
     {
         match self.raw_entry_mut().from_key(key) {
-            RawEntryMut::Occupied(occupied) => occupied.get_mut().add_assign(value),
+            RawEntryMut::Occupied(mut occupied) => occupied.get_mut().add_assign(value),
             RawEntryMut::Vacant(vacant) => {
                 vacant.insert(key.clone(), value);
             }
@@ -290,7 +291,7 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
 
     fn cor_put_all(&mut self, all: &Self)
     where
-        Self::Value: AddAssign,
+        Self::Value: Copy + AddAssign,
         Self::Key: Clone,
     {
         for (key, put_value) in all.iter() {
@@ -298,15 +299,15 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
         }
     }
 
-    fn cor_put_all_times<T>(&mut self, all: &Self, times: T)
+    fn cor_put_all_times<T: Copy>(&mut self, all: &Self, times: T)
     where
-        V: AddAssign + Mul<T, Output = V>,
+        V: Copy + AddAssign + Mul<T, Output = V>,
         Self::Key: Clone,
     {
         for (key, put_value_single) in all.iter() {
             let put_value = *put_value_single * times;
             match self.raw_entry_mut().from_key(key) {
-                RawEntryMut::Occupied(occupied) => occupied.get_mut().add_assign(put_value),
+                RawEntryMut::Occupied(mut occupied) => occupied.get_mut().add_assign(put_value),
                 RawEntryMut::Vacant(vacant) => {
                     vacant.insert(key.clone(), put_value);
                 }
