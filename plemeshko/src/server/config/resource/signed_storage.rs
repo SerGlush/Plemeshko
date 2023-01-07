@@ -1,6 +1,6 @@
 use plegine::json;
 
-use crate::sim::units::ResourceAmount;
+use crate::server::units::ResourceAmount;
 
 use super::{
     storage::{Cor, ResourceStorage},

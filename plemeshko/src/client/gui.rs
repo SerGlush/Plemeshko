@@ -1,0 +1,95 @@
+use super::graphics::Graphics;
+use egui::{ClippedPrimitive, Context, TexturesDelta};
+use winit::{dpi::PhysicalSize, event::WindowEvent};
+
+pub struct Gui {
+    state: egui_winit::State,
+    context: Context,
+    renderer: egui_wgpu::Renderer,
+    paint_jobs: Vec<ClippedPrimitive>,
+    textures: TexturesDelta,
+    screen_descriptor: egui_wgpu::renderer::ScreenDescriptor,
+}
+
+impl Gui {
+    pub fn new(
+        gfx: &Graphics,
+        event_loop: &winit::event_loop::EventLoop<()>,
+        pixels_per_point: f32,
+        screen_size: PhysicalSize<u32>,
+    ) -> Self {
+        let context = egui::Context::default();
+        let renderer = egui_wgpu::Renderer::new(&gfx.device, gfx.surface_config.format, None, 1);
+        let mut state = egui_winit::State::new(event_loop);
+        state.set_pixels_per_point(pixels_per_point);
+        let paint_jobs = Vec::new();
+        let textures = TexturesDelta::default();
+        let screen_descriptor = egui_wgpu::renderer::ScreenDescriptor {
+            size_in_pixels: [screen_size.width, screen_size.height],
+            pixels_per_point,
+        };
+        Gui {
+            state,
+            context,
+            renderer,
+            paint_jobs,
+            textures,
+            screen_descriptor,
+        }
+    }
+
+    pub fn handle_event<'e>(&mut self, event: &WindowEvent<'e>) {
+        let _ = self.state.on_event(&self.context, event);
+    }
+
+    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.screen_descriptor.size_in_pixels = [new_size.width, new_size.height];
+        }
+    }
+
+    pub fn set_pixels_per_point(&mut self, pixels_per_point: f32) {
+        self.screen_descriptor.pixels_per_point = pixels_per_point;
+    }
+
+    pub fn run(&mut self, window: &winit::window::Window, f: impl FnOnce(&Context)) {
+        let raw_input = self.state.take_egui_input(window);
+        let output = self.context.run(raw_input, f);
+
+        self.textures.append(output.textures_delta);
+        self.state
+            .handle_platform_output(window, &self.context, output.platform_output);
+        self.paint_jobs = self.context.tessellate(output.shapes);
+    }
+
+    pub fn pre_render(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        encoder: &mut wgpu::CommandEncoder,
+    ) {
+        for (id, image_delta) in &self.textures.set {
+            self.renderer
+                .update_texture(device, queue, *id, image_delta);
+        }
+        self.renderer.update_buffers(
+            device,
+            queue,
+            encoder,
+            &self.paint_jobs,
+            &self.screen_descriptor,
+        );
+    }
+
+    pub fn post_render(&mut self) {
+        let textures = std::mem::take(&mut self.textures);
+        for id in &textures.free {
+            self.renderer.free_texture(id);
+        }
+    }
+
+    pub fn render<'a>(&'a mut self, rpass: &mut wgpu::RenderPass<'a>) {
+        self.renderer
+            .render(rpass, &self.paint_jobs, &self.screen_descriptor);
+    }
+}

@@ -1,4 +1,4 @@
-use crate::{cor::Cor, sim::units::ResourceAmount};
+use crate::{cor::Cor, server::units::ResourceAmount};
 use std::{
     collections::{
         hash_map::{Entry, RawEntryMut},

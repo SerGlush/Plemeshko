@@ -1,14 +1,25 @@
+use wgpu::{CommandEncoder, RenderPass, SurfaceError, SurfaceTexture, TextureView};
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
 
-pub struct Gfx {
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    surface: wgpu::Surface,
-    surface_config: wgpu::SurfaceConfiguration,
-    size: PhysicalSize<u32>,
+pub struct Graphics {
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+    pub surface: wgpu::Surface,
+    pub surface_config: wgpu::SurfaceConfiguration,
 }
 
-impl Gfx {
+pub struct Frame {
+    surface_texture: SurfaceTexture,
+    surface_view: TextureView,
+    pub encoder: CommandEncoder,
+}
+
+pub enum RenderError {
+    Skip,
+    OutOfMemory,
+}
+
+impl Graphics {
     pub async fn new(window: &Window) -> Self {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -41,47 +52,65 @@ impl Gfx {
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
         surface.configure(&device, &surface_config);
-        Gfx {
+        Graphics {
             device,
             queue,
             surface,
             surface_config,
-            size,
         }
     }
 
-    pub fn reconfigure_surface(&mut self) {
-        self.resize(self.size)
+    pub fn surface_size(&self) -> PhysicalSize<u32> {
+        PhysicalSize {
+            width: self.surface_config.width,
+            height: self.surface_config.height,
+        }
     }
 
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            self.size = new_size;
             self.surface_config.width = new_size.width;
             self.surface_config.height = new_size.height;
             self.surface.configure(&self.device, &self.surface_config);
         }
     }
 
-    pub fn handle_event(&mut self, event: &WindowEvent) -> bool {
+    pub fn handle_event<'e>(&mut self, event: &WindowEvent<'e>) -> bool {
         false
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        let surface_texture = self.surface.get_current_texture()?;
-        let view = surface_texture
+    pub fn new_frame(&mut self) -> Result<Frame, RenderError> {
+        let surface_texture = match self.surface.get_current_texture() {
+            Ok(surface_texture) => surface_texture,
+            Err(SurfaceError::Lost) => {
+                self.resize(self.surface_size());
+                return Err(RenderError::Skip);
+            }
+            Err(SurfaceError::OutOfMemory) => return Err(RenderError::OutOfMemory),
+            Err(_) => return Err(RenderError::Skip),
+        };
+        let surface_view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self
+        let encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Render Encoder"),
             });
-        {
-            let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        Ok(Frame {
+            surface_texture,
+            surface_view,
+            encoder,
+        })
+    }
+
+    pub fn begin<'a>(&mut self, frame: &'a mut Frame) -> RenderPass<'a> {
+        frame
+            .encoder
+            .begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
+                    view: &frame.surface_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -94,10 +123,11 @@ impl Gfx {
                     },
                 })],
                 depth_stencil_attachment: None,
-            });
-        }
-        self.queue.submit(std::iter::once(encoder.finish()));
-        surface_texture.present();
-        Ok(())
+            })
+    }
+
+    pub fn end<'a>(&mut self, frame: Frame) {
+        self.queue.submit(std::iter::once(frame.encoder.finish()));
+        frame.surface_texture.present();
     }
 }

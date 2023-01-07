@@ -1,17 +1,19 @@
 #![feature(hash_raw_entry)]
 #![feature(map_try_insert)]
 #![feature(int_roundings)]
+// #![feature(closure_lifetime_binder)]
+#![deny(elided_lifetimes_in_paths)]
 
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-use sim::Sim;
+use server::Sim;
 
+mod client;
 mod cor;
-mod gui;
-mod sim;
+mod server;
 
 fn main() {
     let sim = match Sim::init() {
@@ -33,6 +35,6 @@ fn main() {
         })
     };
 
-    gui::run(sim);
+    client::run(sim);
     sim_thread_handle.join().unwrap();
 }

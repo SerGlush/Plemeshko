@@ -4,7 +4,7 @@ use std::{
     ops::{AddAssign, SubAssign},
 };
 
-use crate::sim::units::ResourceAmount;
+use crate::server::units::ResourceAmount;
 
 use super::ResourceId;
 

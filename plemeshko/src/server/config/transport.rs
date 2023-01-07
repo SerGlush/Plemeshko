@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use plegine::config::{Config, ConfigId};
 use plegine_derive::Config;
 
-use crate::sim::{transport_group::TransportGroup, units::ResourceWeight};
+use crate::server::{transport_group::TransportGroup, units::ResourceWeight};
 
 use super::resource::signed_storage::ResourceStorageSigned;
 
