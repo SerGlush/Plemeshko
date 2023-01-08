@@ -1,3 +1,5 @@
+use plegine::config::ConfigRepository;
+
 use crate::{cor::Cor, server::units::ResourceAmount};
 use std::{
     collections::{
@@ -10,7 +12,7 @@ use std::{
 use super::{
     config::{
         method::{Method, MethodId},
-        resource::{signed_storage::ResourceStorageSigned, ResourceId},
+        resource::{signed_storage::ResourceStorageSigned, storage::ResourceStorage, ResourceId},
         transport::{Transport, TransportId, TransportMap},
     },
     error::{SimError, SimResult},
@@ -126,12 +128,15 @@ impl Erection {
         self.active = active;
     }
 
-    fn step_import(&mut self, sim: &mut Sim) -> SimResult<()> {
+    fn step_import(
+        &mut self,
+        depot: &mut ResourceStorage,
+        configs: &ConfigRepository,
+    ) -> SimResult<()> {
         let mut transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
         let mut requested_resources = Vec::with_capacity(self.max_io.negative.len());
         for (res_id, req_amount) in self.max_io.negative.iter() {
-            let res = sim
-                .configs
+            let res = configs
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
             let already_stored = self
@@ -154,8 +159,7 @@ impl Erection {
             ));
             match transport_state.entry(res.transport_group) {
                 Entry::Vacant(vacant) => {
-                    let tr = sim
-                        .configs
+                    let tr = configs
                         .get(self.transport.get(&res.transport_group).unwrap())
                         .map_err(SimError::ConfigRetrievalFailed)?;
                     vacant.insert((tr, ResourceWeight(0)));
@@ -176,7 +180,7 @@ impl Erection {
                 {
                     let amount_ready =
                         req_amount.min(ResourceAmount(*tr_remaining / res.transport_weight));
-                    let res_depot = match sim.depot.get_mut(res_id) {
+                    let res_depot = match depot.get_mut(res_id) {
                         Some(res_depot) => res_depot,
                         None => break 'a, // todo: handle 0-required-res ?
                     };
@@ -189,10 +193,10 @@ impl Erection {
                     total_stored += amount_ready;
                 }
                 while *tr_remaining < res.transport_weight {
-                    if !sim.depot.cor_sub_all(&tr.fuel.negative) {
+                    if !depot.cor_sub_all(&tr.fuel.negative) {
                         break 'a;
                     }
-                    sim.depot.cor_put_all(&tr.fuel.positive);
+                    depot.cor_put_all(&tr.fuel.positive);
                 }
             }
             self.storage.negative.cor_put(res_id, total_stored);
@@ -211,11 +215,14 @@ impl Erection {
     }
 
     // todo: fair export scheduler
-    fn step_export(&mut self, sim: &mut Sim) -> SimResult<()> {
+    fn step_export(
+        &mut self,
+        depot: &mut ResourceStorage,
+        configs: &ConfigRepository,
+    ) -> SimResult<()> {
         let mut transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
         for (res_id, res_amount) in self.storage.positive.iter_mut() {
-            let res = sim
-                .configs
+            let res = configs
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
             let (tr, transported_weight_already) =
@@ -229,12 +236,11 @@ impl Erection {
                 let transported_amount_already =
                     ResourceAmount(*transported_weight_already / res.transport_weight);
                 *transported_weight_already = ResourceWeight(0);
-                let can_fuel = sim.depot.cor_has_all_times(&tr.fuel.negative, i128::MAX);
+                let can_fuel = depot.cor_has_all_times(&tr.fuel.negative, i128::MAX);
                 let req_transport = res_weight.0.div_ceil(tr.capacity.0);
                 let transport = req_transport.min(can_fuel);
-                sim.depot
-                    .cor_sub_all_times_unchecked(&tr.fuel.negative, transport);
-                sim.depot.cor_put_all_times(&tr.fuel.positive, transport);
+                depot.cor_sub_all_times_unchecked(&tr.fuel.negative, transport);
+                depot.cor_put_all_times(&tr.fuel.positive, transport);
                 let transported_amount_newly = ResourceAmount(
                     (*res_amount - transported_amount_already)
                         .0
@@ -251,7 +257,7 @@ impl Erection {
             };
             // update storages
             res_amount.sub_assign(transported_amount);
-            match sim.depot.raw_entry_mut().from_key(res_id) {
+            match depot.raw_entry_mut().from_key(res_id) {
                 RawEntryMut::Occupied(mut occupied) => {
                     occupied.get_mut().add_assign(transported_amount)
                 }
@@ -263,10 +269,14 @@ impl Erection {
         Ok(())
     }
 
-    pub fn step(&mut self, sim: &mut Sim) -> SimResult<()> {
-        self.step_import(sim)?;
+    pub fn step(
+        &mut self,
+        depot: &mut ResourceStorage,
+        configs: &ConfigRepository,
+    ) -> SimResult<()> {
+        self.step_import(depot, configs)?;
         self.step_process();
-        self.step_export(sim)
+        self.step_export(depot, configs)
     }
 }
 

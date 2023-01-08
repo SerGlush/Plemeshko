@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{ops::DerefMut, sync::Mutex};
 
 use winit::event::Event;
 
@@ -16,7 +16,7 @@ mod graphics;
 mod gui;
 mod window;
 
-pub fn run(sim: &Mutex<Sim>) {
+pub fn run(sim: &'static Mutex<Sim>) -> ! {
     let (event_loop, window) = window::initialize();
     let mut graphics = futures::executor::block_on(Graphics::new(&window));
     let mut gui = Gui::new(
@@ -40,7 +40,8 @@ pub fn run(sim: &Mutex<Sim>) {
                         gui.resize(new_inner_size);
                     }
                     winit::event::WindowEvent::CloseRequested => {
-                        *control_flow = winit::event_loop::ControlFlow::Exit
+                        *control_flow = winit::event_loop::ControlFlow::Exit;
+                        sim.lock().unwrap().exit();
                     }
                     winit::event::WindowEvent::ScaleFactorChanged {
                         new_inner_size,
@@ -55,7 +56,10 @@ pub fn run(sim: &Mutex<Sim>) {
                 }
             }
         }
-        Event::MainEventsCleared => window.request_redraw(),
+        Event::MainEventsCleared => {
+            app.update(sim.lock().unwrap().deref_mut());
+            window.request_redraw(); // ?
+        }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
                 gui.run(&window, |ctx| app.gui(ctx));

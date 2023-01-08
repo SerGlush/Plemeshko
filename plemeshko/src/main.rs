@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use std::{
-    sync::{Mutex, atomic::AtomicBool},
+    sync::Mutex,
     time::{Duration, Instant},
 };
 
@@ -18,23 +18,31 @@ mod server;
 fn main() {
     // todo: consider RwLock / partial locking; multithreaded sim
     let sim = match Sim::new() {
-        Ok(sim) => Mutex::new(sim),
+        Ok(sim) => Box::leak::<'static>(Box::new(Mutex::new(sim))),
         Err(e) => {
             println!("Sim initialization error: {e}");
             std::process::exit(1);
-        },
+        }
     };
-    let quit = AtomicBool::new(false);
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
             let mut tick_delay = Duration::ZERO;
             loop {
                 let instant = Instant::now();
-                if quit.load(std::sync::atomic::Ordering::Relaxed) {
-                    quit.store(false, std::sync::atomic::Ordering::Relaxed);
-                    break;
+                {
+                    let mut sim = sim.lock().unwrap();
+                    if sim.exited() {
+                        break;
+                    }
+                    let step_result = sim.step();
+                    match step_result {
+                        Ok(_) => (),
+                        Err(e) => {
+                            println!("Sim error: {e}");
+                            break;
+                        }
+                    }
                 }
-                sim.lock().unwrap().step();
                 tick_delay += Sim::TICK_DELAY;
                 // note: `instant.elapsed()` before and after "sleep" aren't equal
                 if tick_delay - instant.elapsed() - Sim::TICK_THRESHOLD > Duration::ZERO {
@@ -44,8 +52,6 @@ fn main() {
             }
         });
 
-        client::run(&sim);
+        client::run(sim);
     });
-
-    client::run(&sim);
 }
