@@ -1,12 +1,12 @@
 #![feature(hash_raw_entry)]
 #![feature(map_try_insert)]
 #![feature(int_roundings)]
-// #![feature(closure_lifetime_binder)]
 #![deny(elided_lifetimes_in_paths)]
+#![allow(dead_code)]
 
 use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
+    sync::{Mutex, atomic::AtomicBool},
+    time::{Duration, Instant},
 };
 
 use server::Sim;
@@ -16,25 +16,36 @@ mod cor;
 mod server;
 
 fn main() {
-    let sim = match Sim::init() {
-        Ok(sim) => Arc::new(Mutex::new(sim)),
+    // todo: consider RwLock / partial locking; multithreaded sim
+    let sim = match Sim::new() {
+        Ok(sim) => Mutex::new(sim),
         Err(e) => {
             println!("Sim initialization error: {e}");
             std::process::exit(1);
-        }
+        },
     };
-    let quit = Arc::new(Mutex::new(false));
-    let sim_thread_handle = {
-        let sim = sim.clone();
-        std::thread::spawn(move || loop {
-            std::thread::sleep(Duration::from_millis(100));
-            sim.lock().unwrap().step();
-            if *quit.lock().unwrap() {
-                break;
+    let quit = AtomicBool::new(false);
+    std::thread::scope(|thread_scope| {
+        thread_scope.spawn(|| {
+            let mut tick_delay = Duration::ZERO;
+            loop {
+                let instant = Instant::now();
+                if quit.load(std::sync::atomic::Ordering::Relaxed) {
+                    quit.store(false, std::sync::atomic::Ordering::Relaxed);
+                    break;
+                }
+                sim.lock().unwrap().step();
+                tick_delay += Sim::TICK_DELAY;
+                // note: `instant.elapsed()` before and after "sleep" aren't equal
+                if tick_delay - instant.elapsed() - Sim::TICK_THRESHOLD > Duration::ZERO {
+                    std::thread::sleep(tick_delay);
+                }
+                tick_delay -= instant.elapsed();
             }
-        })
-    };
+        });
 
-    client::run(sim);
-    sim_thread_handle.join().unwrap();
+        client::run(&sim);
+    });
+
+    client::run(&sim);
 }

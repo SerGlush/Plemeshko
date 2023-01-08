@@ -4,7 +4,11 @@ pub mod error;
 pub mod transport_group;
 pub mod units;
 
-use std::{error::Error, path::PathBuf, time::Duration};
+use std::{
+    error::Error,
+    path::PathBuf,
+    time::Duration,
+};
 
 use erection::ErectionContainer;
 use plegine::config::{ConfigRepository, ConfigRepositoryBuilder};
@@ -25,8 +29,9 @@ const CONFIG_DIR: &'static str = "config";
 
 impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
+    pub const TICK_THRESHOLD: Duration = Duration::from_millis(20);
 
-    pub fn init() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let mut config_repo_builder = ConfigRepositoryBuilder::new();
         config_repo_builder
             .register::<config::resource::Resource>()

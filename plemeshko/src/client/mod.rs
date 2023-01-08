@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use winit::event::Event;
 
@@ -16,18 +16,7 @@ mod graphics;
 mod gui;
 mod window;
 
-pub fn run(sim: Arc<Mutex<Sim>>) {
-    // win::run(
-    //     || {
-    //         let sim = sim.lock().unwrap();
-    //         match self::egui::Gui::init(&sim) {
-    //             Ok(gui) => std::ops::ControlFlow::Continue(gui),
-    //             Err(_) => todo!(),
-    //         }
-    //     },
-    //     |gui| std::ops::ControlFlow::Continue(()),
-    // );
-
+pub fn run(sim: &Mutex<Sim>) {
     let (event_loop, window) = window::initialize();
     let mut graphics = futures::executor::block_on(Graphics::new(&window));
     let mut gui = Gui::new(

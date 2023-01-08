@@ -1,4 +1,5 @@
 [workspace]
+rust-version = "1.68.0-nightly"
 members = [
     "plegine",
     "plegine_derive",
