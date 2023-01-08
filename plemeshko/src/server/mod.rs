@@ -29,7 +29,7 @@ const CONFIG_DIR: &'static str = "config";
 
 impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
-    pub const TICK_THRESHOLD: Duration = Duration::from_millis(20);
+    pub const TICK_THRESHOLD: Duration = Duration::from_millis(1);
 
     pub fn new() -> Result<Self, Box<dyn Error>> {
         let mut config_repo_builder = ConfigRepositoryBuilder::new();
