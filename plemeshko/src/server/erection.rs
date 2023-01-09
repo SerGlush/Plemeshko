@@ -171,11 +171,11 @@ impl Erection {
         requested_resources
             .sort_unstable_by_key(|(_, _, _, transportation_priority)| *transportation_priority);
 
-        for (res_id, res, req_amount, _) in requested_resources.iter() {
+        for (res_id, res, req_amount, _) in requested_resources {
             let tr_group = res.transport_group;
             let (tr, tr_remaining) = transport_state.get_mut(&tr_group).unwrap();
             let mut total_stored = ResourceAmount::default();
-            let mut req_amount = *req_amount;
+            let mut req_amount = req_amount;
             'a: while req_amount > ResourceAmount::default() {
                 {
                     let amount_ready =

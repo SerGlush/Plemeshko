@@ -48,10 +48,10 @@ impl ConfigRepository {
     pub fn get<C: Config>(&self, id: &ConfigId<C>) -> Result<&C, ConfigRetrievalError> {
         match self.get_store::<C>() {
             Ok(store) => store
-                .get(id.as_string())
+                .get(id.as_str())
                 .ok_or(ConfigRetrievalError::NotInStore {
                     kind: type_name::<C>(),
-                    id: id.as_string().clone(),
+                    id: id.as_str().to_owned(),
                 }),
             Err(e) => Err(e.into()),
         }
