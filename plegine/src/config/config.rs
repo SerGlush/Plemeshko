@@ -1,4 +1,4 @@
-use std::{hash::Hash, marker::PhantomData};
+use std::{hash::Hash, marker::PhantomData, fmt::Display};
 
 use crate::json::{self, FromValue};
 
@@ -53,5 +53,11 @@ impl<C> Eq for ConfigId<C> {}
 impl<C> FromValue for ConfigId<C> {
     fn from_value(value: serde_json::Value) -> json::ParseResult<Self> {
         Ok(ConfigId::new(String::from_value(value)?))
+    }
+}
+
+impl<C> Display for ConfigId<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }

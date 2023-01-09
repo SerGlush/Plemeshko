@@ -1,9 +1,11 @@
 use crate::server::{
-    config::resource::{Resource, ResourceId},
+    config::resource::{Resource, ResourceId, self},
     Sim,
 };
 use egui::*;
 use plegine::config::ConfigId;
+
+static HUMAN_ID: ResourceId = ResourceId::new("human");
 
 pub struct App {
     current_panel: i64,
@@ -34,10 +36,15 @@ impl App {
                     ui.label(format!(
                         "Population: {}",
                         sim.depot
-                            .get(&ResourceId::new("human"))
+                            .get(&HUMAN_ID)
                             .map(Clone::clone)
                             .unwrap_or_default()
                     ));
+                    for (id, value) in sim.depot.iter()
+                    {
+                        if id == &HUMAN_ID {continue;}
+                        ui.label(format!("{} : {}", id, value));
+                    }
                 }
                 _ => (),
             }
