@@ -1,6 +1,6 @@
 use std::ops::{Mul, MulAssign};
 
-use derive_more::{Add, AddAssign, Display, Neg, Sub, SubAssign};
+use derive_more::{Add, AddAssign, Display, FromStr, Neg, Sub, SubAssign};
 use plegine::json::FromValue;
 use plegine_derive::FromValue;
 
@@ -10,6 +10,7 @@ macro_rules! declare_amount_type {
             Clone,
             Copy,
             FromValue,
+            FromStr,
             Default,
             Display,
             PartialEq,

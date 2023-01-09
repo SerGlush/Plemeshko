@@ -1,4 +1,7 @@
-use crate::server::Sim;
+use crate::server::{
+    config::resource::{storage::Cor, Resource, ResourceId},
+    Sim,
+};
 use egui::*;
 
 use super::error::GuiResult;
@@ -7,11 +10,17 @@ const HUMAN_ID: &'static str = "human";
 
 pub struct App {
     current_panel: i64,
+    spawn_resource_name: String,
+    spawn_resource_value: String,
 }
 
 impl App {
     pub fn new() -> Self {
-        App { current_panel: 0 }
+        App {
+            current_panel: 0,
+            spawn_resource_name: "human".to_string(),
+            spawn_resource_value: "10".to_string(),
+        }
     }
 
     pub fn update(&mut self, _sim: &mut Sim) -> GuiResult<()> {
@@ -27,7 +36,7 @@ impl App {
                 if ui.button("Erections").clicked() {
                     self.current_panel = 1;
                 }
-                if ui.button("Placeholder").clicked() {
+                if ui.button("Debug").clicked() {
                     self.current_panel = 2;
                 }
             });
@@ -45,6 +54,16 @@ impl App {
                             continue;
                         }
                         ui.label(format!("{} : {}", id, value));
+                    }
+                }
+                2 => {
+                    ui.text_edit_singleline(&mut self.spawn_resource_name);
+                    ui.text_edit_singleline(&mut self.spawn_resource_value);
+                    if ui.button("Spawn resource").clicked() {
+                        sim.depot.cor_put(
+                            &ResourceId::new(self.spawn_resource_name.clone()),
+                            self.spawn_resource_value.parse().unwrap(),
+                        );
                     }
                 }
                 _ => (),
