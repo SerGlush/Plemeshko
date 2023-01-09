@@ -64,14 +64,6 @@ impl Sim {
         // todo: finalization code, mb dropping resources / saving state
     }
 
-    pub fn default_transport(&self, tg: TransportGroup) -> TransportId {
-        match tg {
-            TransportGroup::Gas => todo!(),
-            TransportGroup::Liquid => todo!(),
-            TransportGroup::Solid => todo!(),
-        }
-    }
-
     pub fn step(&mut self) -> SimResult<()> {
         if self.exited {
             panic!("Sim is in exiting state when step was called");

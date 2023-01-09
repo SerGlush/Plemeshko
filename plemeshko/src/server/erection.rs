@@ -23,7 +23,7 @@ use super::{
 
 pub struct Erection {
     name: String,
-    method_ids: Vec<MethodId>,
+    methods: Vec<MethodId>,
     transport: TransportMap<TransportId>,
     single_io: ResourceStorageSigned,
     max_io: ResourceStorageSigned,
@@ -44,9 +44,9 @@ fn iter_methods<'a>(
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
 
 impl Erection {
-    pub fn new(sim: &Sim, name: String, method_ids: Vec<MethodId>) -> SimResult<Self> {
+    pub fn new(sim: &Sim, name: String, methods: Vec<MethodId>, transport: HashMap::<TransportGroup, TransportId>) -> SimResult<Self> {
         let mut total_delta = HashMap::<ResourceId, ResourceAmount>::new();
-        for method in iter_methods(&method_ids, sim) {
+        for method in iter_methods(&methods, sim) {
             let method = method?;
             for (resource_id, delta) in method.resources.positive.iter() {
                 total_delta
@@ -59,18 +59,6 @@ impl Erection {
                     .entry(resource_id.to_owned())
                     .or_default()
                     .sub_assign(*delta);
-            }
-        }
-
-        let mut transport = HashMap::<TransportGroup, TransportId>::new();
-        for (resource_id, delta) in total_delta.iter() {
-            if *delta != ResourceAmount::default() {
-                let tg = sim
-                    .configs
-                    .get(resource_id)
-                    .map_err(SimError::ConfigRetrievalFailed)?
-                    .transport_group;
-                let _ = transport.try_insert(tg, sim.default_transport(tg));
             }
         }
 
@@ -90,7 +78,7 @@ impl Erection {
 
         Ok(Erection {
             name,
-            method_ids,
+            methods,
             transport,
             single_io: ResourceStorageSigned {
                 positive: single_export,
@@ -110,9 +98,17 @@ impl Erection {
         &self.name
     }
 
-    pub fn methods<'a>(&'a self, sim: &'a Sim) -> impl Iterator<Item = SimResult<&Method>> {
-        iter_methods(&self.method_ids, sim)
+    pub fn methods(&self) -> &Vec<MethodId> {
+        &self.methods
     }
+
+    pub fn transport(&self) -> &TransportMap<TransportId> {
+        &self.transport
+    }
+
+    //pub fn methods<'a>(&'a self, sim: &'a Sim) -> impl Iterator<Item = SimResult<&Method>> {
+    //    iter_methods(&self.method_ids, sim)
+    //}
 
     pub fn count(&self) -> u32 {
         self.count

@@ -1,5 +1,5 @@
 use crate::server::{
-    config::resource::{storage::Cor, Resource, ResourceId},
+    config::{resource::{storage::Cor, Resource, ResourceId}, transport::{TransportMap, TransportId}, method::MethodId, method_group},
     erection::Erection,
     Sim,
 };
@@ -13,12 +13,21 @@ pub struct App {
     current_panel: i64,
     spawn_resource_name: String,
     spawn_resource_value: String,
+    erection_builder_name: String,
+    erection_builder_transport: TransportMap<TransportId>,
+    erection_builder_methods: Vec<MethodId>,
 }
 
 pub fn draw_erection(ui: &mut Ui, erection: &Erection) {
     ui.horizontal(|ui| {
-        ui.label(format!("{}:", erection.name()))
+        ui.label(format!("{}:", erection.name()));
+        for transport in erection.transport().values() {
+            ui.label(transport.as_str()).on_hover_text("Placeholder");
+        }
     });
+    for method in erection.methods().iter() {
+        ui.horizontal(|ui| ui.label(method.as_str()).on_hover_text("Placeholder"));
+    }
 }
 
 impl App {
@@ -27,6 +36,9 @@ impl App {
             current_panel: 0,
             spawn_resource_name: "human".to_string(),
             spawn_resource_value: "10".to_string(),
+            erection_builder_name: "input name".to_string(),
+            erection_builder_transport: TransportMap::<TransportId>::new(),
+            erection_builder_methods: Vec::<MethodId>::new(),
         }
     }
 
@@ -64,6 +76,17 @@ impl App {
                     }
                 }
                 1 => {
+                    if ui.button("Create Erection").clicked() {
+
+                        Window::new("Erection Builder").show(context, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.text_edit_singleline(&mut self.erection_builder_name);
+                            })
+                            //for method in self.erection_builder_methods {
+                            //    ui.
+                            //}
+                        });
+                    }
                     for (erection) in sim.erections.iter() {
                         draw_erection(ui, erection);
                     }
