@@ -62,7 +62,7 @@ pub fn run(sim: &'static Mutex<Sim>) -> ! {
         }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
-                gui.run(&window, |ctx| app.gui(ctx));
+                gui.run(&window, |ctx| app.gui(ctx, sim.lock().unwrap().deref_mut()));
                 match graphics.new_frame() {
                     Ok(mut frame) => {
                         {

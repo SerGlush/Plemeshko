@@ -57,13 +57,13 @@ impl ConfigRepository {
         }
     }
 
-    pub fn check_id<C: Config>(&self, id: String) -> Option<ConfigId<C>> {
-        let store = self.0.get(&TypeId::of::<C>())?;
-        let hcc = store.downcast_ref::<HomoConfigContainer<C>>()?;
-        if hcc.contains_key(id.as_str()) {
-            Some(ConfigId::new(id))
-        } else {
-            None
-        }
-    }
+    // pub fn check_id<C: Config>(&self, id: String) -> Option<ConfigId<C>> {
+    //     let store = self.0.get(&TypeId::of::<C>())?;
+    //     let hcc = store.downcast_ref::<HomoConfigContainer<C>>()?;
+    //     if hcc.contains_key(id.as_str()) {
+    //         Some(ConfigId::new(id))
+    //     } else {
+    //         None
+    //     }
+    // }
 }

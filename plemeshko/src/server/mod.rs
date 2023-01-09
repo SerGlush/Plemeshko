@@ -11,15 +11,14 @@ use plegine::config::{ConfigRepository, ConfigRepositoryBuilder};
 
 use self::{
     config::{resource::storage::ResourceStorage, transport::TransportId},
-    erection::Erection,
     error::SimResult,
     transport_group::TransportGroup,
 };
 
 pub struct Sim {
-    depot: ResourceStorage,
-    erections: ErectionContainer,
-    configs: ConfigRepository,
+    pub depot: ResourceStorage,
+    pub erections: ErectionContainer,
+    pub configs: ConfigRepository,
     exited: bool,
 }
 
@@ -54,14 +53,6 @@ impl Sim {
             configs: config_repo_builder.build(),
             exited: false,
         })
-    }
-
-    pub fn depot(&self) -> &ResourceStorage {
-        &self.depot
-    }
-
-    pub fn erections(&self) -> impl Iterator<Item = &Erection> {
-        self.erections.iter()
     }
 
     pub fn exited(&self) -> bool {
