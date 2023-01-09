@@ -17,8 +17,8 @@ pub trait Config: Sized + Send + 'static {
 pub struct ConfigId<C>(String, PhantomData<C>);
 
 impl<C> ConfigId<C> {
-    pub fn new(id: String) -> Self {
-        ConfigId(id, PhantomData)
+    pub fn new<S: Into<String>>(id: S) -> Self {
+        ConfigId(id.into(), PhantomData)
     }
 
     pub fn as_string(&self) -> &String {
