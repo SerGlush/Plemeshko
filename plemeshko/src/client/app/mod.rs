@@ -1,4 +1,7 @@
-use crate::server::{config::resource::{Resource, ResourceId}, Sim};
+use crate::server::{
+    config::resource::{Resource, ResourceId},
+    Sim,
+};
 use egui::*;
 use plegine::config::ConfigId;
 
@@ -25,17 +28,19 @@ impl App {
                 if ui.button("Placeholder").clicked() {
                     self.current_panel = 2;
                 }
-
-                match self.current_panel {
-                    0 => {
-                        ui.label(format!(
-                            "Population: {}",
-                            sim.depot.get(&ResourceId::new("human")).unwrap()
-                        ));
-                    }
-                    _ => (),
-                }
             });
+            match self.current_panel {
+                0 => {
+                    ui.label(format!(
+                        "Population: {}",
+                        sim.depot
+                            .get(&ResourceId::new("human"))
+                            .map(Clone::clone)
+                            .unwrap_or_default()
+                    ));
+                }
+                _ => (),
+            }
         });
     }
 }
