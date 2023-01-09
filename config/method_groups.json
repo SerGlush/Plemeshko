@@ -1,0 +1,16 @@
+[
+    {
+        "#tag": "MethodGroup",
+        "#name": "food_production",
+        "variants": [
+            "hunt_animals"
+        ]
+    },
+    {
+        "#tag": "MethodGroup",
+        "#name": "people_consumption",
+        "variants": [
+            "people_eat"
+        ]
+    }
+]
