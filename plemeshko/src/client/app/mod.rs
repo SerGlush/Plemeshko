@@ -1,9 +1,7 @@
-use crate::server::{
-    config::resource::{Resource, ResourceId, self},
-    Sim,
-};
+use crate::server::Sim;
 use egui::*;
-use plegine::config::ConfigId;
+
+use super::error::GuiResult;
 
 const HUMAN_ID: &'static str = "human";
 
@@ -16,9 +14,11 @@ impl App {
         App { current_panel: 0 }
     }
 
-    pub fn update(&mut self, sim: &mut Sim) {}
+    pub fn update(&mut self, _sim: &mut Sim) -> GuiResult<()> {
+        Ok(())
+    }
 
-    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim) {
+    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim) -> GuiResult<()> {
         CentralPanel::default().show(context, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("Main").clicked() {
@@ -40,14 +40,17 @@ impl App {
                             .map(Clone::clone)
                             .unwrap_or_default()
                     ));
-                    for (id, value) in sim.depot.iter()
-                    {
-                        if id.as_str() == HUMAN_ID {continue;}
+                    for (id, value) in sim.depot.iter() {
+                        if id.as_str() == HUMAN_ID {
+                            continue;
+                        }
                         ui.label(format!("{} : {}", id, value));
                     }
                 }
                 _ => (),
             }
         });
+
+        Ok(())
     }
 }

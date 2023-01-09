@@ -57,12 +57,28 @@ pub fn run(sim: &'static Mutex<Sim>) -> ! {
             }
         }
         Event::MainEventsCleared => {
-            app.update(sim.lock().unwrap().deref_mut());
+            match app.update(sim.lock().unwrap().deref_mut()) {
+                Ok(_) => (),
+                Err(e) => {
+                    *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
+                    println!("App update error: {e}");
+                    return;
+                }
+            }
             window.request_redraw(); // ?
         }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
-                gui.run(&window, |ctx| app.gui(ctx, sim.lock().unwrap().deref_mut()));
+                gui.run(&window, |ctx| {
+                    match app.gui(ctx, sim.lock().unwrap().deref_mut()) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
+                            println!("App update error: {e}");
+                            return;
+                        }
+                    }
+                });
                 match graphics.new_frame() {
                     Ok(mut frame) => {
                         {

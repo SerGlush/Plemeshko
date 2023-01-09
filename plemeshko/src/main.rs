@@ -4,10 +4,7 @@
 #![deny(elided_lifetimes_in_paths)]
 #![allow(dead_code)]
 
-use std::{
-    sync::Mutex,
-    time::Instant,
-};
+use std::{sync::Mutex, time::Instant};
 
 use server::Sim;
 

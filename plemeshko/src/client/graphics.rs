@@ -75,7 +75,7 @@ impl Graphics {
         }
     }
 
-    pub fn handle_event<'e>(&mut self, event: &WindowEvent<'e>) -> bool {
+    pub fn handle_event<'e>(&mut self, _event: &WindowEvent<'e>) -> bool {
         false
     }
 

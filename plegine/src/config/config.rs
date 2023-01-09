@@ -1,4 +1,4 @@
-use std::{hash::Hash, marker::PhantomData, fmt::Display, borrow::Borrow};
+use std::{borrow::Borrow, fmt::Display, hash::Hash, marker::PhantomData};
 
 use crate::json::{self, FromValue};
 
