@@ -1,0 +1,9 @@
+[
+    {
+        "#tag": "Transport",
+        "#name": "manual",
+        "group": "solid",
+        "capacity": 400,
+        "fuel": []
+    }
+]

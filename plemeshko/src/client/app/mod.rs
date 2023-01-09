@@ -1,5 +1,6 @@
 use crate::server::{
     config::resource::{storage::Cor, Resource, ResourceId},
+    erection::Erection,
     Sim,
 };
 use egui::*;
@@ -12,6 +13,12 @@ pub struct App {
     current_panel: i64,
     spawn_resource_name: String,
     spawn_resource_value: String,
+}
+
+pub fn draw_erection(ui: &mut Ui, erection: &Erection) {
+    ui.horizontal(|ui| {
+        ui.label(format!("{}:", erection.name()))
+    });
 }
 
 impl App {
@@ -54,6 +61,11 @@ impl App {
                             continue;
                         }
                         ui.label(format!("{} : {}", id, value));
+                    }
+                }
+                1 => {
+                    for (erection) in sim.erections.iter() {
+                        draw_erection(ui, erection);
                     }
                 }
                 2 => {

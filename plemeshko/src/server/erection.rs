@@ -22,6 +22,7 @@ use super::{
 };
 
 pub struct Erection {
+    name: String,
     method_ids: Vec<MethodId>,
     transport: TransportMap<TransportId>,
     single_io: ResourceStorageSigned,
@@ -43,7 +44,7 @@ fn iter_methods<'a>(
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
 
 impl Erection {
-    pub fn new(sim: &Sim, method_ids: Vec<MethodId>) -> SimResult<Self> {
+    pub fn new(sim: &Sim, name: String, method_ids: Vec<MethodId>) -> SimResult<Self> {
         let mut total_delta = HashMap::<ResourceId, ResourceAmount>::new();
         for method in iter_methods(&method_ids, sim) {
             let method = method?;
@@ -88,6 +89,7 @@ impl Erection {
         }
 
         Ok(Erection {
+            name,
             method_ids,
             transport,
             single_io: ResourceStorageSigned {
@@ -102,6 +104,10 @@ impl Erection {
             },
             storage: ResourceStorageSigned::new(),
         })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn methods<'a>(&'a self, sim: &'a Sim) -> impl Iterator<Item = SimResult<&Method>> {

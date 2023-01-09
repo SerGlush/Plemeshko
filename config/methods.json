@@ -3,14 +3,7 @@
         "#tag": "Method",
         "#name": "hunt_animals",
         "resources": [
-            ["food", 5]
-        ]
-    },
-    {
-        "#tag": "Method",
-        "#name": "people_eat",
-        "resources": [
-            ["food", -4]
+            ["food", 20]
         ]
     }
 ]
