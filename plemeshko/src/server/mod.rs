@@ -1,7 +1,6 @@
 pub mod config;
 pub mod erection;
 pub mod error;
-pub mod transport_group;
 pub mod units;
 
 use std::{error::Error, path::PathBuf, time::Duration};
@@ -9,11 +8,7 @@ use std::{error::Error, path::PathBuf, time::Duration};
 use erection::ErectionContainer;
 use plegine::config::{ConfigRepository, ConfigRepositoryBuilder};
 
-use self::{
-    config::{resource::storage::ResourceStorage, transport::TransportId},
-    error::SimResult,
-    transport_group::TransportGroup,
-};
+use self::{config::resource::storage::ResourceStorage, error::SimResult};
 
 pub struct Sim {
     pub depot: ResourceStorage,
@@ -37,6 +32,9 @@ impl Sim {
             .map_err(Box::new)?;
         config_repo_builder
             .register::<config::transport::Transport>()
+            .map_err(Box::new)?;
+        config_repo_builder
+            .register::<config::transport_group::TransportGroup>()
             .map_err(Box::new)?;
         config_repo_builder
             .register::<config::method::Method>()

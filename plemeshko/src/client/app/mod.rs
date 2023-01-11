@@ -1,5 +1,12 @@
+use std::collections::HashMap;
+
 use crate::server::{
-    config::{resource::{storage::Cor, Resource, ResourceId}, transport::{TransportMap, TransportId}, method::MethodId, method_group},
+    config::{
+        method::MethodId,
+        resource::{storage::Cor, ResourceId},
+        transport::TransportId,
+        transport_group::TransportGroupId,
+    },
     erection::Erection,
     Sim,
 };
@@ -14,7 +21,7 @@ pub struct App {
     spawn_resource_name: String,
     spawn_resource_value: String,
     erection_builder_name: String,
-    erection_builder_transport: TransportMap<TransportId>,
+    erection_builder_transport: HashMap<TransportGroupId, TransportId>,
     erection_builder_methods: Vec<MethodId>,
 }
 
@@ -37,7 +44,7 @@ impl App {
             spawn_resource_name: "human".to_string(),
             spawn_resource_value: "10".to_string(),
             erection_builder_name: "input name".to_string(),
-            erection_builder_transport: TransportMap::<TransportId>::new(),
+            erection_builder_transport: HashMap::<TransportGroupId, TransportId>::new(),
             erection_builder_methods: Vec::<MethodId>::new(),
         }
     }
@@ -77,7 +84,6 @@ impl App {
                 }
                 1 => {
                     if ui.button("Create Erection").clicked() {
-
                         Window::new("Erection Builder").show(context, |ui| {
                             ui.horizontal(|ui| {
                                 ui.text_edit_singleline(&mut self.erection_builder_name);
@@ -87,7 +93,7 @@ impl App {
                             //}
                         });
                     }
-                    for (erection) in sim.erections.iter() {
+                    for erection in sim.erections.iter() {
                         draw_erection(ui, erection);
                     }
                 }

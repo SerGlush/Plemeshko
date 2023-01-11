@@ -2,10 +2,7 @@ use plegine::config::ConfigRepository;
 
 use crate::{cor::Cor, server::units::ResourceAmount};
 use std::{
-    collections::{
-        hash_map::{Entry, RawEntryMut},
-        HashMap,
-    },
+    collections::{hash_map::RawEntryMut, HashMap},
     ops::{AddAssign, SubAssign},
 };
 
@@ -13,10 +10,10 @@ use super::{
     config::{
         method::{Method, MethodId},
         resource::{signed_storage::ResourceStorageSigned, storage::ResourceStorage, ResourceId},
-        transport::{Transport, TransportId, TransportMap},
+        transport::{Transport, TransportId},
+        transport_group::TransportGroupId,
     },
     error::{SimError, SimResult},
-    transport_group::TransportGroup,
     units::ResourceWeight,
     Sim,
 };
@@ -24,7 +21,7 @@ use super::{
 pub struct Erection {
     name: String,
     methods: Vec<MethodId>,
-    transport: TransportMap<TransportId>,
+    transport: HashMap<TransportGroupId, TransportId>,
     single_io: ResourceStorageSigned,
     max_io: ResourceStorageSigned,
     storage: ResourceStorageSigned,
@@ -44,7 +41,12 @@ fn iter_methods<'a>(
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
 
 impl Erection {
-    pub fn new(sim: &Sim, name: String, methods: Vec<MethodId>, transport: HashMap::<TransportGroup, TransportId>) -> SimResult<Self> {
+    pub fn new(
+        sim: &Sim,
+        name: String,
+        methods: Vec<MethodId>,
+        transport: HashMap<TransportGroupId, TransportId>,
+    ) -> SimResult<Self> {
         let mut total_delta = HashMap::<ResourceId, ResourceAmount>::new();
         for method in iter_methods(&methods, sim) {
             let method = method?;
@@ -102,7 +104,7 @@ impl Erection {
         &self.methods
     }
 
-    pub fn transport(&self) -> &TransportMap<TransportId> {
+    pub fn transport(&self) -> &HashMap<TransportGroupId, TransportId> {
         &self.transport
     }
 
@@ -135,7 +137,7 @@ impl Erection {
         depot: &mut ResourceStorage,
         configs: &ConfigRepository,
     ) -> SimResult<()> {
-        let mut transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
+        let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let mut requested_resources = Vec::with_capacity(self.max_io.negative.len());
         for (res_id, req_amount) in self.max_io.negative.iter() {
             let res = configs
@@ -159,12 +161,15 @@ impl Erection {
                 req_amount_transported,
                 transportation_priority,
             ));
-            match transport_state.entry(res.transport_group) {
-                Entry::Vacant(vacant) => {
+            match transport_state
+                .raw_entry_mut()
+                .from_key(&res.transport_group)
+            {
+                RawEntryMut::Vacant(vacant) => {
                     let tr = configs
                         .get(self.transport.get(&res.transport_group).unwrap())
                         .map_err(SimError::ConfigRetrievalFailed)?;
-                    vacant.insert((tr, ResourceWeight(0)));
+                    vacant.insert(res.transport_group.clone(), (tr, ResourceWeight(0)));
                 }
                 _ => (),
             }
@@ -174,8 +179,8 @@ impl Erection {
             .sort_unstable_by_key(|(_, _, _, transportation_priority)| *transportation_priority);
 
         for (res_id, res, req_amount, _) in requested_resources {
-            let tr_group = res.transport_group;
-            let (tr, tr_remaining) = transport_state.get_mut(&tr_group).unwrap();
+            let tr_group = &res.transport_group;
+            let (tr, tr_remaining) = transport_state.get_mut(tr_group).unwrap();
             let mut total_stored = ResourceAmount::default();
             let mut req_amount = req_amount;
             'a: while req_amount > ResourceAmount::default() {
@@ -222,7 +227,7 @@ impl Erection {
         depot: &mut ResourceStorage,
         configs: &ConfigRepository,
     ) -> SimResult<()> {
-        let mut transport_state = TransportMap::<(&Transport, ResourceWeight)>::new();
+        let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         for (res_id, res_amount) in self.storage.positive.iter_mut() {
             let res = configs
                 .get(res_id)
