@@ -1,3 +1,4 @@
+use crate::util::json_optional_key_w_default;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{DataStruct, Fields, FieldsNamed, FieldsUnnamed};
@@ -34,11 +35,7 @@ fn from_value_derive_impl_struct_named(
         .named
         .iter()
         .fold(TokenStream::new(), |mut ts, field| {
-            let field_ty = &field.ty;
-            let field_id = &field.ident;
-            ts.extend(quote! {
-                #field_id: plegine::json::try_take_key::<#field_ty>(#src, stringify!(#field_id))?,
-            });
+            ts.extend(json_optional_key_w_default(&src, field));
             ts
         });
     quote! {

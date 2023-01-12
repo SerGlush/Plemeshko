@@ -11,8 +11,7 @@
                 },
                 "output": {
                     "human": 8
-                },
-                "time_to_complete": 0
+                }
             },
             {
                 "#name": "stone_insruments",
@@ -24,8 +23,7 @@
                 "output": {
                     "human": 8,
                     "stone_instrument": 6
-                },
-                "time_to_complete": 0
+                }
             }
         ]
     }

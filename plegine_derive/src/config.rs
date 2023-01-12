@@ -1,3 +1,4 @@
+use crate::util::json_optional_key_w_default;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{DataStruct, Fields, FieldsNamed};
@@ -37,10 +38,7 @@ fn config_derive_impl_struct_named(
         .named
         .iter()
         .fold(TokenStream::new(), |mut ts, field| {
-            let ident = &field.ident;
-            ts.extend(quote! {
-                #ident : plegine::json::try_take_key(#src, stringify!(#ident))?,
-            });
+            ts.extend(json_optional_key_w_default(&src, field));
             ts
         });
     quote! {

@@ -19,13 +19,8 @@ pub fn try_take_optional_key<T: FromValue>(
 }
 
 pub fn try_take_key<T: FromValue>(object: &mut Object, key: &str) -> ParseResult<T> {
-    try_take_optional_key(object, key).and_then(|v| {
-        v.ok_or_else(|| ParseError {
-            kind: ParseErrorKind::FieldAbsent,
-            path: Path::new(),
-            expected: key.into(),
-        })
-    })
+    try_take_optional_key(object, key)
+        .and_then(|v| v.ok_or_else(|| ParseError::new_absent(key.into())))
 }
 
 pub fn parse_type_err<T>() -> ParseError {

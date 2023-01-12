@@ -32,6 +32,14 @@ impl ParseError {
             ..self
         }
     }
+
+    pub fn new_absent(key: String) -> Self {
+        ParseError {
+            kind: ParseErrorKind::FieldAbsent,
+            path: Path::new(),
+            expected: key,
+        }
+    }
 }
 
 impl Display for ParseError {

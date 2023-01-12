@@ -14,6 +14,7 @@ use super::resource::ResourceId;
 pub struct Setting {
     pub input: HashMap<ResourceId, ResourceAmount>,
     pub output: HashMap<ResourceId, ResourceAmount>,
+    #[default]
     pub time_to_complete: Ticks,
 }
 
