@@ -5,7 +5,7 @@ use plegine::json::FromValue;
 use plegine_derive::FromValue;
 
 macro_rules! declare_amount_type {
-    ($name:ident) => {
+    ($name:ident, $ty:ty) => {
         #[derive(
             Clone,
             Copy,
@@ -23,35 +23,35 @@ macro_rules! declare_amount_type {
             SubAssign,
             Neg,
         )]
-        pub struct $name(pub i128);
+        pub struct $name(pub $ty);
 
-        impl Mul<i128> for $name {
+        impl Mul<$ty> for $name {
             type Output = $name;
 
-            fn mul(self, rhs: i128) -> Self::Output {
+            fn mul(self, rhs: $ty) -> Self::Output {
                 $name(self.0 * rhs)
             }
         }
 
-        impl MulAssign<i128> for $name {
-            fn mul_assign(&mut self, rhs: i128) {
+        impl MulAssign<$ty> for $name {
+            fn mul_assign(&mut self, rhs: $ty) {
                 self.0 *= rhs
             }
         }
 
         impl std::ops::Div for $name {
-            type Output = i128;
+            type Output = $ty;
 
-            fn div(self, rhs: Self) -> i128 {
+            fn div(self, rhs: Self) -> $ty {
                 self.0 / rhs.0
             }
         }
     };
 }
 
-declare_amount_type!(ResourceWeight);
-declare_amount_type!(ResourceAmount);
-declare_amount_type!(TransportAmount);
+declare_amount_type!(ResourceWeight, i64);
+declare_amount_type!(ResourceAmount, i64);
+declare_amount_type!(Ticks, i64);
 
 impl Mul<ResourceWeight> for ResourceAmount {
     type Output = ResourceWeight;

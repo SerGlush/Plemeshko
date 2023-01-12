@@ -1,3 +1,5 @@
+use std::{collections::HashMap, hash::Hash};
+
 use super::{Object, ParseError, ParseErrorKind, ParseResult, Path, Value};
 
 pub trait FromValue: Sized {
@@ -87,7 +89,26 @@ impl<T: FromValue> FromValue for Option<T> {
 impl<T: FromValue> FromValue for Vec<T> {
     fn from_value(value: Value) -> ParseResult<Self> {
         match value {
-            Value::Array(array) => array.into_iter().map(T::from_value).try_collect(),
+            Value::Array(array) => array
+                .into_iter()
+                .enumerate()
+                .map(|(i, v)| T::from_value(v).map_err(|e| e.lift(&i.to_string())))
+                .try_collect(),
+            _ => parse_type_err_res(),
+        }
+    }
+}
+
+impl<K: From<String> + Eq + Hash, V: FromValue> FromValue for HashMap<K, V> {
+    fn from_value(value: Value) -> ParseResult<Self> {
+        match value {
+            Value::Object(object) => object
+                .into_iter()
+                .map(|(key, value)| {
+                    let value = V::from_value(value).map_err(|e| e.lift(key.as_str()))?;
+                    Ok((K::from(key), value))
+                })
+                .try_collect(),
             _ => parse_type_err_res(),
         }
     }

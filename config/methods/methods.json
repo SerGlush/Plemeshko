@@ -2,8 +2,8 @@
     {
         "#tag": "Method",
         "#name": "hunt_animals",
-        "resources": [
-            ["food", 20]
+        "setting_groups": [
+            "hunting_tool"
         ]
     }
 ]

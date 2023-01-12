@@ -10,7 +10,6 @@ use super::transport_group::TransportGroupId;
 
 #[derive(Config)]
 pub struct Resource {
-    pub consumable: bool,
     pub transport_group: TransportGroupId,
     pub transport_weight: ResourceWeight,
 }

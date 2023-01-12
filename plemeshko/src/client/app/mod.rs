@@ -33,7 +33,7 @@ pub fn draw_erection(ui: &mut Ui, erection: &Erection) {
         }
     });
     for method in erection.methods().iter() {
-        ui.horizontal(|ui| ui.label(method.as_str()).on_hover_text("Placeholder"));
+        ui.horizontal(|ui| ui.label(method.id.as_str()).on_hover_text("Placeholder"));
     }
 }
 

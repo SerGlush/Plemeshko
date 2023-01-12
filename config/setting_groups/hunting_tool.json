@@ -1,0 +1,32 @@
+[
+    {
+        "#tag": "SettingGroup",
+        "#name": "hunting_tool",
+        "settings": [
+            {
+                "#name": "sticks_&_rocks",
+                "input": {
+                    "human": 8,
+                    "food": 70
+                },
+                "output": {
+                    "human": 8
+                },
+                "time_to_complete": 0
+            },
+            {
+                "#name": "stone_insruments",
+                "input": {
+                    "human": 8,
+                    "food": 80,
+                    "stone_instrument": 8
+                },
+                "output": {
+                    "human": 8,
+                    "stone_instrument": 6
+                },
+                "time_to_complete": 0
+            }
+        ]
+    }
+]

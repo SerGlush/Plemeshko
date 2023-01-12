@@ -31,6 +31,9 @@ impl Sim {
             .register::<config::resource::Resource>()
             .map_err(Box::new)?;
         config_repo_builder
+            .register::<config::setting_group::SettingGroup>()
+            .map_err(Box::new)?;
+        config_repo_builder
             .register::<config::transport::Transport>()
             .map_err(Box::new)?;
         config_repo_builder

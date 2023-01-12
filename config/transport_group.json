@@ -1,0 +1,14 @@
+[
+    {
+        "#tag": "TransportGroup",
+        "#name": "solid"
+    },
+    {
+        "#tag": "TransportGroup",
+        "#name": "liquid"
+    },
+    {
+        "#tag": "TransportGroup",
+        "#name": "gas"
+    }
+]
