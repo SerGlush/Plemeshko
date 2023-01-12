@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{Object, ParseError, ParseErrorKind, ParseResult, Path, Value};
 
 pub trait FromValue: Sized {
@@ -88,6 +90,18 @@ impl<T: FromValue> FromValue for Vec<T> {
     fn from_value(value: Value) -> ParseResult<Self> {
         match value {
             Value::Array(array) => array.into_iter().map(T::from_value).try_collect(),
+            _ => parse_type_err_res(),
+        }
+    }
+}
+
+impl<V: FromValue> FromValue for HashMap<String, V> {
+    fn from_value(value: Value) -> ParseResult<Self> {
+        match value {
+            Value::Object(object) => object
+                .into_iter()
+                .map(|pair| Ok((pair.0, V::from_value(pair.1)?)))
+                .try_collect(),
             _ => parse_type_err_res(),
         }
     }

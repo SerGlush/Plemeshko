@@ -1,16 +1,18 @@
+use egui::epaint::ahash::HashMap;
 use plegine::{
     config::{Config, ConfigId},
     json::FromValue,
 };
 use plegine_derive::{Config, FromValue};
 
-use crate::server::units::Ticks;
+use crate::server::units::{ResourceAmount, Ticks};
 
-use super::resource::signed_storage::ResourceStorageSigned;
+use super::resource::ResourceId;
 
 #[derive(FromValue)]
 pub struct Setting {
-    pub resources: Vec<ResourceStorageSigned>,
+    pub input: HashMap<ResourceId, ResourceAmount>,
+    pub output: HashMap<ResourceId, ResourceAmount>,
     pub time_to_complete: Option<Ticks>,
 }
 

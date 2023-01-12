@@ -2,21 +2,18 @@
     {
         "#tag": "Resource",
         "#name": "human",
-        "consumable": false,
         "transport_group": "solid",
         "transport_weight": 80
     },
     {
         "#tag": "Resource",
         "#name": "food",
-        "consumable": true,
         "transport_group": "solid",
         "transport_weight": 2
     },
     {
         "#tag": "Resource",
         "#name": "stone_instrument",
-        "consumable": true,
         "transport_group": "solid",
         "transport_weight": 4
     }
