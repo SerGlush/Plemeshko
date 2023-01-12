@@ -5,25 +5,27 @@
         "settings": [
             {
                 "#name": "sticks_&_rocks",
-                "input": [
-                    ["human", 8],
-                    ["food", 70]
-                ],
-                "output": [
-                    ["human", 8]
-                ]
+                "input": {
+                    "human": 8,
+                    "food": 70
+                },
+                "output": {
+                    "human": 8
+                },
+                "time_to_complete": null
             },
             {
                 "#name": "stone_insruments",
-                "input": [
-                    ["human", 8],
-                    ["food", 80],
-                    ["stone_instrument", 8]
-                ],
-                "output": [
-                    ["human", 8],
-                    ["stone_instrument", 6]
-                ]
+                "input": {
+                    "human": 8,
+                    "food": 80,
+                    "stone_instrument": 8
+                },
+                "output": {
+                    "human": 8,
+                    "stone_instrument": 6
+                },
+                "time_to_complete": null
             }
         ]
     }
