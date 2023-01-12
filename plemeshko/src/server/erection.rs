@@ -8,7 +8,7 @@ use std::{
 
 use super::{
     config::{
-        method::{Method, MethodId},
+        method::{Method, MethodId, SelectedMethod},
         resource::{signed_storage::ResourceStorageSigned, storage::ResourceStorage, ResourceId},
         transport::{Transport, TransportId},
         transport_group::TransportGroupId,
@@ -20,7 +20,7 @@ use super::{
 
 pub struct Erection {
     name: String,
-    methods: Vec<MethodId>,
+    selected_methods: Vec<SelectedMethod>,
     transport: HashMap<TransportGroupId, TransportId>,
     single_io: ResourceStorageSigned,
     max_io: ResourceStorageSigned,
@@ -44,43 +44,41 @@ impl Erection {
     pub fn new(
         sim: &Sim,
         name: String,
-        methods: Vec<MethodId>,
+        selected_methods: Vec<SelectedMethod>,
         transport: HashMap<TransportGroupId, TransportId>,
     ) -> SimResult<Self> {
-        let mut total_delta = HashMap::<ResourceId, ResourceAmount>::new();
-        for method in iter_methods(&methods, sim) {
-            let method = method?;
-            for (resource_id, delta) in method.setting_groups.positive.iter() {
-                total_delta
-                    .entry(resource_id.to_owned())
-                    .or_default()
-                    .add_assign(*delta);
-            }
-            for (resource_id, delta) in method.setting_groups.negative.iter() {
-                total_delta
-                    .entry(resource_id.to_owned())
-                    .or_default()
-                    .sub_assign(*delta);
-            }
-        }
-
-        let mut single_import = HashMap::with_capacity(total_delta.len() / 2);
-        let mut single_export = HashMap::with_capacity(total_delta.len() / 2);
-        let mut max_import = HashMap::with_capacity(total_delta.len() / 2);
-        let mut max_export = HashMap::with_capacity(total_delta.len() / 2);
-        for (resource_id, delta) in total_delta {
-            if delta < ResourceAmount::default() {
-                single_import.insert(resource_id.clone(), -delta);
-                max_import.insert(resource_id, ResourceAmount(0));
-            } else if delta > ResourceAmount::default() {
-                single_export.insert(resource_id.clone(), delta);
-                max_export.insert(resource_id, ResourceAmount(0));
+        let mut single_import = HashMap::<ResourceId, ResourceAmount>::new();
+        let mut single_export = HashMap::<ResourceId, ResourceAmount>::new();
+        let mut max_import = HashMap::new();
+        let mut max_export = HashMap::new();
+        for selected_method in selected_methods.iter() {
+            // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
+            for selected_setting in selected_method.settings.iter() {
+                let setting_group = sim
+                    .configs
+                    .get(&selected_setting.group_id)
+                    .map_err(SimError::ConfigRetrievalFailed)?;
+                let setting = &setting_group.settings[selected_setting.index];
+                for (resource_id, delta) in setting.output.iter() {
+                    single_export
+                        .entry(resource_id.to_owned())
+                        .or_default()
+                        .add_assign(*delta);
+                    let _ = max_export.try_insert(resource_id.to_owned(), ResourceAmount(0));
+                }
+                for (resource_id, delta) in setting.input.iter() {
+                    single_import
+                        .entry(resource_id.to_owned())
+                        .or_default()
+                        .sub_assign(*delta);
+                    let _ = max_import.try_insert(resource_id.to_owned(), ResourceAmount(0));
+                }
             }
         }
 
         Ok(Erection {
             name,
-            methods,
+            selected_methods,
             transport,
             single_io: ResourceStorageSigned {
                 positive: single_export,
@@ -100,8 +98,8 @@ impl Erection {
         &self.name
     }
 
-    pub fn methods(&self) -> &Vec<MethodId> {
-        &self.methods
+    pub fn methods(&self) -> &Vec<SelectedMethod> {
+        &self.selected_methods
     }
 
     pub fn transport(&self) -> &HashMap<TransportGroupId, TransportId> {

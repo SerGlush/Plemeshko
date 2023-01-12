@@ -23,3 +23,8 @@ pub struct SettingGroup {
 }
 
 pub type SettingGroupId = ConfigId<SettingGroup>;
+
+pub struct SelectedSetting {
+    pub group_id: SettingGroupId,
+    pub index: usize,
+}
