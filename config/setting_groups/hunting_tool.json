@@ -1,6 +1,6 @@
 [
     {
-        "#tag": "Category",
+        "#tag": "SettingGroup",
         "#name": "hunting_tool",
         "settings": [
             {
