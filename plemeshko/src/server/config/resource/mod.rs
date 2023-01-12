@@ -4,12 +4,14 @@ pub mod storage;
 use plegine::config::{Config, ConfigId};
 use plegine_derive::Config;
 
-use crate::server::{transport_group::TransportGroup, units::ResourceWeight};
+use crate::server::units::ResourceWeight;
+
+use super::transport_group::TransportGroupId;
 
 #[derive(Config)]
 pub struct Resource {
     pub consumable: bool,
-    pub transport_group: TransportGroup,
+    pub transport_group: TransportGroupId,
     pub transport_weight: ResourceWeight,
 }
 

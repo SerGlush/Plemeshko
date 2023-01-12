@@ -4,8 +4,8 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 600;
+const WIDTH: u32 = 960;
+const HEIGHT: u32 = 540;
 
 pub fn initialize() -> (EventLoop<()>, Window) {
     let event_loop = EventLoop::new();

@@ -1,6 +1,7 @@
 use std::{
     any::{type_name, Any, TypeId},
     collections::HashMap,
+    fmt::Display,
 };
 
 use super::{Config, ConfigId};
@@ -16,6 +17,7 @@ pub enum ConfigStoreRetrievalError {
     StoreTypeInvalid,
 }
 
+#[derive(Debug)]
 pub enum ConfigRetrievalError {
     StoreNotRegistered { kind: &'static str },
     StoreTypeInvalid,
@@ -29,6 +31,20 @@ impl From<ConfigStoreRetrievalError> for ConfigRetrievalError {
                 ConfigRetrievalError::StoreNotRegistered { kind }
             }
             ConfigStoreRetrievalError::StoreTypeInvalid => ConfigRetrievalError::StoreTypeInvalid,
+        }
+    }
+}
+
+impl Display for ConfigRetrievalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConfigRetrievalError::StoreNotRegistered { kind } => {
+                write!(f, "Store not registered for \"{kind}\"")
+            }
+            ConfigRetrievalError::StoreTypeInvalid => write!(f, "Store type invalid"),
+            ConfigRetrievalError::NotInStore { kind, id } => {
+                write!(f, "Not in store \"{id}\" of type \"{kind}\"")
+            }
         }
     }
 }
@@ -48,10 +64,10 @@ impl ConfigRepository {
     pub fn get<C: Config>(&self, id: &ConfigId<C>) -> Result<&C, ConfigRetrievalError> {
         match self.get_store::<C>() {
             Ok(store) => store
-                .get(id.as_string())
+                .get(id.as_str())
                 .ok_or(ConfigRetrievalError::NotInStore {
                     kind: type_name::<C>(),
-                    id: id.as_string().clone(),
+                    id: id.as_str().to_owned(),
                 }),
             Err(e) => Err(e.into()),
         }

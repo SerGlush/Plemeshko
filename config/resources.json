@@ -1,9 +1,16 @@
 [
     {
         "#tag": "Resource",
-        "#name": "water",
+        "#name": "human",
+        "consumable": false,
+        "transport_group": "solid",
+        "transport_weight": 80
+    },
+    {
+        "#tag": "Resource",
+        "#name": "food",
         "consumable": true,
-        "transport_group": "liquid",
-        "transport_weight": 1
+        "transport_group": "solid",
+        "transport_weight": 2
     }
 ]

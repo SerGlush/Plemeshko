@@ -1,4 +1,4 @@
-use std::{hash::Hash, marker::PhantomData};
+use std::{borrow::Borrow, fmt::Display, hash::Hash, marker::PhantomData};
 
 use crate::json::{self, FromValue};
 
@@ -17,11 +17,11 @@ pub trait Config: Sized + Send + 'static {
 pub struct ConfigId<C>(String, PhantomData<C>);
 
 impl<C> ConfigId<C> {
-    pub fn new(id: String) -> Self {
-        ConfigId(id, PhantomData)
+    pub fn new<S: Into<String>>(id: S) -> Self {
+        ConfigId(id.into(), PhantomData)
     }
 
-    pub fn as_string(&self) -> &String {
+    pub fn as_str(&self) -> &str {
         &self.0
     }
 
@@ -53,5 +53,17 @@ impl<C> Eq for ConfigId<C> {}
 impl<C> FromValue for ConfigId<C> {
     fn from_value(value: serde_json::Value) -> json::ParseResult<Self> {
         Ok(ConfigId::new(String::from_value(value)?))
+    }
+}
+
+impl<C> Display for ConfigId<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<C> Borrow<str> for ConfigId<C> {
+    fn borrow(&self) -> &str {
+        self.0.borrow()
     }
 }
