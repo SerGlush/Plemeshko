@@ -12,5 +12,12 @@
         "consumable": true,
         "transport_group": "solid",
         "transport_weight": 2
+    },
+    {
+        "#tag": "Resource",
+        "#name": "stone_instrument",
+        "consumable": true,
+        "transport_group": "solid",
+        "transport_weight": 4
     }
 ]

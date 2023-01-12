@@ -1,0 +1,23 @@
+[
+    {
+        "#tag": "Category",
+        "#name": "hunting_tool",
+        "options": [
+            {
+                "#name": "sticks_&_rocks",
+                "resources": [
+                    ["human", 8],
+                    ["food", 72]
+                ]
+            },
+            {
+                "#name": "stone_insruments",
+                "resources": [
+                    ["human", 8],
+                    ["food", 80],
+                    ["stone_instrument", 2]
+                ]
+            }
+        ]
+    }
+]
