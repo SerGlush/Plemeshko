@@ -2,7 +2,7 @@
     {
         "#tag": "Method",
         "#name": "hunt_animals",
-        "option_groups": [
+        "setting_groups": [
             "hunting_tool"
         ]
     }

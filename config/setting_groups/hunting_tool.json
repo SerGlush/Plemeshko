@@ -2,7 +2,7 @@
     {
         "#tag": "Category",
         "#name": "hunting_tool",
-        "options": [
+        "settings": [
             {
                 "#name": "sticks_&_rocks",
                 "resources": [

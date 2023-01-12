@@ -50,13 +50,13 @@ impl Erection {
         let mut total_delta = HashMap::<ResourceId, ResourceAmount>::new();
         for method in iter_methods(&methods, sim) {
             let method = method?;
-            for (resource_id, delta) in method.resources.positive.iter() {
+            for (resource_id, delta) in method.setting_groups.positive.iter() {
                 total_delta
                     .entry(resource_id.to_owned())
                     .or_default()
                     .add_assign(*delta);
             }
-            for (resource_id, delta) in method.resources.negative.iter() {
+            for (resource_id, delta) in method.setting_groups.negative.iter() {
                 total_delta
                     .entry(resource_id.to_owned())
                     .or_default()
