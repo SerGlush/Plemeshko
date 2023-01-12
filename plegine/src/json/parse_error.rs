@@ -19,6 +19,13 @@ pub struct ParseError {
 pub type ParseResult<T> = Result<T, ParseError>;
 
 impl ParseError {
+    pub fn is_absent(&self) -> bool {
+        match self.kind {
+            ParseErrorKind::FieldAbsent => true,
+            _ => false,
+        }
+    }
+
     pub fn lift(self, key: &str) -> Self {
         ParseError {
             path: self.path.lift(key),

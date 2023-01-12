@@ -37,7 +37,7 @@ fn from_value_derive_impl_struct_named(
             let field_ty = &field.ty;
             let field_id = &field.ident;
             ts.extend(quote! {
-                #field_id: <#field_ty as FromValue>::from_value(plegine::json::try_take_key(#src, stringify!(#field_id)).map_err(|e| e.lift(stringify!(#field_id)))?)?,
+                #field_id: plegine::json::try_take_key::<#field_ty>(#src, stringify!(#field_id))?,
             });
             ts
         });
