@@ -1,4 +1,5 @@
-use egui::epaint::ahash::HashMap;
+use std::collections::HashMap;
+
 use plegine::{
     config::{Config, ConfigId},
     json::FromValue,

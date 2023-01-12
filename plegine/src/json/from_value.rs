@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 use super::{Object, ParseError, ParseErrorKind, ParseResult, Path, Value};
 
@@ -95,12 +95,12 @@ impl<T: FromValue> FromValue for Vec<T> {
     }
 }
 
-impl<V: FromValue> FromValue for HashMap<String, V> {
+impl<K: From<String> + Eq + Hash, V: FromValue> FromValue for HashMap<K, V> {
     fn from_value(value: Value) -> ParseResult<Self> {
         match value {
             Value::Object(object) => object
                 .into_iter()
-                .map(|pair| Ok((pair.0, V::from_value(pair.1)?)))
+                .map(|pair| Ok((K::from(pair.0), V::from_value(pair.1)?)))
                 .try_collect(),
             _ => parse_type_err_res(),
         }

@@ -56,6 +56,12 @@ impl<C> FromValue for ConfigId<C> {
     }
 }
 
+impl<C> From<String> for ConfigId<C> {
+    fn from(value: String) -> Self {
+        ConfigId(value, PhantomData)
+    }
+}
+
 impl<C> Display for ConfigId<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
