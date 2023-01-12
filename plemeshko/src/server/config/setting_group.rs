@@ -14,7 +14,7 @@ use super::resource::ResourceId;
 pub struct Setting {
     pub input: HashMap<ResourceId, ResourceAmount>,
     pub output: HashMap<ResourceId, ResourceAmount>,
-    pub time_to_complete: Option<Ticks>,
+    pub time_to_complete: Ticks,
 }
 
 #[derive(Config)]
