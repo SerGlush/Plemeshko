@@ -215,7 +215,7 @@ impl Erection {
         let activated = self
             .storage
             .negative
-            .cor_sub_all_times(&self.single_io.negative, self.active as i128);
+            .cor_sub_all_times(&self.single_io.negative, self.active as i64);
         self.storage
             .positive
             .cor_put_all_times(&self.single_io.positive, activated);
@@ -243,7 +243,7 @@ impl Erection {
                 let transported_amount_already =
                     ResourceAmount(*transported_weight_already / res.transport_weight);
                 *transported_weight_already = ResourceWeight(0);
-                let can_fuel = depot.cor_has_all_times(&tr.fuel.negative, i128::MAX);
+                let can_fuel = depot.cor_has_all_times(&tr.fuel.negative, i64::MAX);
                 let req_transport = res_weight.0.div_ceil(tr.capacity.0);
                 let transport = req_transport.min(can_fuel);
                 depot.cor_sub_all_times_unchecked(&tr.fuel.negative, transport);
