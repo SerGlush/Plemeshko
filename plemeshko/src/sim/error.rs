@@ -1,7 +1,8 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 use plegine::config::ConfigRetrievalError;
 
+#[derive(Debug)]
 pub enum SimError {
     ConfigRetrievalFailed(ConfigRetrievalError),
 }
@@ -15,3 +16,5 @@ impl Display for SimError {
         }
     }
 }
+
+impl Error for SimError {}

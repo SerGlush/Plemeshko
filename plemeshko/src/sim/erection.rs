@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{env::Env, sim::units::ResourceAmount, util::cor::Cor};
 use std::{
     collections::{hash_map::RawEntryMut, HashMap},
@@ -18,31 +20,48 @@ use super::{
     units::ResourceWeight,
 };
 
-pub struct Erection {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ErectionSnapshot {
     name: String,
     selected_methods: Vec<SelectedMethod>,
     transport: HashMap<TransportGroupId, TransportId>,
-    single_io: ResourceIo,
-    max_io: ResourceIo,
     storage: ResourceIo,
     count: u32,
     active: u32,
 }
 
+pub struct Erection {
+    state: ErectionSnapshot,
+    single_io: ResourceIo,
+    max_io: ResourceIo,
+}
+
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
 
-impl Erection {
+impl ErectionSnapshot {
     pub fn new(
-        env: &Env,
         name: String,
         selected_methods: Vec<SelectedMethod>,
         transport: HashMap<TransportGroupId, TransportId>,
-    ) -> SimResult<Self> {
+    ) -> Self {
+        ErectionSnapshot {
+            name,
+            selected_methods,
+            transport,
+            storage: ResourceIo::new(),
+            count: 0,
+            active: 0,
+        }
+    }
+}
+
+impl Erection {
+    pub fn restore(env: &Env, snapshot: ErectionSnapshot) -> SimResult<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
         let mut max_input = HashMap::new();
         let mut max_output = HashMap::new();
-        for selected_method in selected_methods.iter() {
+        for selected_method in snapshot.selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
                 let setting_group = env
@@ -68,53 +87,52 @@ impl Erection {
         }
 
         Ok(Erection {
-            name,
-            selected_methods,
-            transport,
+            state: snapshot,
             single_io: ResourceIo {
                 input: single_output,
                 output: single_input,
             },
-            count: 0,
-            active: 0,
             max_io: ResourceIo {
                 input: max_output,
                 output: max_input,
             },
-            storage: ResourceIo::new(),
         })
     }
 
+    pub fn snapshot(&self) -> ErectionSnapshot {
+        self.state.clone()
+    }
+
     pub fn name(&self) -> &str {
-        &self.name
+        &self.state.name
     }
 
     pub fn methods(&self) -> &Vec<SelectedMethod> {
-        &self.selected_methods
+        &self.state.selected_methods
     }
 
     pub fn transport(&self) -> &HashMap<TransportGroupId, TransportId> {
-        &self.transport
+        &self.state.transport
     }
 
     pub fn count(&self) -> u32 {
-        self.count
+        self.state.count
     }
 
     pub fn active(&self) -> u32 {
-        self.count
+        self.state.count
     }
 
     pub fn set_count(&mut self, count: u32) {
-        if count < self.active {
-            self.set_active(self.count);
+        if count < self.state.active {
+            self.set_active(self.state.count);
         }
-        self.count = count;
+        self.state.count = count;
     }
 
     pub fn set_active(&mut self, active: u32) {
         // let delta = active - self.active;
-        self.active = active;
+        self.state.active = active;
     }
 
     fn step_input(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
@@ -126,6 +144,7 @@ impl Erection {
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
             let already_stored = self
+                .state
                 .storage
                 .output
                 .get(res_id)
@@ -150,7 +169,7 @@ impl Erection {
                 RawEntryMut::Vacant(vacant) => {
                     let tr = env
                         .configs
-                        .get(self.transport.get(&res.transport_group).unwrap())
+                        .get(self.state.transport.get(&res.transport_group).unwrap())
                         .map_err(SimError::ConfigRetrievalFailed)?;
                     vacant.insert(res.transport_group.clone(), (tr, ResourceWeight(0)));
                 }
@@ -189,17 +208,19 @@ impl Erection {
                     depot.cor_put_all(&tr.fuel.input);
                 }
             }
-            self.storage.output.cor_put(res_id, total_stored);
+            self.state.storage.output.cor_put(res_id, total_stored);
         }
         Ok(())
     }
 
     fn step_process(&mut self) {
         let activated = self
+            .state
             .storage
             .output
-            .cor_sub_all_times(&self.single_io.output, self.active as i64);
-        self.storage
+            .cor_sub_all_times(&self.single_io.output, self.state.active as i64);
+        self.state
+            .storage
             .input
             .cor_put_all_times(&self.single_io.input, activated);
     }
@@ -207,7 +228,7 @@ impl Erection {
     // todo: fair output scheduler
     fn step_output(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
-        for (res_id, res_amount) in self.storage.input.iter_mut() {
+        for (res_id, res_amount) in self.state.storage.input.iter_mut() {
             let res = env
                 .configs
                 .get(res_id)

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use plegine::config::ConfigId;
 use plegine_derive::Config;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::sim::units::{ResourceAmount, Ticks};
 
@@ -23,6 +23,7 @@ pub struct SettingGroup {
 
 pub type SettingGroupId = ConfigId<SettingGroup>;
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SelectedSetting {
     pub group_id: SettingGroupId,
     pub index: usize,

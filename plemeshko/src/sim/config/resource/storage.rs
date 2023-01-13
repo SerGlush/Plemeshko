@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::sim::units::ResourceAmount;
 
@@ -10,7 +10,7 @@ pub use crate::util::cor::*;
 
 pub type ResourceMap = HashMap<ResourceId, ResourceAmount>;
 
-#[derive(Deserialize, Default)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct ResourceIo {
     #[serde(default)]
     pub input: ResourceMap,

@@ -1,19 +1,34 @@
 #![feature(hash_raw_entry)]
 #![feature(map_try_insert)]
 #![feature(int_roundings)]
+#![feature(iterator_try_collect)]
 #![deny(elided_lifetimes_in_paths)]
 #![allow(dead_code)]
 
-use std::{sync::Mutex, time::Instant};
+use std::{error::Error, sync::Mutex, time::Instant};
 
 use env::Env;
-use sim::Sim;
+use sim::{Sim, SimSnapshot};
 
 mod app;
 mod env;
 mod framework;
 mod sim;
 mod util;
+
+fn load_sim(env: &Env) -> Result<Sim, Box<dyn Error>> {
+    let mut cli_args_iter = std::env::args();
+    cli_args_iter.next(); // exe
+    Ok(match cli_args_iter.next() {
+        Some(snapshot_path) => {
+            let file = std::fs::File::open(snapshot_path)?;
+            let reader = std::io::BufReader::new(file);
+            let snapshot = serde_json::from_reader::<_, SimSnapshot>(reader)?;
+            Sim::restore(env, snapshot)?
+        }
+        None => Sim::new(),
+    })
+}
 
 fn main() {
     // todo: consider RwLock / partial locking; multithreaded sim
@@ -24,7 +39,14 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let sim = Box::leak(Box::new(Mutex::new(Sim::new())));
+    let sim = match load_sim(&env) {
+        Ok(sim) => sim,
+        Err(e) => {
+            println!("Error reading Sim snapshot: {e}");
+            std::process::exit(1);
+        }
+    };
+    let sim = Box::leak(Box::new(Mutex::new(sim)));
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
             let mut tick_delay = Sim::TICK_DELAY;

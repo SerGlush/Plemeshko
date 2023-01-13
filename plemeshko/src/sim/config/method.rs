@@ -1,6 +1,6 @@
 use plegine::config::ConfigId;
 use plegine_derive::Config;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::setting_group::{SelectedSetting, SettingGroupId};
 
@@ -11,6 +11,7 @@ pub struct Method {
 
 pub type MethodId = ConfigId<Method>;
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SelectedMethod {
     pub id: MethodId,
     pub settings: Vec<SelectedSetting>,

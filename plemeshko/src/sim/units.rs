@@ -1,5 +1,5 @@
 use derive_more::{Add, AddAssign, Display, FromStr, Neg, Sub, SubAssign};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::ops::{Mul, MulAssign};
 
 macro_rules! declare_amount_type {
@@ -7,10 +7,11 @@ macro_rules! declare_amount_type {
         #[derive(
             Clone,
             Copy,
-            Deserialize,
             FromStr,
             Default,
             Display,
+            Serialize,
+            Deserialize,
             PartialEq,
             PartialOrd,
             Eq,
