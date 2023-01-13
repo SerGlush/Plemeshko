@@ -1,24 +1,22 @@
 use std::collections::HashMap;
 
-use plegine::{
-    config::{Config, ConfigId},
-    json::FromValue,
-};
-use plegine_derive::{Config, FromValue};
+use plegine::config::ConfigId;
+use plegine_derive::Config;
+use serde::Deserialize;
 
 use crate::server::units::{ResourceAmount, Ticks};
 
 use super::resource::ResourceId;
 
-#[derive(FromValue)]
+#[derive(Deserialize)]
 pub struct Setting {
     pub input: HashMap<ResourceId, ResourceAmount>,
     pub output: HashMap<ResourceId, ResourceAmount>,
-    #[default]
+    #[serde(default)]
     pub time_to_complete: Ticks,
 }
 
-#[derive(Config)]
+#[derive(Config, Deserialize)]
 pub struct SettingGroup {
     pub settings: Vec<Setting>,
 }

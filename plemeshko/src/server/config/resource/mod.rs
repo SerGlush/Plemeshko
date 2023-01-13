@@ -1,14 +1,14 @@
-pub mod signed_storage;
 pub mod storage;
 
-use plegine::config::{Config, ConfigId};
+use plegine::config::ConfigId;
 use plegine_derive::Config;
+use serde::Deserialize;
 
 use crate::server::units::ResourceWeight;
 
 use super::transport_group::TransportGroupId;
 
-#[derive(Config)]
+#[derive(Config, Deserialize)]
 pub struct Resource {
     pub transport_group: TransportGroupId,
     pub transport_weight: ResourceWeight,

@@ -1,9 +1,11 @@
 [
     {
-        "#tag": "Method",
-        "#name": "hunt_animals",
-        "setting_groups": [
-            "hunting_tool"
-        ]
+        "tag": "Method",
+        "name": "hunt_animals",
+        "payload": {
+            "setting_groups": [
+                "hunting_tool"
+            ]
+        }
     }
 ]

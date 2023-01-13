@@ -1,49 +1,13 @@
-use crate::util::json_optional_key_w_default;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DataStruct, Fields, FieldsNamed};
 
 pub fn config_derive_impl(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
-    let src = quote! { &mut src };
-
-    let parse_body = match &ast.data {
-        syn::Data::Struct(DataStruct {
-            fields: Fields::Named(fields),
-            ..
-        }) => config_derive_impl_struct_named(src, name, fields),
-        syn::Data::Struct(DataStruct { fields: _, .. }) => todo!(),
-        syn::Data::Enum(_) => todo!(),
-        syn::Data::Union(_) => quote! { compile_error!("Can't derive Config for unions.") },
-    };
 
     let gen = quote! {
-        impl Config for #name {
+        impl plegine::config::Config for #name {
             const TAG: &'static str = stringify!(#name);
-
-            fn parse(mut src: plegine::json::Object) -> Result<Self, plegine::json::ParseError> {
-                #parse_body
-            }
         }
     };
     gen.into()
-}
-
-fn config_derive_impl_struct_named(
-    src: TokenStream,
-    con: &Ident,
-    fields: &FieldsNamed,
-) -> proc_macro2::TokenStream {
-    let fields_ts = fields
-        .named
-        .iter()
-        .fold(TokenStream::new(), |mut ts, field| {
-            ts.extend(json_optional_key_w_default(&src, field));
-            ts
-        });
-    quote! {
-        Ok(#con {
-            #fields_ts
-        })
-    }
 }

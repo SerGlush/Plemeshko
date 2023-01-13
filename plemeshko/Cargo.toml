@@ -12,7 +12,10 @@ wgpu = "0.14"
 egui = "0.20"
 egui-wgpu = "0.20"
 egui-winit = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
 derive_more = "0.99"
+educe = "0.4.20"
 either = "1.8"
 futures = "0.3"
 static_assertions = "1.1"

@@ -1,9 +1,11 @@
 [
     {
-        "#tag": "Transport",
-        "#name": "manual",
-        "group": "solid",
-        "capacity": 400,
-        "fuel": []
+        "tag": "Transport",
+        "name": "manual",
+        "payload": {
+            "group": "solid",
+            "capacity": 400,
+            "fuel": {}
+        }
     }
 ]

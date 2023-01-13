@@ -1,9 +1,10 @@
-use plegine::config::{Config, ConfigId};
+use plegine::config::ConfigId;
 use plegine_derive::Config;
+use serde::Deserialize;
 
 use super::setting_group::{SelectedSetting, SettingGroupId};
 
-#[derive(Config)]
+#[derive(Config, Deserialize)]
 pub struct Method {
     pub setting_groups: Vec<SettingGroupId>,
 }

@@ -1,15 +1,13 @@
-use std::ops::{Mul, MulAssign};
-
 use derive_more::{Add, AddAssign, Display, FromStr, Neg, Sub, SubAssign};
-use plegine::json::FromValue;
-use plegine_derive::FromValue;
+use serde::Deserialize;
+use std::ops::{Mul, MulAssign};
 
 macro_rules! declare_amount_type {
     ($name:ident, $ty:ty) => {
         #[derive(
             Clone,
             Copy,
-            FromValue,
+            Deserialize,
             FromStr,
             Default,
             Display,

@@ -1,20 +1,26 @@
 [
     {
-        "#tag": "Resource",
-        "#name": "human",
-        "transport_group": "solid",
-        "transport_weight": 80
+        "tag": "Resource",
+        "name": "human",
+        "payload": {
+            "transport_group": "solid",
+            "transport_weight": 80
+        }
     },
     {
-        "#tag": "Resource",
-        "#name": "food",
-        "transport_group": "solid",
-        "transport_weight": 2
+        "tag": "Resource",
+        "name": "food",
+        "payload": {
+            "transport_group": "solid",
+            "transport_weight": 2
+        }
     },
     {
-        "#tag": "Resource",
-        "#name": "stone_instrument",
-        "transport_group": "solid",
-        "transport_weight": 4
+        "tag": "Resource",
+        "name": "stone_instrument",
+        "payload": {
+            "transport_group": "solid",
+            "transport_weight": 4
+        }
     }
 ]

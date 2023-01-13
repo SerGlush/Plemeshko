@@ -9,7 +9,10 @@ use std::{
 use super::{
     config::{
         method::{Method, MethodId, SelectedMethod},
-        resource::{signed_storage::ResourceStorageSigned, storage::ResourceStorage, ResourceId},
+        resource::{
+            storage::{ResourceIo, ResourceMap},
+            ResourceId,
+        },
         transport::{Transport, TransportId},
         transport_group::TransportGroupId,
     },
@@ -22,9 +25,9 @@ pub struct Erection {
     name: String,
     selected_methods: Vec<SelectedMethod>,
     transport: HashMap<TransportGroupId, TransportId>,
-    single_io: ResourceStorageSigned,
-    max_io: ResourceStorageSigned,
-    storage: ResourceStorageSigned,
+    single_io: ResourceIo,
+    max_io: ResourceIo,
+    storage: ResourceIo,
     count: u32,
     active: u32,
 }
@@ -47,10 +50,10 @@ impl Erection {
         selected_methods: Vec<SelectedMethod>,
         transport: HashMap<TransportGroupId, TransportId>,
     ) -> SimResult<Self> {
-        let mut single_import = HashMap::<ResourceId, ResourceAmount>::new();
-        let mut single_export = HashMap::<ResourceId, ResourceAmount>::new();
-        let mut max_import = HashMap::new();
-        let mut max_export = HashMap::new();
+        let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
+        let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
+        let mut max_input = HashMap::new();
+        let mut max_output = HashMap::new();
         for selected_method in selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
@@ -60,18 +63,18 @@ impl Erection {
                     .map_err(SimError::ConfigRetrievalFailed)?;
                 let setting = &setting_group.settings[selected_setting.index];
                 for (resource_id, delta) in setting.output.iter() {
-                    single_export
+                    single_output
                         .entry(resource_id.to_owned())
                         .or_default()
                         .add_assign(*delta);
-                    let _ = max_export.try_insert(resource_id.to_owned(), ResourceAmount(0));
+                    let _ = max_output.try_insert(resource_id.to_owned(), ResourceAmount(0));
                 }
                 for (resource_id, delta) in setting.input.iter() {
-                    single_import
+                    single_input
                         .entry(resource_id.to_owned())
                         .or_default()
                         .sub_assign(*delta);
-                    let _ = max_import.try_insert(resource_id.to_owned(), ResourceAmount(0));
+                    let _ = max_input.try_insert(resource_id.to_owned(), ResourceAmount(0));
                 }
             }
         }
@@ -80,17 +83,17 @@ impl Erection {
             name,
             selected_methods,
             transport,
-            single_io: ResourceStorageSigned {
-                positive: single_export,
-                negative: single_import,
+            single_io: ResourceIo {
+                input: single_output,
+                output: single_input,
             },
             count: 0,
             active: 0,
-            max_io: ResourceStorageSigned {
-                positive: max_export,
-                negative: max_import,
+            max_io: ResourceIo {
+                input: max_output,
+                output: max_input,
             },
-            storage: ResourceStorageSigned::new(),
+            storage: ResourceIo::new(),
         })
     }
 
@@ -130,20 +133,16 @@ impl Erection {
         self.active = active;
     }
 
-    fn step_import(
-        &mut self,
-        depot: &mut ResourceStorage,
-        configs: &ConfigRepository,
-    ) -> SimResult<()> {
+    fn step_input(&mut self, depot: &mut ResourceMap, configs: &ConfigRepository) -> SimResult<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
-        let mut requested_resources = Vec::with_capacity(self.max_io.negative.len());
-        for (res_id, req_amount) in self.max_io.negative.iter() {
+        let mut requested_resources = Vec::with_capacity(self.max_io.output.len());
+        for (res_id, req_amount) in self.max_io.output.iter() {
             let res = configs
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
             let already_stored = self
                 .storage
-                .negative
+                .output
                 .get(res_id)
                 .map(Clone::clone)
                 .unwrap_or_default();
@@ -152,7 +151,7 @@ impl Erection {
             }
             let req_amount_transported = *req_amount - already_stored;
             let transportation_priority =
-                req_amount_transported / *self.single_io.negative.get(res_id).unwrap();
+                req_amount_transported / *self.single_io.output.get(res_id).unwrap();
             requested_resources.push((
                 res_id,
                 res,
@@ -198,13 +197,13 @@ impl Erection {
                     total_stored += amount_ready;
                 }
                 while *tr_remaining < res.transport_weight {
-                    if !depot.cor_sub_all(&tr.fuel.negative) {
+                    if !depot.cor_sub_all(&tr.fuel.output) {
                         break 'a;
                     }
-                    depot.cor_put_all(&tr.fuel.positive);
+                    depot.cor_put_all(&tr.fuel.input);
                 }
             }
-            self.storage.negative.cor_put(res_id, total_stored);
+            self.storage.output.cor_put(res_id, total_stored);
         }
         Ok(())
     }
@@ -212,21 +211,21 @@ impl Erection {
     fn step_process(&mut self) {
         let activated = self
             .storage
-            .negative
-            .cor_sub_all_times(&self.single_io.negative, self.active as i64);
+            .output
+            .cor_sub_all_times(&self.single_io.output, self.active as i64);
         self.storage
-            .positive
-            .cor_put_all_times(&self.single_io.positive, activated);
+            .input
+            .cor_put_all_times(&self.single_io.input, activated);
     }
 
-    // todo: fair export scheduler
-    fn step_export(
+    // todo: fair output scheduler
+    fn step_output(
         &mut self,
-        depot: &mut ResourceStorage,
+        depot: &mut ResourceMap,
         configs: &ConfigRepository,
     ) -> SimResult<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
-        for (res_id, res_amount) in self.storage.positive.iter_mut() {
+        for (res_id, res_amount) in self.storage.input.iter_mut() {
             let res = configs
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
@@ -241,11 +240,11 @@ impl Erection {
                 let transported_amount_already =
                     ResourceAmount(*transported_weight_already / res.transport_weight);
                 *transported_weight_already = ResourceWeight(0);
-                let can_fuel = depot.cor_has_all_times(&tr.fuel.negative, i64::MAX);
+                let can_fuel = depot.cor_has_all_times(&tr.fuel.output, i64::MAX);
                 let req_transport = res_weight.0.div_ceil(tr.capacity.0);
                 let transport = req_transport.min(can_fuel);
-                depot.cor_sub_all_times_unchecked(&tr.fuel.negative, transport);
-                depot.cor_put_all_times(&tr.fuel.positive, transport);
+                depot.cor_sub_all_times_unchecked(&tr.fuel.output, transport);
+                depot.cor_put_all_times(&tr.fuel.input, transport);
                 let transported_amount_newly = ResourceAmount(
                     (*res_amount - transported_amount_already)
                         .0
@@ -274,15 +273,9 @@ impl Erection {
         Ok(())
     }
 
-    pub fn step(
-        &mut self,
-        depot: &mut ResourceStorage,
-        configs: &ConfigRepository,
-    ) -> SimResult<()> {
-        self.step_import(depot, configs)?;
+    pub fn step(&mut self, depot: &mut ResourceMap, configs: &ConfigRepository) -> SimResult<()> {
+        self.step_input(depot, configs)?;
         self.step_process();
-        self.step_export(depot, configs)
+        self.step_output(depot, configs)
     }
 }
-
-pub type ErectionContainer = Vec<Erection>;

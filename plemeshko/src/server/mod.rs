@@ -5,14 +5,13 @@ pub mod units;
 
 use std::{error::Error, path::PathBuf, time::Duration};
 
-use erection::ErectionContainer;
 use plegine::config::{ConfigRepository, ConfigRepositoryBuilder};
 
-use self::{config::resource::storage::ResourceStorage, error::SimResult};
+use self::{config::resource::storage::ResourceMap, erection::Erection, error::SimResult};
 
 pub struct Sim {
-    pub depot: ResourceStorage,
-    pub erections: ErectionContainer,
+    pub depot: ResourceMap,
+    pub erections: Vec<Erection>,
     pub configs: ConfigRepository,
     exited: bool,
 }
@@ -49,8 +48,8 @@ impl Sim {
         config_repo_builder.load_directory(config_dir_path.as_path())?;
 
         Ok(Sim {
-            depot: ResourceStorage::new(),
-            erections: ErectionContainer::new(),
+            depot: ResourceMap::new(),
+            erections: Vec::new(),
             configs: config_repo_builder.build(),
             exited: false,
         })
