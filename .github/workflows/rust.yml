@@ -8,9 +8,17 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  fmt-build-test:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v3
