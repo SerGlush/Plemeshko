@@ -1,0 +1,28 @@
+{
+    "depot": {
+        "human": 100,
+        "food": 10000
+    },
+    "erections": [
+        {
+            "name": "Hunting House",
+            "selected_methods": [
+                {
+                    "id": "hunt_animals",
+                    "settings": [
+                        {
+                            "group_id": "hunting_tool",
+                            "index": 0
+                        }
+                    ]
+                }
+            ],
+            "transport": {
+                "solid": "manual"
+            },
+            "storage": {},
+            "count": 4,
+            "active": 4
+        }
+    ]
+}

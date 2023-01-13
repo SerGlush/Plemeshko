@@ -9,6 +9,7 @@ macro_rules! declare_amount_type {
             Copy,
             FromStr,
             Default,
+            Debug,
             Display,
             Serialize,
             Deserialize,

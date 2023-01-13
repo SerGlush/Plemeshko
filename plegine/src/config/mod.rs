@@ -12,7 +12,7 @@ pub trait Config: for<'a> Deserialize<'a> + Sized + Send + Sync + 'static {
 }
 
 #[derive(Educe, Serialize, Deserialize)]
-#[educe(Clone, Hash, PartialEq, Eq)]
+#[educe(Clone, Hash, PartialEq, Eq, Debug)]
 #[serde(transparent)]
 pub struct ConfigId<C>(String, PhantomData<C>);
 

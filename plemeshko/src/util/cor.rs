@@ -234,7 +234,10 @@ impl<K: Hash + Eq, V: Default> Cor for HashMap<K, V> {
         let available = self.cor_has_all_times(req, max);
         for (req_k, req_v) in req.iter() {
             let given_res_amount = *req_v * available;
-            self.get_mut(req_k).unwrap().sub_assign(given_res_amount); // todo: unwrap may panic if (req_v=0, has[req_k]=None, default=0>=0)
+            match self.get_mut(req_k) {
+                Some(value) => value.sub_assign(given_res_amount),
+                None => continue, // can just continue because guarded by "available"
+            }
         }
         available
     }

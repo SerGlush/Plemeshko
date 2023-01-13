@@ -61,6 +61,7 @@ impl Erection {
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
         let mut max_input = HashMap::new();
         let mut max_output = HashMap::new();
+        let active: i64 = snapshot.active.into();
         for selected_method in snapshot.selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
@@ -74,14 +75,14 @@ impl Erection {
                         .entry(resource_id.to_owned())
                         .or_default()
                         .add_assign(*delta);
-                    let _ = max_output.try_insert(resource_id.to_owned(), ResourceAmount(0));
+                    let _ = max_output.try_insert(resource_id.to_owned(), *delta * active);
                 }
                 for (resource_id, delta) in setting.input.iter() {
                     single_input
                         .entry(resource_id.to_owned())
                         .or_default()
-                        .sub_assign(*delta);
-                    let _ = max_input.try_insert(resource_id.to_owned(), ResourceAmount(0));
+                        .add_assign(*delta);
+                    let _ = max_input.try_insert(resource_id.to_owned(), *delta * active);
                 }
             }
         }
@@ -187,8 +188,11 @@ impl Erection {
             let mut req_amount = req_amount;
             'a: while req_amount > ResourceAmount::default() {
                 {
-                    let amount_ready =
-                        req_amount.min(ResourceAmount(*tr_remaining / res.transport_weight));
+                    let amount_ready = if res.transport_weight.0 != 0 {
+                        req_amount.min(ResourceAmount(*tr_remaining / res.transport_weight))
+                    } else {
+                        req_amount
+                    };
                     let res_depot = match depot.get_mut(res_id) {
                         Some(res_depot) => res_depot,
                         None => break 'a, // todo: handle 0-required-res ?
@@ -252,8 +256,21 @@ impl Erection {
                 .configs
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
-            let (tr, transported_weight_already) =
-                transport_state.get_mut(&res.transport_group).unwrap();
+            let (tr, transported_weight_already) = match transport_state
+                .raw_entry_mut()
+                .from_key(&res.transport_group)
+            {
+                RawEntryMut::Vacant(vacant) => {
+                    let tr = env
+                        .configs
+                        .get(self.state.transport.get(&res.transport_group).unwrap())
+                        .map_err(SimError::ConfigRetrievalFailed)?;
+                    vacant
+                        .insert(res.transport_group.clone(), (tr, ResourceWeight(0)))
+                        .1
+                }
+                RawEntryMut::Occupied(occupied) => occupied.into_mut(),
+            };
             let mut res_weight = *res_amount * res.transport_weight;
             let transported_amount = if res_weight <= *transported_weight_already {
                 transported_weight_already.sub_assign(res_weight);

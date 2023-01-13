@@ -4,7 +4,7 @@
         "name": "human",
         "payload": {
             "transport_group": "solid",
-            "transport_weight": 80
+            "transport_weight": 0
         }
     },
     {
