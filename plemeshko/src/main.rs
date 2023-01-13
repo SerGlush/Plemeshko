@@ -6,21 +6,25 @@
 
 use std::{sync::Mutex, time::Instant};
 
-use server::Sim;
+use env::Env;
+use sim::Sim;
 
-mod client;
-mod cor;
-mod server;
+mod app;
+mod env;
+mod framework;
+mod sim;
+mod util;
 
 fn main() {
     // todo: consider RwLock / partial locking; multithreaded sim
-    let sim = match Sim::new() {
-        Ok(sim) => Box::leak(Box::new(Mutex::new(sim))),
+    let env = match Env::new() {
+        Ok(env) => env,
         Err(e) => {
             println!("Sim initialization error: {e}");
             std::process::exit(1);
         }
     };
+    let sim = Box::leak(Box::new(Mutex::new(Sim::new())));
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
             let mut tick_delay = Sim::TICK_DELAY;
@@ -31,7 +35,7 @@ fn main() {
                     if sim.exited() {
                         break;
                     }
-                    let step_result = sim.step();
+                    let step_result = sim.step(&env);
                     match step_result {
                         Ok(_) => (),
                         Err(e) => {
@@ -53,6 +57,6 @@ fn main() {
             }
         });
 
-        client::run(sim);
+        framework::run(sim);
     });
 }

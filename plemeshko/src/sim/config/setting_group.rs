@@ -4,7 +4,7 @@ use plegine::config::ConfigId;
 use plegine_derive::Config;
 use serde::Deserialize;
 
-use crate::server::units::{ResourceAmount, Ticks};
+use crate::sim::units::{ResourceAmount, Ticks};
 
 use super::resource::ResourceId;
 

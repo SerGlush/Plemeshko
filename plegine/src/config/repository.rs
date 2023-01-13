@@ -8,7 +8,7 @@ use super::{Config, ConfigId};
 
 pub(super) type HomoConfigContainer<C> = HashMap<String, C>;
 
-pub trait AnyHomoConfigContainer = Any + Send;
+pub trait AnyHomoConfigContainer = Any + Send + Sync;
 
 pub struct ConfigRepository(pub(super) HashMap<TypeId, Box<dyn AnyHomoConfigContainer>>);
 
@@ -72,14 +72,4 @@ impl ConfigRepository {
             Err(e) => Err(e.into()),
         }
     }
-
-    // pub fn check_id<C: Config>(&self, id: String) -> Option<ConfigId<C>> {
-    //     let store = self.0.get(&TypeId::of::<C>())?;
-    //     let hcc = store.downcast_ref::<HomoConfigContainer<C>>()?;
-    //     if hcc.contains_key(id.as_str()) {
-    //         Some(ConfigId::new(id))
-    //     } else {
-    //         None
-    //     }
-    // }
 }

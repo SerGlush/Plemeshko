@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::server::{
+use crate::sim::{
     config::{
         method::MethodId,
         resource::{storage::Cor, ResourceId},
@@ -12,7 +12,9 @@ use crate::server::{
 };
 use egui::*;
 
-use super::error::GuiResult;
+use self::error::AppResult;
+
+pub mod error;
 
 const HUMAN_ID: &'static str = "human";
 
@@ -49,11 +51,11 @@ impl App {
         }
     }
 
-    pub fn update(&mut self, _sim: &mut Sim) -> GuiResult<()> {
+    pub fn update(&mut self, _sim: &mut Sim) -> AppResult<()> {
         Ok(())
     }
 
-    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim) -> GuiResult<()> {
+    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim) -> AppResult<()> {
         CentralPanel::default().show(context, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("Main").clicked() {

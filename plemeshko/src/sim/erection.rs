@@ -1,6 +1,4 @@
-use plegine::config::ConfigRepository;
-
-use crate::{cor::Cor, server::units::ResourceAmount};
+use crate::{env::Env, sim::units::ResourceAmount, util::cor::Cor};
 use std::{
     collections::{hash_map::RawEntryMut, HashMap},
     ops::{AddAssign, SubAssign},
@@ -8,7 +6,7 @@ use std::{
 
 use super::{
     config::{
-        method::{Method, MethodId, SelectedMethod},
+        method::SelectedMethod,
         resource::{
             storage::{ResourceIo, ResourceMap},
             ResourceId,
@@ -18,7 +16,6 @@ use super::{
     },
     error::{SimError, SimResult},
     units::ResourceWeight,
-    Sim,
 };
 
 pub struct Erection {
@@ -32,20 +29,11 @@ pub struct Erection {
     active: u32,
 }
 
-fn iter_methods<'a>(
-    method_ids: &'a Vec<MethodId>,
-    sim: &'a Sim,
-) -> impl Iterator<Item = SimResult<&'a Method>> {
-    method_ids
-        .iter()
-        .map(|id| sim.configs.get(id).map_err(SimError::ConfigRetrievalFailed))
-}
-
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
 
 impl Erection {
     pub fn new(
-        sim: &Sim,
+        env: &Env,
         name: String,
         selected_methods: Vec<SelectedMethod>,
         transport: HashMap<TransportGroupId, TransportId>,
@@ -57,7 +45,7 @@ impl Erection {
         for selected_method in selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
-                let setting_group = sim
+                let setting_group = env
                     .configs
                     .get(&selected_setting.group_id)
                     .map_err(SimError::ConfigRetrievalFailed)?;
@@ -109,10 +97,6 @@ impl Erection {
         &self.transport
     }
 
-    //pub fn methods<'a>(&'a self, sim: &'a Sim) -> impl Iterator<Item = SimResult<&Method>> {
-    //    iter_methods(&self.method_ids, sim)
-    //}
-
     pub fn count(&self) -> u32 {
         self.count
     }
@@ -133,11 +117,12 @@ impl Erection {
         self.active = active;
     }
 
-    fn step_input(&mut self, depot: &mut ResourceMap, configs: &ConfigRepository) -> SimResult<()> {
+    fn step_input(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let mut requested_resources = Vec::with_capacity(self.max_io.output.len());
         for (res_id, req_amount) in self.max_io.output.iter() {
-            let res = configs
+            let res = env
+                .configs
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
             let already_stored = self
@@ -163,7 +148,8 @@ impl Erection {
                 .from_key(&res.transport_group)
             {
                 RawEntryMut::Vacant(vacant) => {
-                    let tr = configs
+                    let tr = env
+                        .configs
                         .get(self.transport.get(&res.transport_group).unwrap())
                         .map_err(SimError::ConfigRetrievalFailed)?;
                     vacant.insert(res.transport_group.clone(), (tr, ResourceWeight(0)));
@@ -219,14 +205,11 @@ impl Erection {
     }
 
     // todo: fair output scheduler
-    fn step_output(
-        &mut self,
-        depot: &mut ResourceMap,
-        configs: &ConfigRepository,
-    ) -> SimResult<()> {
+    fn step_output(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         for (res_id, res_amount) in self.storage.input.iter_mut() {
-            let res = configs
+            let res = env
+                .configs
                 .get(res_id)
                 .map_err(SimError::ConfigRetrievalFailed)?;
             let (tr, transported_weight_already) =
@@ -273,9 +256,9 @@ impl Erection {
         Ok(())
     }
 
-    pub fn step(&mut self, depot: &mut ResourceMap, configs: &ConfigRepository) -> SimResult<()> {
-        self.step_input(depot, configs)?;
+    pub fn step(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
+        self.step_input(env, depot)?;
         self.step_process();
-        self.step_output(depot, configs)
+        self.step_output(env, depot)
     }
 }

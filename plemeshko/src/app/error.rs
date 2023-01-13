@@ -3,18 +3,18 @@ use std::{error::Error, fmt::Display};
 use plegine::config::ConfigRetrievalError;
 
 #[derive(Debug)]
-pub enum GuiError {
+pub enum AppError {
     ConfigRetrievalFailed(ConfigRetrievalError),
 }
 
-pub type GuiResult<T> = Result<T, GuiError>;
+pub type AppResult<T> = Result<T, AppError>;
 
-impl Display for GuiError {
+impl Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GuiError::ConfigRetrievalFailed(e) => write!(f, "Config retrieval failed: {e}"),
+            AppError::ConfigRetrievalFailed(e) => write!(f, "Config retrieval failed: {e}"),
         }
     }
 }
 
-impl Error for GuiError {}
+impl Error for AppError {}

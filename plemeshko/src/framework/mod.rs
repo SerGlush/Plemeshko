@@ -2,16 +2,13 @@ use std::{ops::DerefMut, sync::Mutex};
 
 use winit::event::Event;
 
-use crate::server::Sim;
+use crate::{app::App, sim::Sim};
 
 use self::{
-    app::App,
     graphics::{Graphics, RenderError},
     gui::Gui,
 };
 
-mod app;
-mod error;
 mod graphics;
 mod gui;
 mod window;

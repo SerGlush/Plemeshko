@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::server::units::ResourceAmount;
+use crate::sim::units::ResourceAmount;
 
 use super::ResourceId;
 
-pub use crate::cor::*;
+pub use crate::util::cor::*;
 
 pub type ResourceMap = HashMap<ResourceId, ResourceAmount>;
 

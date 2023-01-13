@@ -2,7 +2,7 @@ use plegine::config::ConfigId;
 use plegine_derive::Config;
 use serde::Deserialize;
 
-use crate::server::units::ResourceWeight;
+use crate::sim::units::ResourceWeight;
 
 use super::{resource::storage::ResourceIo, transport_group::TransportGroupId};
 

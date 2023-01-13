@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt::Display, marker::PhantomData};
 
-pub trait Config: for<'a> Deserialize<'a> + Sized + Send + 'static {
+pub trait Config: for<'a> Deserialize<'a> + Sized + Send + Sync + 'static {
     const TAG: &'static str;
 }
 
