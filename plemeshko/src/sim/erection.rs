@@ -89,12 +89,12 @@ impl Erection {
         Ok(Erection {
             state: snapshot,
             single_io: ResourceIo {
-                input: single_output,
-                output: single_input,
+                output: single_output,
+                input: single_input,
             },
             max_io: ResourceIo {
-                input: max_output,
-                output: max_input,
+                output: max_output,
+                input: max_input,
             },
         })
     }
@@ -137,8 +137,8 @@ impl Erection {
 
     fn step_input(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
-        let mut requested_resources = Vec::with_capacity(self.max_io.output.len());
-        for (res_id, req_amount) in self.max_io.output.iter() {
+        let mut requested_resources = Vec::with_capacity(self.max_io.input.len());
+        for (res_id, req_amount) in self.max_io.input.iter() {
             let res = env
                 .configs
                 .get(res_id)
@@ -146,7 +146,7 @@ impl Erection {
             let already_stored = self
                 .state
                 .storage
-                .output
+                .input
                 .get(res_id)
                 .map(Clone::clone)
                 .unwrap_or_default();
@@ -155,7 +155,7 @@ impl Erection {
             }
             let req_amount_transported = *req_amount - already_stored;
             let transportation_priority =
-                req_amount_transported / *self.single_io.output.get(res_id).unwrap();
+                req_amount_transported / *self.single_io.input.get(res_id).unwrap();
             requested_resources.push((
                 res_id,
                 res,
@@ -201,14 +201,33 @@ impl Erection {
                     req_amount.sub_assign(amount_ready);
                     total_stored += amount_ready;
                 }
-                while *tr_remaining < res.transport_weight {
-                    if !depot.cor_sub_all(&tr.fuel.output) {
-                        break 'a;
-                    }
-                    depot.cor_put_all(&tr.fuel.input);
+                if req_amount == ResourceAmount(0) {
+                    break;
                 }
+                if req_amount < ResourceAmount(0) {
+                    panic!("Negative amount");
+                };
+                let tr_required_add_weight = res.transport_weight - *tr_remaining;
+                let tr_required_add_count = tr_required_add_weight.0.div_ceil(tr.capacity.0);
+                if depot.cor_has_all_times(&tr.fuel.input, tr_required_add_count)
+                    != tr_required_add_count
+                {
+                    break;
+                }
+                depot.cor_sub_all_times_unchecked(&tr.fuel.input, tr_required_add_count);
+                //# TODO: don't add output until the end of the step (ex: fuel = non-consumed vehicle)
+                // opt: normalized step stages? like "post-step"
+                depot.cor_put_all_times(&tr.fuel.output, tr_required_add_count);
+                tr_remaining.add_assign(tr.capacity * tr_required_add_count);
+
+                // while *tr_remaining < res.transport_weight {
+                //     if !depot.cor_sub_all(&tr.fuel.input) {
+                //         break 'a;
+                //     }
+                //     depot.cor_put_all(&tr.fuel.output);
+                // }
             }
-            self.state.storage.output.cor_put(res_id, total_stored);
+            self.state.storage.input.cor_put(res_id, total_stored);
         }
         Ok(())
     }
@@ -217,18 +236,18 @@ impl Erection {
         let activated = self
             .state
             .storage
-            .output
-            .cor_sub_all_times(&self.single_io.output, self.state.active as i64);
+            .input
+            .cor_sub_all_times(&self.single_io.input, self.state.active as i64);
         self.state
             .storage
-            .input
-            .cor_put_all_times(&self.single_io.input, activated);
+            .output
+            .cor_put_all_times(&self.single_io.output, activated);
     }
 
     // todo: fair output scheduler
     fn step_output(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
-        for (res_id, res_amount) in self.state.storage.input.iter_mut() {
+        for (res_id, res_amount) in self.state.storage.output.iter_mut() {
             let res = env
                 .configs
                 .get(res_id)
@@ -244,11 +263,11 @@ impl Erection {
                 let transported_amount_already =
                     ResourceAmount(*transported_weight_already / res.transport_weight);
                 *transported_weight_already = ResourceWeight(0);
-                let can_fuel = depot.cor_has_all_times(&tr.fuel.output, i64::MAX);
+                let can_fuel = depot.cor_has_all_times(&tr.fuel.input, i64::MAX);
                 let req_transport = res_weight.0.div_ceil(tr.capacity.0);
                 let transport = req_transport.min(can_fuel);
-                depot.cor_sub_all_times_unchecked(&tr.fuel.output, transport);
-                depot.cor_put_all_times(&tr.fuel.input, transport);
+                depot.cor_sub_all_times_unchecked(&tr.fuel.input, transport);
+                depot.cor_put_all_times(&tr.fuel.output, transport);
                 let transported_amount_newly = ResourceAmount(
                     (*res_amount - transported_amount_already)
                         .0
