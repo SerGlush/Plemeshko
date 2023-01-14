@@ -12,10 +12,6 @@ use crate::sim::{
 };
 use egui::*;
 
-use self::error::AppResult;
-
-pub mod error;
-
 const HUMAN_ID: &'static str = "human";
 
 pub struct App {
@@ -51,11 +47,11 @@ impl App {
         }
     }
 
-    pub fn update(&mut self, _sim: &mut Sim) -> AppResult<()> {
+    pub fn update(&mut self, _sim: &mut Sim) -> anyhow::Result<()> {
         Ok(())
     }
 
-    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim) -> AppResult<()> {
+    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim) -> anyhow::Result<()> {
         CentralPanel::default().show(context, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("Main").clicked() {

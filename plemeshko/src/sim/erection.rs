@@ -1,3 +1,4 @@
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::{env::Env, sim::units::ResourceAmount, util::cor::Cor};
@@ -16,7 +17,6 @@ use super::{
         transport::{Transport, TransportId},
         transport_group::TransportGroupId,
     },
-    error::{SimError, SimResult},
     units::ResourceWeight,
 };
 
@@ -56,7 +56,7 @@ impl ErectionSnapshot {
 }
 
 impl Erection {
-    pub fn restore(env: &Env, snapshot: ErectionSnapshot) -> SimResult<Self> {
+    pub fn restore(env: &Env, snapshot: ErectionSnapshot) -> anyhow::Result<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
         let mut max_input = HashMap::new();
@@ -65,10 +65,7 @@ impl Erection {
         for selected_method in snapshot.selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
-                let setting_group = env
-                    .configs
-                    .get(&selected_setting.group_id)
-                    .map_err(SimError::ConfigRetrievalFailed)?;
+                let setting_group = config_get!(env.configs, &selected_setting.group_id);
                 let setting = &setting_group.settings[selected_setting.index];
                 for (resource_id, delta) in setting.output.iter() {
                     single_output
@@ -136,14 +133,11 @@ impl Erection {
         self.state.active = active;
     }
 
-    fn step_input(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
+    fn step_input(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let mut requested_resources = Vec::with_capacity(self.max_io.input.len());
         for (res_id, req_amount) in self.max_io.input.iter() {
-            let res = env
-                .configs
-                .get(res_id)
-                .map_err(SimError::ConfigRetrievalFailed)?;
+            let res = config_get!(env.configs, res_id);
             let already_stored = self
                 .state
                 .storage
@@ -168,10 +162,10 @@ impl Erection {
                 .from_key(&res.transport_group)
             {
                 RawEntryMut::Vacant(vacant) => {
-                    let tr = env
-                        .configs
-                        .get(self.state.transport.get(&res.transport_group).unwrap())
-                        .map_err(SimError::ConfigRetrievalFailed)?;
+                    let tr = config_get!(
+                        env.configs,
+                        self.state.transport.get(&res.transport_group).unwrap()
+                    );
                     vacant.insert(res.transport_group.clone(), (tr, ResourceWeight(0)));
                 }
                 _ => (),
@@ -250,22 +244,19 @@ impl Erection {
     }
 
     // todo: fair output scheduler
-    fn step_output(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
+    fn step_output(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         for (res_id, res_amount) in self.state.storage.output.iter_mut() {
-            let res = env
-                .configs
-                .get(res_id)
-                .map_err(SimError::ConfigRetrievalFailed)?;
+            let res = config_get!(env.configs, res_id);
             let (tr, transported_weight_already) = match transport_state
                 .raw_entry_mut()
                 .from_key(&res.transport_group)
             {
                 RawEntryMut::Vacant(vacant) => {
-                    let tr = env
-                        .configs
-                        .get(self.state.transport.get(&res.transport_group).unwrap())
-                        .map_err(SimError::ConfigRetrievalFailed)?;
+                    let tr = config_get!(
+                        env.configs,
+                        self.state.transport.get(&res.transport_group).unwrap()
+                    );
                     vacant
                         .insert(res.transport_group.clone(), (tr, ResourceWeight(0)))
                         .1
@@ -314,7 +305,7 @@ impl Erection {
         Ok(())
     }
 
-    pub fn step(&mut self, env: &Env, depot: &mut ResourceMap) -> SimResult<()> {
+    pub fn step(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
         self.step_input(env, depot)?;
         self.step_process();
         self.step_output(env, depot)

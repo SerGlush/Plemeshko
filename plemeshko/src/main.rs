@@ -5,18 +5,19 @@
 #![deny(elided_lifetimes_in_paths)]
 #![allow(dead_code)]
 
-use std::{error::Error, sync::Mutex, time::Instant};
+use std::{sync::Mutex, time::Instant};
 
 use env::Env;
 use sim::{Sim, SimSnapshot};
 
+#[macro_use]
+mod util;
 mod app;
 mod env;
 mod framework;
 mod sim;
-mod util;
 
-fn load_sim(env: &Env) -> Result<Sim, Box<dyn Error>> {
+fn load_sim(env: &Env) -> anyhow::Result<Sim> {
     let mut cli_args_iter = std::env::args();
     cli_args_iter.next(); // exe
     Ok(match cli_args_iter.next() {

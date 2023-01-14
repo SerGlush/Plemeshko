@@ -1,6 +1,5 @@
 pub mod config;
 pub mod erection;
-pub mod error;
 pub mod units;
 
 use std::time::Duration;
@@ -12,7 +11,6 @@ use crate::env::Env;
 use self::{
     config::resource::storage::ResourceMap,
     erection::{Erection, ErectionSnapshot},
-    error::SimResult,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -33,7 +31,7 @@ impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
     pub const TICK_THRESHOLD: Duration = Duration::from_millis(1);
 
-    pub fn restore(env: &Env, snapshot: SimSnapshot) -> SimResult<Self> {
+    pub fn restore(env: &Env, snapshot: SimSnapshot) -> anyhow::Result<Self> {
         let SimSnapshot { depot, erections } = snapshot;
         Ok(Sim {
             depot,
@@ -69,7 +67,7 @@ impl Sim {
         // todo: finalization code, mb dropping resources / saving state
     }
 
-    pub fn step(&mut self, env: &Env) -> SimResult<()> {
+    pub fn step(&mut self, env: &Env) -> anyhow::Result<()> {
         if self.exited {
             panic!("Sim is in exiting state when step was called");
         }

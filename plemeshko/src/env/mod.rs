@@ -1,4 +1,4 @@
-use std::{error::Error, path::PathBuf};
+use std::path::PathBuf;
 
 use plegine::config::{ConfigRepository, ConfigRepositoryBuilder};
 
@@ -11,7 +11,7 @@ pub struct Env {
 const CONFIG_DIR: &'static str = "config";
 
 impl Env {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> anyhow::Result<Self> {
         let mut config_repo_builder = ConfigRepositoryBuilder::new();
         config_repo_builder.register::<config::resource::Resource>()?;
         config_repo_builder.register::<config::setting_group::SettingGroup>()?;
