@@ -1,7 +1,6 @@
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     collections::HashMap,
-    error::Error,
     fmt::Display,
     fs::File,
     io,
@@ -11,6 +10,7 @@ use std::{
 use either::Either;
 use serde::Deserialize;
 use serde_json::value::RawValue;
+use thiserror::Error;
 
 use super::{AnyHomoConfigContainer, Config, ConfigRepository, HomoConfigContainer};
 
@@ -34,36 +34,46 @@ pub struct ConfigRepositoryBuilder {
     tagged_loaders: HashMap<&'static str, (TypeId, SomeConfigLoadFn)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ConfigRegistrationError {
-    TypeAlreadyRegistered,
-    TagAlreadyRegistered,
+    #[error("Type already registered: {type_name}")]
+    TypeAlreadyRegistered { type_name: &'static str },
+    #[error("Tag already registered: {tag}")]
+    TagAlreadyRegistered { tag: &'static str },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ConfigLoadErrorPayload {
-    ConfigIdentifierOccupied,
-    NoCorrespondingStore,
-    ParsingFailed(serde_json::Error),
-    StoreTypeInvalid,
-    TagNotRegistered(String),
+    #[error("Identifier already loaded: {id}")]
+    IdAlreadyOccupied { id: String },
+    // #[error("Type not registered: {type_name}")]
+    // TypeNotRegistered { type_name: &'static str },
+    #[error("Storage for requested tag doesn't exist: {tag}")]
+    StoreNotFound { tag: String },
+    #[error("Parsing failed: {0}")]
+    ParsingFailed(#[from] serde_json::Error),
+    #[error("Storage had type not matching its key, expected: {type_name}")]
+    StoreTypeInvalid { type_name: &'static str },
+    #[error("Tag not registered: {tag}")]
+    TagNotRegistered { tag: String },
 }
 
 use ConfigLoadErrorPayload::*;
 
+#[derive(Debug, Error)]
+pub struct ConfigLoadError {
+    pub path: PathBuf,
+    #[source]
+    pub payload: ConfigLoadErrorPayload,
+}
+
 impl ConfigLoadError {
-    pub fn new(path: &Path, payload: ConfigLoadErrorPayload) -> Self {
+    fn new(path: &Path, payload: ConfigLoadErrorPayload) -> Self {
         ConfigLoadError {
             path: path.to_owned(),
             payload,
         }
     }
-}
-
-#[derive(Debug)]
-pub struct ConfigLoadError {
-    pub path: PathBuf,
-    pub payload: ConfigLoadErrorPayload,
 }
 
 fn parse_adding_to_any_store<C: Config>(
@@ -73,13 +83,23 @@ fn parse_adding_to_any_store<C: Config>(
     raw_cfg: &RawValue,
 ) -> Result<(), ConfigLoadError> {
     dst.downcast_mut::<HomoConfigContainer<C>>()
-        .ok_or(ConfigLoadError::new(path, StoreTypeInvalid))
+        .ok_or(ConfigLoadError::new(
+            path,
+            StoreTypeInvalid {
+                type_name: type_name::<C>(),
+            },
+        ))
         .and_then(|store| {
             let config = serde_json::from_str(raw_cfg.get())
                 .map_err(|e| ConfigLoadError::new(path, ParsingFailed(e)))?;
             match store.try_insert(id, config) {
                 Ok(_) => Ok(()),
-                Err(_) => Err(ConfigLoadError::new(path, ConfigIdentifierOccupied)),
+                Err(e) => Err(ConfigLoadError::new(
+                    path,
+                    IdAlreadyOccupied {
+                        id: e.entry.key().clone(),
+                    },
+                )),
             }
         })
 }
@@ -96,13 +116,15 @@ impl ConfigRepositoryBuilder {
         let type_id = TypeId::of::<C>();
         self.repository
             .try_insert(type_id, Box::new(HomoConfigContainer::<C>::new()))
-            .map_err(|_| ConfigRegistrationError::TypeAlreadyRegistered)?;
+            .map_err(|_| ConfigRegistrationError::TypeAlreadyRegistered {
+                type_name: type_name::<C>(),
+            })?;
         match self
             .tagged_loaders
             .try_insert(C::TAG, (type_id, parse_adding_to_any_store::<C>))
         {
             Ok(_) => Ok(()),
-            Err(_) => Err(ConfigRegistrationError::TagAlreadyRegistered),
+            Err(_) => Err(ConfigRegistrationError::TagAlreadyRegistered { tag: C::TAG }),
         }
     }
 
@@ -116,12 +138,14 @@ impl ConfigRepositoryBuilder {
                 .get(raw.tag.as_str())
                 .ok_or_else(|| ConfigLoadError {
                     path: path.to_owned(),
-                    payload: TagNotRegistered(raw.tag),
+                    payload: TagNotRegistered {
+                        tag: raw.tag.clone(),
+                    },
                 })?;
         let store = self
             .repository
             .get_mut(type_id)
-            .ok_or(ConfigLoadError::new(path, NoCorrespondingStore))?;
+            .ok_or(ConfigLoadError::new(path, StoreNotFound { tag: raw.tag }))?;
         loader(store.as_mut(), path, raw.name, raw.payload.as_ref())
     }
 
@@ -156,37 +180,9 @@ impl ConfigRepositoryBuilder {
     }
 }
 
-impl Display for ConfigRegistrationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ConfigRegistrationError::TypeAlreadyRegistered => write!(f, "Type already registered"),
-            ConfigRegistrationError::TagAlreadyRegistered => write!(f, "Tag already registered"),
-        }
-    }
-}
-
-impl Error for ConfigRegistrationError {}
-
 impl Display for ConfigLoadError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let path = self.path.display();
-        write!(f, "When loading config file \"{path}\": ")?;
-        match &self.payload {
-            ParsingFailed(e) => write!(f, "Parsing failed: {e}"),
-            StoreTypeInvalid => write!(
-                f,
-                "Attempted to downcast badly typed configuration storage."
-            ),
-            ConfigIdentifierOccupied => {
-                write!(f, "Attempred to load config with an already existing tag.")
-            }
-            TagNotRegistered(tag) => write!(f, "Tag not registered: {tag}"),
-            NoCorrespondingStore => write!(
-                f,
-                "No configuration storage corresponding to the tagged TypeId found"
-            ),
-        }
+        write!(f, "When loading config file \"{}\": ", self.path.display())?;
+        self.payload.fmt(f)
     }
 }
-
-impl Error for ConfigLoadError {}

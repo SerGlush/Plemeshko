@@ -1,8 +1,9 @@
 use std::{
     any::{type_name, Any, TypeId},
     collections::HashMap,
-    fmt::Display,
 };
+
+use thiserror::Error;
 
 use super::{Config, ConfigId};
 
@@ -12,53 +13,28 @@ pub trait AnyHomoConfigContainer = Any + Send + Sync;
 
 pub struct ConfigRepository(pub(super) HashMap<TypeId, Box<dyn AnyHomoConfigContainer>>);
 
-pub enum ConfigStoreRetrievalError {
-    StoreNotRegistered { kind: &'static str },
-    StoreTypeInvalid,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ConfigRetrievalError {
-    StoreNotRegistered { kind: &'static str },
-    StoreTypeInvalid,
-    NotInStore { kind: &'static str, id: String },
-}
-
-impl From<ConfigStoreRetrievalError> for ConfigRetrievalError {
-    fn from(value: ConfigStoreRetrievalError) -> Self {
-        match value {
-            ConfigStoreRetrievalError::StoreNotRegistered { kind } => {
-                ConfigRetrievalError::StoreNotRegistered { kind }
-            }
-            ConfigStoreRetrievalError::StoreTypeInvalid => ConfigRetrievalError::StoreTypeInvalid,
-        }
-    }
-}
-
-impl Display for ConfigRetrievalError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ConfigRetrievalError::StoreNotRegistered { kind } => {
-                write!(f, "Store not registered for \"{kind}\"")
-            }
-            ConfigRetrievalError::StoreTypeInvalid => write!(f, "Store type invalid"),
-            ConfigRetrievalError::NotInStore { kind, id } => {
-                write!(f, "Not in store \"{id}\" of type \"{kind}\"")
-            }
-        }
-    }
+    #[error("Store not registered for '{type_name}'")]
+    StoreNotRegistered { type_name: &'static str },
+    #[error("Storage had type not matching its key, expected ('{type_name}')")]
+    StoreTypeMismatch { type_name: &'static str },
+    #[error("Key '{id}' doesn't exist in the store for config type '{type_name}'")]
+    NotInStore { type_name: &'static str, id: String },
 }
 
 impl ConfigRepository {
-    fn get_store<C: Config>(&self) -> Result<&HomoConfigContainer<C>, ConfigStoreRetrievalError> {
-        let any_store = self.0.get(&TypeId::of::<C>()).ok_or(
-            ConfigStoreRetrievalError::StoreNotRegistered {
-                kind: type_name::<C>(),
-            },
-        )?;
+    fn get_store<C: Config>(&self) -> Result<&HomoConfigContainer<C>, ConfigRetrievalError> {
+        let any_store = self.0.get(&TypeId::of::<C>()).ok_or_else(|| {
+            ConfigRetrievalError::StoreNotRegistered {
+                type_name: type_name::<C>(),
+            }
+        })?;
         any_store
             .downcast_ref()
-            .ok_or(ConfigStoreRetrievalError::StoreTypeInvalid)
+            .ok_or_else(|| ConfigRetrievalError::StoreTypeMismatch {
+                type_name: type_name::<C>(),
+            })
     }
 
     pub fn get<C: Config>(&self, id: &ConfigId<C>) -> Result<&C, ConfigRetrievalError> {
@@ -66,7 +42,7 @@ impl ConfigRepository {
             Ok(store) => store
                 .get(id.as_str())
                 .ok_or(ConfigRetrievalError::NotInStore {
-                    kind: type_name::<C>(),
+                    type_name: type_name::<C>(),
                     id: id.as_str().to_owned(),
                 }),
             Err(e) => Err(e.into()),
