@@ -8,7 +8,7 @@ use crate::sim::units::ResourceWeight;
 
 use super::transport_group::TransportGroupId;
 
-#[derive(Config, Deserialize)]
+#[derive(Config, Debug, Deserialize)]
 pub struct Resource {
     pub transport_group: TransportGroupId,
     pub transport_weight: ResourceWeight,

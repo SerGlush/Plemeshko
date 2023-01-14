@@ -201,6 +201,7 @@ impl Erection {
                         break 'a;
                     }
                     let amount_ready = amount_ready.min(*res_depot);
+                    res_depot.sub_assign(amount_ready);
                     tr_remaining.sub_assign(amount_ready * res.transport_weight);
                     req_amount.sub_assign(amount_ready);
                     total_stored += amount_ready;
