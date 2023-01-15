@@ -18,6 +18,7 @@ use super::{
         transport_group::TransportGroupId,
     },
     units::ResourceWeight,
+    RESOURCE_ID_HUMAN,
 };
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -25,15 +26,15 @@ pub struct ErectionSnapshot {
     name: String,
     selected_methods: Vec<SelectedMethod>,
     transport: HashMap<TransportGroupId, TransportId>,
-    storage: ResourceIo,
+    storage: ResourceMap,
     count: u32,
     active: u32,
+    reserve_export_threshold: u32,
 }
 
 pub struct Erection {
     state: ErectionSnapshot,
     single_io: ResourceIo,
-    max_io: ResourceIo,
 }
 
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
@@ -51,9 +52,10 @@ impl Erection {
                 name,
                 selected_methods,
                 transport,
-                storage: ResourceIo::new(),
+                storage: ResourceMap::new(),
                 count: 0,
                 active: 0,
+                reserve_export_threshold: 1,
             },
         )
     }
@@ -61,9 +63,6 @@ impl Erection {
     pub fn restore(env: &Env, snapshot: ErectionSnapshot) -> anyhow::Result<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
-        let mut max_input = HashMap::new();
-        let mut max_output = HashMap::new();
-        let active: i64 = snapshot.active.into();
         for selected_method in snapshot.selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
@@ -74,14 +73,12 @@ impl Erection {
                         .entry(resource_id.to_owned())
                         .or_default()
                         .add_assign(*delta);
-                    let _ = max_output.try_insert(resource_id.to_owned(), *delta * active);
                 }
                 for (resource_id, delta) in setting.input.iter() {
                     single_input
                         .entry(resource_id.to_owned())
                         .or_default()
                         .add_assign(*delta);
-                    let _ = max_input.try_insert(resource_id.to_owned(), *delta * active);
                 }
             }
         }
@@ -91,10 +88,6 @@ impl Erection {
             single_io: ResourceIo {
                 output: single_output,
                 input: single_input,
-            },
-            max_io: ResourceIo {
-                output: max_output,
-                input: max_input,
             },
         })
     }
@@ -137,28 +130,23 @@ impl Erection {
 
     fn step_input(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
-        let mut requested_resources = Vec::with_capacity(self.max_io.input.len());
-        for (res_id, req_amount) in self.max_io.input.iter() {
+        let mut requested_resources = Vec::with_capacity(self.single_io.input.len());
+        for (res_id, &single_input) in self.single_io.input.iter() {
+            let req_input = single_input * self.active() as i64;
             let res = config_get!(env.configs, res_id);
             let already_stored = self
                 .state
                 .storage
-                .input
                 .get(res_id)
                 .map(Clone::clone)
                 .unwrap_or_default();
-            if already_stored >= *req_amount {
+            if already_stored >= req_input {
                 continue;
             }
-            let req_amount_transported = *req_amount - already_stored;
+            let req_import = req_input - already_stored;
             let transportation_priority =
-                req_amount_transported.div_ceil(*self.single_io.input.get(res_id).unwrap());
-            requested_resources.push((
-                res_id,
-                res,
-                req_amount_transported,
-                transportation_priority,
-            ));
+                req_import.div_ceil(*self.single_io.input.get(res_id).unwrap());
+            requested_resources.push((res_id, res, req_import, transportation_priority));
             if let RawEntryMut::Vacant(vacant) = transport_state
                 .raw_entry_mut()
                 .from_key(&res.transport_group)
@@ -225,7 +213,7 @@ impl Erection {
                 //     depot.cor_put_all(&tr.fuel.output);
                 // }
             }
-            self.state.storage.input.cor_put(res_id, total_stored);
+            self.state.storage.cor_put(res_id, total_stored);
         }
         Ok(())
     }
@@ -234,18 +222,27 @@ impl Erection {
         let activated = self
             .state
             .storage
-            .input
             .cor_sub_all_times(&self.single_io.input, self.state.active as i64);
         self.state
             .storage
-            .output
             .cor_put_all_times(&self.single_io.output, activated);
     }
 
     // todo: fair output scheduler
     fn step_output(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
-        for (res_id, res_amount) in self.state.storage.output.iter_mut() {
+        let active = self.active() as i64;
+        for (res_id, res_amount) in self.state.storage.iter_mut() {
+            // humans are always exported back to the global storage
+            if self.state.reserve_export_threshold > 0 && res_id.as_str() != RESOURCE_ID_HUMAN {
+                // other resources are exported when above the reserve limit
+                if let Some(&single_input) = self.single_io.input.get(res_id) {
+                    let tick_input = single_input * active;
+                    if *res_amount < tick_input * self.state.reserve_export_threshold as i64 {
+                        continue;
+                    }
+                }
+            }
             let res = config_get!(env.configs, res_id);
             let (tr, transported_weight_already) = match transport_state
                 .raw_entry_mut()

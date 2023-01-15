@@ -8,11 +8,9 @@ use crate::sim::{
         transport_group::TransportGroupId,
     },
     erection::Erection,
-    Sim,
+    Sim, RESOURCE_ID_HUMAN,
 };
 use egui::*;
-
-const HUMAN_ID: &str = "human";
 
 pub struct App {
     current_panel: i64,
@@ -69,12 +67,12 @@ impl App {
                     ui.label(format!(
                         "Population: {}",
                         sim.depot
-                            .get(HUMAN_ID)
+                            .get(RESOURCE_ID_HUMAN)
                             .map(Clone::clone)
                             .unwrap_or_default()
                     ));
                     for (id, value) in sim.depot.iter() {
-                        if id.as_str() == HUMAN_ID {
+                        if id.as_str() == RESOURCE_ID_HUMAN {
                             continue;
                         }
                         ui.label(format!("{id} : {value}"));

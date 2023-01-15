@@ -22,7 +22,8 @@
             },
             "storage": {},
             "count": 4,
-            "active": 4
+            "active": 4,
+            "reserve_export_threshold": 1
         }
     ]
 }

@@ -27,6 +27,8 @@ pub struct Sim {
 
 static_assertions::assert_not_impl_all!(Sim: Drop);
 
+pub const RESOURCE_ID_HUMAN: &str = "human";
+
 impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
     pub const TICK_THRESHOLD: Duration = Duration::from_millis(1);
