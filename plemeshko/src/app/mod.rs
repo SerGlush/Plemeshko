@@ -12,7 +12,7 @@ use crate::sim::{
 };
 use egui::*;
 
-const HUMAN_ID: &'static str = "human";
+const HUMAN_ID: &str = "human";
 
 pub struct App {
     current_panel: i64,
@@ -77,7 +77,7 @@ impl App {
                         if id.as_str() == HUMAN_ID {
                             continue;
                         }
-                        ui.label(format!("{} : {}", id, value));
+                        ui.label(format!("{id} : {value}"));
                     }
                 }
                 1 => {

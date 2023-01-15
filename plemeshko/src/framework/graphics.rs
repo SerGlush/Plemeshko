@@ -75,7 +75,7 @@ impl Graphics {
         }
     }
 
-    pub fn handle_event<'e>(&mut self, _event: &WindowEvent<'e>) -> bool {
+    pub fn handle_event(&mut self, _event: &WindowEvent<'_>) -> bool {
         false
     }
 
@@ -126,7 +126,7 @@ impl Graphics {
             })
     }
 
-    pub fn end<'a>(&mut self, frame: Frame) {
+    pub fn end(&mut self, frame: Frame) {
         self.queue.submit(std::iter::once(frame.encoder.finish()));
         frame.surface_texture.present();
     }

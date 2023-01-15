@@ -66,16 +66,13 @@ pub fn run(sim: &'static Mutex<Sim>) -> ! {
         }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
-                gui.run(&window, |ctx| {
-                    match app.gui(ctx, sim.lock().unwrap().deref_mut()) {
-                        Ok(_) => (),
-                        Err(e) => {
-                            *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
-                            println!("App update error: {e}");
-                            return;
-                        }
-                    }
-                });
+                if let Err(e) =
+                    gui.run(&window, |ctx| app.gui(ctx, sim.lock().unwrap().deref_mut()))
+                {
+                    *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
+                    println!("App update error: {e}");
+                    return;
+                }
                 match graphics.new_frame() {
                     Ok(mut frame) => {
                         {

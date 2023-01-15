@@ -115,7 +115,7 @@ impl ConfigRepositoryBuilder {
     pub fn register<C: Config>(&mut self) -> Result<(), ConfigRegistrationError> {
         let type_id = TypeId::of::<C>();
         self.repository
-            .try_insert(type_id, Box::new(HomoConfigContainer::<C>::new()))
+            .try_insert(type_id, Box::<HomoConfigContainer<C>>::default())
             .map_err(|_| ConfigRegistrationError::TypeAlreadyRegistered {
                 type_name: type_name::<C>(),
             })?;
@@ -177,6 +177,12 @@ impl ConfigRepositoryBuilder {
             }
         }
         Ok(())
+    }
+}
+
+impl Default for ConfigRepositoryBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

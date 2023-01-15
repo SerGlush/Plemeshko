@@ -38,7 +38,7 @@ impl Gui {
         }
     }
 
-    pub fn handle_event<'e>(&mut self, event: &WindowEvent<'e>) {
+    pub fn handle_event(&mut self, event: &WindowEvent<'_>) {
         let _ = self.state.on_event(&self.context, event);
     }
 
@@ -52,14 +52,17 @@ impl Gui {
         self.screen_descriptor.pixels_per_point = pixels_per_point;
     }
 
-    pub fn run(&mut self, window: &winit::window::Window, f: impl FnOnce(&Context)) {
+    pub fn run<R>(&mut self, window: &winit::window::Window, f: impl FnOnce(&Context) -> R) -> R {
         let raw_input = self.state.take_egui_input(window);
-        let output = self.context.run(raw_input, f);
+        self.context.begin_frame(raw_input);
+        let result = f(&self.context);
+        let output = self.context.end_frame();
 
         self.textures.append(output.textures_delta);
         self.state
             .handle_platform_output(window, &self.context, output.platform_output);
         self.paint_jobs = self.context.tessellate(output.shapes);
+        result
     }
 
     pub fn pre_render(

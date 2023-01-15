@@ -45,7 +45,7 @@ impl ConfigRepository {
                     type_name: type_name::<C>(),
                     id: id.as_str().to_owned(),
                 }),
-            Err(e) => Err(e.into()),
+            Err(e) => Err(e),
         }
     }
 }

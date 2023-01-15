@@ -8,7 +8,7 @@ pub struct Env {
     pub configs: ConfigRepository,
 }
 
-const CONFIG_DIR: &'static str = "config";
+const CONFIG_DIR: &str = "config";
 
 impl Env {
     pub fn new() -> anyhow::Result<Self> {

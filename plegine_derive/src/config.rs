@@ -9,5 +9,5 @@ pub fn config_derive_impl(ast: &syn::DeriveInput) -> TokenStream {
             const TAG: &'static str = stringify!(#name);
         }
     };
-    gen.into()
+    gen
 }

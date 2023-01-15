@@ -3,6 +3,7 @@
 #![feature(int_roundings)]
 #![feature(iterator_try_collect)]
 #![deny(elided_lifetimes_in_paths)]
+#![allow(clippy::mut_mutex_lock)] // false positives
 #![allow(dead_code)]
 
 use std::{sync::Mutex, time::Instant};

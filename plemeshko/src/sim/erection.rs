@@ -118,7 +118,7 @@ impl Erection {
     }
 
     pub fn active(&self) -> u32 {
-        self.state.count
+        self.state.active
     }
 
     pub fn set_count(&mut self, count: u32) {
@@ -157,18 +157,15 @@ impl Erection {
                 req_amount_transported,
                 transportation_priority,
             ));
-            match transport_state
+            if let RawEntryMut::Vacant(vacant) = transport_state
                 .raw_entry_mut()
                 .from_key(&res.transport_group)
             {
-                RawEntryMut::Vacant(vacant) => {
-                    let tr = config_get!(
-                        env.configs,
-                        self.state.transport.get(&res.transport_group).unwrap()
-                    );
-                    vacant.insert(res.transport_group.clone(), (tr, ResourceWeight(0)));
-                }
-                _ => (),
+                let tr = config_get!(
+                    env.configs,
+                    self.state.transport.get(&res.transport_group).unwrap()
+                );
+                vacant.insert(res.transport_group.clone(), (tr, ResourceWeight(0)));
             }
         }
 
