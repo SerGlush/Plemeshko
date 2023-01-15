@@ -21,6 +21,12 @@ macro_rules! declare_unit {
         )]
         pub struct $name(pub $ty);
 
+        impl $name {
+            pub fn div_ceil(self, rhs: Self) -> $ty {
+                self.0.div_ceil(rhs.0)
+            }
+        }
+
         impl std::ops::Mul<$ty> for $name {
             type Output = $name;
 

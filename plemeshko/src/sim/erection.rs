@@ -150,7 +150,7 @@ impl Erection {
             }
             let req_amount_transported = *req_amount - already_stored;
             let transportation_priority =
-                req_amount_transported / *self.single_io.input.get(res_id).unwrap();
+                req_amount_transported.div_ceil(*self.single_io.input.get(res_id).unwrap());
             requested_resources.push((
                 res_id,
                 res,
@@ -204,7 +204,7 @@ impl Erection {
                     panic!("Negative amount");
                 };
                 let tr_required_add_weight = res.transport_weight - *tr_remaining;
-                let tr_required_add_count = tr_required_add_weight.0.div_ceil(tr.capacity.0);
+                let tr_required_add_count = tr_required_add_weight.div_ceil(tr.capacity);
                 if depot.cor_has_all_times(&tr.fuel.input, tr_required_add_count)
                     != tr_required_add_count
                 {
@@ -270,7 +270,7 @@ impl Erection {
                     ResourceAmount(*transported_weight_already / res.transport_weight);
                 *transported_weight_already = ResourceWeight(0);
                 let can_fuel = depot.cor_has_all_times(&tr.fuel.input, i64::MAX);
-                let req_transport = res_weight.0.div_ceil(tr.capacity.0);
+                let req_transport = res_weight.div_ceil(tr.capacity);
                 let transport = req_transport.min(can_fuel);
                 depot.cor_sub_all_times_unchecked(&tr.fuel.input, transport);
                 depot.cor_put_all_times(&tr.fuel.output, transport);
