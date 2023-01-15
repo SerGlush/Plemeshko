@@ -38,24 +38,26 @@ pub struct Erection {
 
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
 
-impl ErectionSnapshot {
+impl Erection {
     pub fn new(
+        env: &Env,
         name: String,
         selected_methods: Vec<SelectedMethod>,
         transport: HashMap<TransportGroupId, TransportId>,
-    ) -> Self {
-        ErectionSnapshot {
-            name,
-            selected_methods,
-            transport,
-            storage: ResourceIo::new(),
-            count: 0,
-            active: 0,
-        }
+    ) -> anyhow::Result<Self> {
+        Self::restore(
+            env,
+            ErectionSnapshot {
+                name,
+                selected_methods,
+                transport,
+                storage: ResourceIo::new(),
+                count: 0,
+                active: 0,
+            },
+        )
     }
-}
 
-impl Erection {
     pub fn restore(env: &Env, snapshot: ErectionSnapshot) -> anyhow::Result<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
