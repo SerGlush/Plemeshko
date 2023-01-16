@@ -1,4 +1,3 @@
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::{env::Env, sim::units::ResourceAmount, util::cor::Cor};

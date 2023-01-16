@@ -48,7 +48,7 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let sim = Box::leak(Box::new(Mutex::new(sim)));
+    let (sim, env) = Box::leak(Box::new((Mutex::new(sim), env)));
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
             let mut tick_delay = Sim::TICK_DELAY;
@@ -59,7 +59,7 @@ fn main() {
                     if sim.exited() {
                         break;
                     }
-                    let step_result = sim.step(&env);
+                    let step_result = sim.step(env);
                     match step_result {
                         Ok(_) => (),
                         Err(e) => {
@@ -81,6 +81,6 @@ fn main() {
             }
         });
 
-        framework::run(sim);
+        framework::run(sim, env);
     });
 }

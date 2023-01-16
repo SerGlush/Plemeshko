@@ -1,15 +1,19 @@
 use std::collections::HashMap;
 
-use crate::sim::{
-    config::{
-        method::MethodId,
-        resource::{storage::Cor, ResourceId},
-        transport::TransportId,
-        transport_group::TransportGroupId,
+use crate::{
+    env::Env,
+    sim::{
+        config::{
+            method::MethodId,
+            resource::{storage::Cor, ResourceId},
+            transport::TransportId,
+            transport_group::TransportGroupId,
+        },
+        erection::Erection,
+        Sim, RESOURCE_ID_HUMAN,
     },
-    erection::Erection,
-    Sim, RESOURCE_ID_HUMAN,
 };
+use anyhow::Ok;
 use egui::*;
 
 pub struct App {
@@ -21,16 +25,21 @@ pub struct App {
     erection_builder_methods: Vec<MethodId>,
 }
 
-pub fn draw_erection(ui: &mut Ui, erection: &Erection) {
+pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &Env) -> anyhow::Result<()> {
     ui.horizontal(|ui| {
         ui.label(format!("{}:", erection.name()));
-        for transport in erection.transport().values() {
-            ui.label(transport.as_str()).on_hover_text("Placeholder");
+        for transport_id in erection.transport().values() {
+            let transport = config_get!(env.configs, transport_id);
+            ui.label(transport_id.as_str())
+                .on_hover_text(format!("transport capacity: {}", transport.capacity));
         }
-    });
+        Ok(())
+    })
+    .inner?;
     for method in erection.methods().iter() {
         ui.horizontal(|ui| ui.label(method.id.as_str()).on_hover_text("Placeholder"));
     }
+    Ok(())
 }
 
 impl App {
@@ -49,7 +58,7 @@ impl App {
         Ok(())
     }
 
-    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim) -> anyhow::Result<()> {
+    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim, env: &Env) -> anyhow::Result<()> {
         CentralPanel::default().show(context, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("Main").clicked() {
@@ -72,10 +81,9 @@ impl App {
                             .unwrap_or_default()
                     ));
                     for (id, value) in sim.depot.iter() {
-                        if id.as_str() == RESOURCE_ID_HUMAN {
-                            continue;
+                        if id.as_str() != RESOURCE_ID_HUMAN {
+                            ui.label(format!("{id} : {value}"));
                         }
-                        ui.label(format!("{id} : {value}"));
                     }
                 }
                 1 => {
@@ -90,7 +98,7 @@ impl App {
                         });
                     }
                     for erection in sim.erections.iter() {
-                        draw_erection(ui, erection);
+                        draw_erection(erection, ui, env);
                     }
                 }
                 2 => {

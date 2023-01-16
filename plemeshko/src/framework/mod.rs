@@ -2,7 +2,7 @@ use std::{ops::DerefMut, sync::Mutex};
 
 use winit::event::Event;
 
-use crate::{app::App, sim::Sim};
+use crate::{app::App, env::Env, sim::Sim};
 
 use self::{
     graphics::{Graphics, RenderError},
@@ -13,7 +13,7 @@ mod graphics;
 mod gui;
 mod window;
 
-pub fn run(sim: &'static Mutex<Sim>) -> ! {
+pub fn run(sim: &'static Mutex<Sim>, env: &'static Env) -> ! {
     let (event_loop, window) = window::initialize();
     let mut graphics = futures::executor::block_on(Graphics::new(&window));
     let mut gui = Gui::new(
@@ -66,9 +66,9 @@ pub fn run(sim: &'static Mutex<Sim>) -> ! {
         }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
-                if let Err(e) =
-                    gui.run(&window, |ctx| app.gui(ctx, sim.lock().unwrap().deref_mut()))
-                {
+                if let Err(e) = gui.run(&window, |ctx| {
+                    app.gui(ctx, sim.lock().unwrap().deref_mut(), env)
+                }) {
                     *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
                     println!("App update error: {e}");
                     return;
