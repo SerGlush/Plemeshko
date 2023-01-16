@@ -59,61 +59,64 @@ impl App {
     }
 
     pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim, env: &Env) -> anyhow::Result<()> {
-        CentralPanel::default().show(context, |ui| {
-            ui.horizontal(|ui| {
-                if ui.button("Main").clicked() {
-                    self.current_panel = 0;
-                }
-                if ui.button("Erections").clicked() {
-                    self.current_panel = 1;
-                }
-                if ui.button("Debug").clicked() {
-                    self.current_panel = 2;
-                }
-            });
-            match self.current_panel {
-                0 => {
-                    ui.label(format!(
-                        "Population: {}",
-                        sim.depot
-                            .get(RESOURCE_ID_HUMAN)
-                            .map(Clone::clone)
-                            .unwrap_or_default()
-                    ));
-                    for (id, value) in sim.depot.iter() {
-                        if id.as_str() != RESOURCE_ID_HUMAN {
-                            ui.label(format!("{id} : {value}"));
+        CentralPanel::default()
+            .show(context, |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Main").clicked() {
+                        self.current_panel = 0;
+                    }
+                    if ui.button("Erections").clicked() {
+                        self.current_panel = 1;
+                    }
+                    if ui.button("Debug").clicked() {
+                        self.current_panel = 2;
+                    }
+                });
+                match self.current_panel {
+                    0 => {
+                        ui.label(format!(
+                            "Population: {}",
+                            sim.depot
+                                .get(RESOURCE_ID_HUMAN)
+                                .map(Clone::clone)
+                                .unwrap_or_default()
+                        ));
+                        for (id, value) in sim.depot.iter() {
+                            if id.as_str() != RESOURCE_ID_HUMAN {
+                                ui.label(format!("{id} : {value}"));
+                            }
                         }
                     }
-                }
-                1 => {
-                    if ui.button("Create Erection").clicked() {
-                        Window::new("Erection Builder").show(context, |ui| {
-                            ui.horizontal(|ui| {
-                                ui.text_edit_singleline(&mut self.erection_builder_name);
-                            })
-                            //for method in self.erection_builder_methods {
-                            //    ui.
-                            //}
-                        });
+                    1 => {
+                        if ui.button("Create Erection").clicked() {
+                            Window::new("Erection Builder").show(context, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.text_edit_singleline(&mut self.erection_builder_name);
+                                })
+                                //for method in self.erection_builder_methods {
+                                //    ui.
+                                //}
+                            });
+                        }
+                        for erection in sim.erections.iter() {
+                            draw_erection(erection, ui, env)?;
+                        }
                     }
-                    for erection in sim.erections.iter() {
-                        draw_erection(erection, ui, env);
+                    2 => {
+                        ui.text_edit_singleline(&mut self.spawn_resource_name);
+                        ui.text_edit_singleline(&mut self.spawn_resource_value);
+                        if ui.button("Spawn resource").clicked() {
+                            sim.depot.cor_put(
+                                &ResourceId::new(self.spawn_resource_name.clone()),
+                                self.spawn_resource_value.parse().unwrap(),
+                            );
+                        }
                     }
+                    _ => (),
                 }
-                2 => {
-                    ui.text_edit_singleline(&mut self.spawn_resource_name);
-                    ui.text_edit_singleline(&mut self.spawn_resource_value);
-                    if ui.button("Spawn resource").clicked() {
-                        sim.depot.cor_put(
-                            &ResourceId::new(self.spawn_resource_name.clone()),
-                            self.spawn_resource_value.parse().unwrap(),
-                        );
-                    }
-                }
-                _ => (),
-            }
-        });
+                Ok(())
+            })
+            .inner?;
 
         Ok(())
     }

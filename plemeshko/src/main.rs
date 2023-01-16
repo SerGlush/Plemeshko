@@ -48,6 +48,9 @@ fn main() {
             std::process::exit(1);
         }
     };
+    // sim and env are never dropped
+    static_assertions::assert_not_impl_all!(Sim: Drop);
+    static_assertions::assert_not_impl_all!(app::App: Drop);
     let (sim, env) = Box::leak(Box::new((Mutex::new(sim), env)));
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {

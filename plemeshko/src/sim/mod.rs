@@ -25,8 +25,6 @@ pub struct Sim {
     exited: bool,
 }
 
-static_assertions::assert_not_impl_all!(Sim: Drop);
-
 pub const RESOURCE_ID_HUMAN: &str = "human";
 
 impl Sim {
