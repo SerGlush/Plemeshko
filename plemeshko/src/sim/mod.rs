@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::env::Env;
+use crate::env::SimEnv;
 
 use self::{
     config::resource::storage::ResourceMap,
@@ -31,7 +31,7 @@ impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
     pub const TICK_THRESHOLD: Duration = Duration::from_millis(1);
 
-    pub fn restore(env: &Env, snapshot: SimSnapshot) -> anyhow::Result<Self> {
+    pub fn restore(env: &SimEnv, snapshot: SimSnapshot) -> anyhow::Result<Self> {
         let SimSnapshot { depot, erections } = snapshot;
         Ok(Sim {
             depot,
@@ -67,7 +67,7 @@ impl Sim {
         // todo: finalization code, mb dropping resources / saving state
     }
 
-    pub fn step(&mut self, env: &Env) -> anyhow::Result<()> {
+    pub fn step(&mut self, env: &SimEnv) -> anyhow::Result<()> {
         if self.exited {
             panic!("Sim is in exiting state when step was called");
         }

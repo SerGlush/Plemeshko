@@ -8,8 +8,10 @@
 
 use std::{sync::Mutex, time::Instant};
 
-use env::Env;
+use env::{SharedEnv, SimEnv};
 use sim::{Sim, SimSnapshot};
+
+use crate::env::AppEnv;
 
 #[macro_use]
 mod util;
@@ -18,7 +20,7 @@ mod env;
 mod framework;
 mod sim;
 
-fn load_sim(env: &Env) -> anyhow::Result<Sim> {
+fn load_sim(env: &SimEnv) -> anyhow::Result<Sim> {
     let mut cli_args_iter = std::env::args();
     cli_args_iter.next(); // exe
     Ok(match cli_args_iter.next() {
@@ -32,26 +34,27 @@ fn load_sim(env: &Env) -> anyhow::Result<Sim> {
     })
 }
 
+macro_rules! error_catch_print_exit {
+    ($e:expr, $msg:literal) => {
+        match $e {
+            Ok(value) => value,
+            Err(e) => {
+                println!($msg, e);
+                std::process::exit(1);
+            }
+        }
+    };
+}
+
 fn main() {
     // todo: consider RwLock / partial locking; multithreaded sim
-    let env = match Env::new() {
-        Ok(env) => env,
-        Err(e) => {
-            println!("Sim initialization error: {e}");
-            std::process::exit(1);
-        }
-    };
-    let sim = match load_sim(&env) {
-        Ok(sim) => sim,
-        Err(e) => {
-            println!("Error reading Sim snapshot: {e}");
-            std::process::exit(1);
-        }
-    };
+    let senv = error_catch_print_exit!(SharedEnv::new(), "Shared env init failed: {}");
+    let sim = error_catch_print_exit!(load_sim(&senv), "Error reading Sim snapshot: {}");
     // sim and env are never dropped
     static_assertions::assert_not_impl_all!(Sim: Drop);
     static_assertions::assert_not_impl_all!(app::App: Drop);
-    let (sim, env) = Box::leak(Box::new((Mutex::new(sim), env)));
+    let (sim, senv) = Box::leak(Box::new((Mutex::new(sim), senv)));
+    let aenv = error_catch_print_exit!(AppEnv::new(senv), "App env init failed: {}");
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
             let mut tick_delay = Sim::TICK_DELAY;
@@ -62,7 +65,7 @@ fn main() {
                     if sim.exited() {
                         break;
                     }
-                    let step_result = sim.step(env);
+                    let step_result = sim.step(senv);
                     match step_result {
                         Ok(_) => (),
                         Err(e) => {
@@ -84,6 +87,6 @@ fn main() {
             }
         });
 
-        framework::run(sim, env);
+        framework::run(sim, aenv);
     });
 }

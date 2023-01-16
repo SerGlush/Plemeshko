@@ -3,6 +3,7 @@
         "tag": "Method",
         "name": "hunt_animals",
         "payload": {
+            "name": "method_hunt-animals",
             "setting_groups": [
                 "hunting_tool"
             ]

@@ -3,6 +3,7 @@
         "tag": "Resource",
         "name": "human",
         "payload": {
+            "name": "resource_human",
             "transport_group": "solid",
             "transport_weight": 0
         }
@@ -11,6 +12,7 @@
         "tag": "Resource",
         "name": "food",
         "payload": {
+            "name": "resource_food",
             "transport_group": "solid",
             "transport_weight": 2
         }
@@ -19,6 +21,7 @@
         "tag": "Resource",
         "name": "stone_instrument",
         "payload": {
+            "name": "resource_stone-instrument",
             "transport_group": "solid",
             "transport_weight": 4
         }

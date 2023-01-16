@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    env::Env,
+    env::AppEnv,
     sim::{
         config::{
             method::MethodId,
@@ -15,6 +15,7 @@ use crate::{
 };
 use anyhow::Ok;
 use egui::*;
+use fluent::FluentArgs;
 
 pub struct App {
     current_panel: i64,
@@ -25,19 +26,25 @@ pub struct App {
     erection_builder_methods: Vec<MethodId>,
 }
 
-pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &Env) -> anyhow::Result<()> {
+pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &AppEnv) -> anyhow::Result<()> {
     ui.horizontal(|ui| {
         ui.label(format!("{}:", erection.name()));
         for transport_id in erection.transport().values() {
-            let transport = config_get!(env.configs, transport_id);
-            ui.label(transport_id.as_str())
+            let transport = config_get!(env.configs(), transport_id);
+            ui.label(env.text(&transport.name)?)
                 .on_hover_text(format!("transport capacity: {}", transport.capacity));
         }
         Ok(())
     })
     .inner?;
-    for method in erection.methods().iter() {
-        ui.horizontal(|ui| ui.label(method.id.as_str()).on_hover_text("Placeholder"));
+    for selected_method in erection.methods().iter() {
+        let method = config_get!(env.configs(), &selected_method.id);
+        ui.horizontal(|ui| {
+            ui.label(env.text(&method.name)?)
+                .on_hover_text("Placeholder");
+            Ok(())
+        })
+        .inner?;
     }
     Ok(())
 }
@@ -58,38 +65,49 @@ impl App {
         Ok(())
     }
 
-    pub fn gui(&mut self, context: &egui::Context, sim: &mut Sim, env: &Env) -> anyhow::Result<()> {
+    pub fn gui(
+        &mut self,
+        context: &egui::Context,
+        sim: &mut Sim,
+        env: &mut AppEnv,
+    ) -> anyhow::Result<()> {
         CentralPanel::default()
             .show(context, |ui| {
                 ui.horizontal(|ui| {
-                    if ui.button("Main").clicked() {
+                    if ui.button(env.text("ui_main")?).clicked() {
                         self.current_panel = 0;
                     }
-                    if ui.button("Erections").clicked() {
+                    if ui.button(env.text("ui_erections")?).clicked() {
                         self.current_panel = 1;
                     }
-                    if ui.button("Debug").clicked() {
+                    if ui.button(env.text("ui_debug")?).clicked() {
                         self.current_panel = 2;
                     }
-                });
+                    Ok(())
+                })
+                .inner?;
                 match self.current_panel {
                     0 => {
-                        ui.label(format!(
-                            "Population: {}",
+                        let mut args = FluentArgs::new();
+                        args.set(
+                            "population",
                             sim.depot
                                 .get(RESOURCE_ID_HUMAN)
                                 .map(Clone::clone)
                                 .unwrap_or_default()
-                        ));
+                                .to_string(),
+                        );
+                        ui.label(env.text_fmt("ui_main_population", &args)?);
                         for (id, value) in sim.depot.iter() {
                             if id.as_str() != RESOURCE_ID_HUMAN {
-                                ui.label(format!("{id} : {value}"));
+                                let res = config_get!(env.configs(), id);
+                                ui.label(format!("{} : {value}", env.text(&res.name)?));
                             }
                         }
                     }
                     1 => {
-                        if ui.button("Create Erection").clicked() {
-                            Window::new("Erection Builder").show(context, |ui| {
+                        if ui.button(env.text("ui_erections_create")?).clicked() {
+                            Window::new(env.text("ui_erections_builder")?).show(context, |ui| {
                                 ui.horizontal(|ui| {
                                     ui.text_edit_singleline(&mut self.erection_builder_name);
                                 })
@@ -105,7 +123,7 @@ impl App {
                     2 => {
                         ui.text_edit_singleline(&mut self.spawn_resource_name);
                         ui.text_edit_singleline(&mut self.spawn_resource_value);
-                        if ui.button("Spawn resource").clicked() {
+                        if ui.button(env.text("ui_debug_spawn-resources")?).clicked() {
                             sim.depot.cor_put(
                                 &ResourceId::new(self.spawn_resource_name.clone()),
                                 self.spawn_resource_value.parse().unwrap(),

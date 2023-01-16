@@ -12,6 +12,9 @@ wgpu = "0.14"
 egui = "0.20"
 egui-wgpu = "0.20"
 egui-winit = "0.20"
+fluent = "0.15"
+fluent-syntax = "0.11"
+unic-langid = { version = "0.9", features = ["macros"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 derive_more = "0.99"

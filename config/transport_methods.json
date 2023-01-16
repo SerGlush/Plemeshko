@@ -3,6 +3,7 @@
         "tag": "Transport",
         "name": "manual",
         "payload": {
+            "name": "transport_manual",
             "group": "solid",
             "capacity": 400,
             "fuel": {}

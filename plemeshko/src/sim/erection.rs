@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{env::Env, sim::units::ResourceAmount, util::cor::Cor};
+use crate::{env::SimEnv, sim::units::ResourceAmount, util::cor::Cor};
 use std::{
     collections::{hash_map::RawEntryMut, HashMap},
     ops::{AddAssign, SubAssign},
@@ -40,7 +40,7 @@ pub struct Erection {
 
 impl Erection {
     pub fn new(
-        env: &Env,
+        env: &SimEnv,
         name: String,
         selected_methods: Vec<SelectedMethod>,
         transport: HashMap<TransportGroupId, TransportId>,
@@ -59,7 +59,7 @@ impl Erection {
         )
     }
 
-    pub fn restore(env: &Env, snapshot: ErectionSnapshot) -> anyhow::Result<Self> {
+    pub fn restore(env: &SimEnv, snapshot: ErectionSnapshot) -> anyhow::Result<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
         for selected_method in snapshot.selected_methods.iter() {
@@ -127,7 +127,7 @@ impl Erection {
         self.state.active = active;
     }
 
-    fn step_input(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
+    fn step_input(&mut self, env: &SimEnv, depot: &mut ResourceMap) -> anyhow::Result<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let mut requested_resources = Vec::with_capacity(self.single_io.input.len());
         for (res_id, &single_input) in self.single_io.input.iter() {
@@ -228,7 +228,7 @@ impl Erection {
     }
 
     // todo: fair output scheduler
-    fn step_output(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
+    fn step_output(&mut self, env: &SimEnv, depot: &mut ResourceMap) -> anyhow::Result<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let active = self.active() as i64;
         for (res_id, res_amount) in self.state.storage.iter_mut() {
@@ -300,7 +300,7 @@ impl Erection {
         Ok(())
     }
 
-    pub fn step(&mut self, env: &Env, depot: &mut ResourceMap) -> anyhow::Result<()> {
+    pub fn step(&mut self, env: &SimEnv, depot: &mut ResourceMap) -> anyhow::Result<()> {
         self.step_input(env, depot)?;
         self.step_process();
         self.step_output(env, depot)
