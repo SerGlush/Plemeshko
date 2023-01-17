@@ -1,8 +1,6 @@
 [workspace]
 members = [
-    "plegine",
-    "plegine_derive",
-    "plemeshko",
+    "plemeshko"
 ]
 
 resolver = "2"

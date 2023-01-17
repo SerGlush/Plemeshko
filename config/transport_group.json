@@ -1,17 +1,17 @@
 [
     {
-        "tag": "TransportGroup",
-        "name": "solid",
+        "tag": "transport-group",
+        "label": "solid",
         "payload": {}
     },
     {
-        "tag": "TransportGroup",
-        "name": "liquid",
+        "tag": "transport-group",
+        "label": "liquid",
         "payload": {}
     },
     {
-        "tag": "TransportGroup",
-        "name": "gas",
+        "tag": "transport-group",
+        "label": "gas",
         "payload": {}
     }
 ]

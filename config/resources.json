@@ -1,27 +1,24 @@
 [
     {
-        "tag": "Resource",
-        "name": "human",
+        "tag": "resource",
+        "label": "human",
         "payload": {
-            "name": "resource_human",
             "transport_group": "solid",
             "transport_weight": 0
         }
     },
     {
-        "tag": "Resource",
-        "name": "food",
+        "tag": "resource",
+        "label": "food",
         "payload": {
-            "name": "resource_food",
             "transport_group": "solid",
             "transport_weight": 2
         }
     },
     {
-        "tag": "Resource",
-        "name": "stone_instrument",
+        "tag": "resource",
+        "label": "stone-instrument",
         "payload": {
-            "name": "resource_stone-instrument",
             "transport_group": "solid",
             "transport_weight": 4
         }

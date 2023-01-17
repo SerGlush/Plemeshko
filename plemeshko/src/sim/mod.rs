@@ -6,14 +6,19 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::env::SimEnv;
+use crate::env::{config::Serializable, SimEnv};
 
 use self::{
-    config::resource::storage::ResourceMap,
-    erection::{Erection, ErectionSnapshot},
+    config::resource::{RawResourceMap, ResourceMap},
+    erection::{Erection, ErectionSnapshot, RawErectionSnapshot},
 };
 
 #[derive(Serialize, Deserialize)]
+pub struct RawSimSnapshot {
+    depot: RawResourceMap,
+    erections: Vec<RawErectionSnapshot>,
+}
+
 pub struct SimSnapshot {
     depot: ResourceMap,
     erections: Vec<ErectionSnapshot>,
@@ -24,8 +29,6 @@ pub struct Sim {
     pub erections: Vec<Erection>,
     exited: bool,
 }
-
-pub const RESOURCE_ID_HUMAN: &str = "human";
 
 impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
@@ -75,5 +78,26 @@ impl Sim {
             self.erections[i].step(env, &mut self.depot)?;
         }
         Ok(())
+    }
+}
+
+impl Serializable for SimSnapshot {
+    type Raw = RawSimSnapshot;
+
+    fn from_serializable(raw: Self::Raw, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
+        SimSnapshot {
+            depot: Serializable::from_serializable(raw.depot, indexer),
+            erections: Serializable::from_serializable(raw.erections, indexer),
+        }
+    }
+
+    fn into_serializable(
+        self,
+        indexer: &mut crate::env::config::ConfigIndexer,
+    ) -> anyhow::Result<Self::Raw> {
+        Ok(RawSimSnapshot {
+            depot: self.depot.into_serializable(indexer)?,
+            erections: self.erections.into_serializable(indexer)?,
+        })
     }
 }

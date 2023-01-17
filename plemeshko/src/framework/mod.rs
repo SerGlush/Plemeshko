@@ -70,7 +70,7 @@ pub fn run(sim: &'static Mutex<Sim>, mut env: AppEnv) -> ! {
                     app.gui(ctx, sim.lock().unwrap().deref_mut(), &mut env)
                 }) {
                     *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
-                    println!("App update error: {e}");
+                    println!("App update error: {e:#}");
                     return;
                 }
                 match graphics.new_frame() {

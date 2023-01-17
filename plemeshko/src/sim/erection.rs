@@ -1,26 +1,40 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{env::SimEnv, sim::units::ResourceAmount, util::cor::Cor};
+use crate::{
+    env::{config::Serializable, SimEnv},
+    sim::units::ResourceAmount,
+    util::cor::Cor,
+};
 use std::{
-    collections::{hash_map::RawEntryMut, HashMap},
+    collections::{
+        hash_map::{Entry, RawEntryMut},
+        HashMap,
+    },
     ops::{AddAssign, SubAssign},
 };
 
 use super::{
     config::{
-        method::SelectedMethod,
-        resource::{
-            storage::{ResourceIo, ResourceMap},
-            ResourceId,
-        },
-        transport::{Transport, TransportId},
-        transport_group::TransportGroupId,
+        method::{RawSelectedMethod, SelectedMethod},
+        resource::{RawResourceMap, ResourceId, ResourceIo, ResourceMap},
+        transport::{Transport, TransportId, TransportLabel},
+        transport_group::{TransportGroupId, TransportGroupLabel},
     },
     units::ResourceWeight,
-    RESOURCE_ID_HUMAN,
 };
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize)]
+pub struct RawErectionSnapshot {
+    name: String,
+    selected_methods: Vec<RawSelectedMethod>,
+    transport: HashMap<TransportGroupLabel, TransportLabel>,
+    storage: RawResourceMap,
+    count: u32,
+    active: u32,
+    reserve_export_threshold: u32,
+}
+
+#[derive(Clone)]
 pub struct ErectionSnapshot {
     name: String,
     selected_methods: Vec<SelectedMethod>,
@@ -65,15 +79,15 @@ impl Erection {
         for selected_method in snapshot.selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
-                let setting_group = config_get!(env.configs, &selected_setting.group_id);
+                let setting_group = config_get!(env.configs, selected_setting.group);
                 let setting = &setting_group.settings[selected_setting.index];
-                for (resource_id, delta) in setting.output.iter() {
+                for (resource_id, delta) in setting.resource_io.output.iter() {
                     single_output
                         .entry(resource_id.to_owned())
                         .or_default()
                         .add_assign(*delta);
                 }
-                for (resource_id, delta) in setting.input.iter() {
+                for (resource_id, delta) in setting.resource_io.input.iter() {
                     single_input
                         .entry(resource_id.to_owned())
                         .or_default()
@@ -132,7 +146,7 @@ impl Erection {
         let mut requested_resources = Vec::with_capacity(self.single_io.input.len());
         for (res_id, &single_input) in self.single_io.input.iter() {
             let req_input = single_input * self.active() as i64;
-            let res = config_get!(env.configs, res_id);
+            let res = config_get!(env.configs, *res_id);
             let already_stored = self
                 .state
                 .storage
@@ -152,9 +166,9 @@ impl Erection {
             {
                 let tr = config_get!(
                     env.configs,
-                    self.state.transport.get(&res.transport_group).unwrap()
+                    *self.state.transport.get(&res.transport_group).unwrap()
                 );
-                vacant.insert(res.transport_group.clone(), (tr, ResourceWeight(0)));
+                vacant.insert(res.transport_group, (tr, ResourceWeight(0)));
             }
         }
 
@@ -231,11 +245,11 @@ impl Erection {
     fn step_output(&mut self, env: &SimEnv, depot: &mut ResourceMap) -> anyhow::Result<()> {
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let active = self.active() as i64;
-        for (res_id, res_amount) in self.state.storage.iter_mut() {
+        for (&res_id, res_amount) in self.state.storage.iter_mut() {
             // humans are always exported back to the global storage
-            if self.state.reserve_export_threshold > 0 && res_id.as_str() != RESOURCE_ID_HUMAN {
+            if self.state.reserve_export_threshold > 0 && res_id != env.human_id {
                 // other resources are exported when above the reserve limit
-                if let Some(&single_input) = self.single_io.input.get(res_id) {
+                if let Some(&single_input) = self.single_io.input.get(&res_id) {
                     let tick_input = single_input * active;
                     if *res_amount < tick_input * self.state.reserve_export_threshold as i64 {
                         continue;
@@ -250,10 +264,10 @@ impl Erection {
                 RawEntryMut::Vacant(vacant) => {
                     let tr = config_get!(
                         env.configs,
-                        self.state.transport.get(&res.transport_group).unwrap()
+                        *self.state.transport.get(&res.transport_group).unwrap()
                     );
                     vacant
-                        .insert(res.transport_group.clone(), (tr, ResourceWeight(0)))
+                        .insert(res.transport_group, (tr, ResourceWeight(0)))
                         .1
                 }
                 RawEntryMut::Occupied(occupied) => occupied.into_mut(),
@@ -288,12 +302,10 @@ impl Erection {
             };
             // update storages
             res_amount.sub_assign(transported_amount);
-            match depot.raw_entry_mut().from_key(res_id) {
-                RawEntryMut::Occupied(mut occupied) => {
-                    occupied.get_mut().add_assign(transported_amount)
-                }
-                RawEntryMut::Vacant(vacant) => {
-                    vacant.insert(res_id.clone(), transported_amount);
+            match depot.entry(res_id) {
+                Entry::Occupied(mut occupied) => occupied.get_mut().add_assign(transported_amount),
+                Entry::Vacant(vacant) => {
+                    vacant.insert(transported_amount);
                 }
             }
         }
@@ -304,5 +316,36 @@ impl Erection {
         self.step_input(env, depot)?;
         self.step_process();
         self.step_output(env, depot)
+    }
+}
+
+impl Serializable for ErectionSnapshot {
+    type Raw = RawErectionSnapshot;
+
+    fn from_serializable(raw: Self::Raw, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
+        ErectionSnapshot {
+            name: raw.name,
+            selected_methods: Serializable::from_serializable(raw.selected_methods, indexer),
+            transport: Serializable::from_serializable(raw.transport, indexer),
+            storage: Serializable::from_serializable(raw.storage, indexer),
+            count: raw.count,
+            active: raw.active,
+            reserve_export_threshold: raw.reserve_export_threshold,
+        }
+    }
+
+    fn into_serializable(
+        self,
+        indexer: &mut crate::env::config::ConfigIndexer,
+    ) -> anyhow::Result<Self::Raw> {
+        Ok(RawErectionSnapshot {
+            name: self.name,
+            selected_methods: self.selected_methods.into_serializable(indexer)?,
+            transport: self.transport.into_serializable(indexer)?,
+            storage: self.storage.into_serializable(indexer)?,
+            count: self.count,
+            active: self.active,
+            reserve_export_threshold: self.reserve_export_threshold,
+        })
     }
 }
