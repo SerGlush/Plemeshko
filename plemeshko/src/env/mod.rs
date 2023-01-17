@@ -1,19 +1,27 @@
+#[macro_use]
+pub mod config;
 pub mod text;
 
 use std::{borrow::Cow, path::PathBuf};
 
+use anyhow::Result;
 use fluent::FluentArgs;
-use plegine::config::{ConfigRepository, ConfigRepositoryBuilder};
 
-use crate::sim::config;
+use crate::sim::config::resource::Resource;
 
-use self::text::{TextIdentifier, TextRepository};
+use self::{
+    config::{ConfigId, ConfigRepository, ConfigRepositoryBuilder},
+    text::{TextIdentifier, TextRepository},
+};
 
 const CONFIG_DIR: &str = "config";
 const TEXT_DIR: &str = "text";
 
+const RESOURCE_LABEL_HUMAN: &str = "human";
+
 pub struct SharedEnv {
     pub configs: ConfigRepository,
+    pub human_id: ConfigId<Resource>,
 }
 
 static_assertions::assert_impl_all!(SharedEnv: Sync);
@@ -26,24 +34,18 @@ pub struct AppEnv {
 pub type SimEnv = SharedEnv;
 
 impl SharedEnv {
-    pub fn new() -> anyhow::Result<Self> {
-        let mut config_repo_builder = ConfigRepositoryBuilder::new();
-        config_repo_builder.register::<config::resource::Resource>()?;
-        config_repo_builder.register::<config::setting_group::SettingGroup>()?;
-        config_repo_builder.register::<config::transport::Transport>()?;
-        config_repo_builder.register::<config::transport_group::TransportGroup>()?;
-        config_repo_builder.register::<config::method::Method>()?;
-        config_repo_builder.register::<config::method_group::MethodGroup>()?;
-        let config_dir_path = PathBuf::from(CONFIG_DIR);
-        config_repo_builder.load_directory(config_dir_path.as_path())?;
-        Ok(SharedEnv {
-            configs: config_repo_builder.build(),
-        })
+    pub fn new() -> Result<Self> {
+        let mut configs_builder = ConfigRepositoryBuilder::new();
+        crate::sim::config::register(&mut configs_builder)?;
+        configs_builder.load_directory(&PathBuf::from(CONFIG_DIR))?;
+        let configs = configs_builder.build()?;
+        let human_id = configs.indexer.get_id(RESOURCE_LABEL_HUMAN.to_owned())?;
+        Ok(SharedEnv { configs, human_id })
     }
 }
 
 impl AppEnv {
-    pub fn new(shared: &'static SharedEnv) -> anyhow::Result<Self> {
+    pub fn new(shared: &'static SharedEnv) -> Result<Self> {
         Ok(AppEnv {
             shared,
             texts: TextRepository::new()?,
@@ -65,7 +67,7 @@ impl AppEnv {
         })
     }
 
-    pub fn text<'a>(&'a self, id: &(impl TextIdentifier + ?Sized)) -> anyhow::Result<Cow<'a, str>> {
+    pub fn text<'a>(&'a self, id: &(impl TextIdentifier + ?Sized)) -> Result<Cow<'a, str>> {
         self.text_impl(id, None)
     }
 

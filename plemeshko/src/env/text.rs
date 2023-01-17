@@ -208,6 +208,12 @@ impl TextRepository {
     }
 }
 
+impl TextId {
+    pub fn new(id: String) -> Self {
+        TextId(id)
+    }
+}
+
 impl Display for LoadTranslationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

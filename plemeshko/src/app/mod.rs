@@ -3,15 +3,11 @@ use std::collections::HashMap;
 use crate::{
     env::AppEnv,
     sim::{
-        config::{
-            method::MethodId,
-            resource::{storage::Cor, ResourceId},
-            transport::TransportId,
-            transport_group::TransportGroupId,
-        },
+        config::{method::MethodId, transport::TransportId, transport_group::TransportGroupId},
         erection::Erection,
-        Sim, RESOURCE_ID_HUMAN,
+        Sim,
     },
+    util::cor::Cor,
 };
 use anyhow::Ok;
 use egui::*;
@@ -29,7 +25,7 @@ pub struct App {
 pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &AppEnv) -> anyhow::Result<()> {
     ui.horizontal(|ui| {
         ui.label(format!("{}:", erection.name()));
-        for transport_id in erection.transport().values() {
+        for &transport_id in erection.transport().values() {
             let transport = config_get!(env.configs(), transport_id);
             ui.label(env.text(&transport.name)?)
                 .on_hover_text(format!("transport capacity: {}", transport.capacity));
@@ -38,7 +34,7 @@ pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &AppEnv) -> anyhow::
     })
     .inner?;
     for selected_method in erection.methods().iter() {
-        let method = config_get!(env.configs(), &selected_method.id);
+        let method = config_get!(env.configs(), selected_method.id);
         ui.horizontal(|ui| {
             ui.label(env.text(&method.name)?)
                 .on_hover_text("Placeholder");
@@ -92,14 +88,14 @@ impl App {
                         args.set(
                             "population",
                             sim.depot
-                                .get(RESOURCE_ID_HUMAN)
+                                .get(&env.shared.human_id)
                                 .map(Clone::clone)
                                 .unwrap_or_default()
                                 .to_string(),
                         );
                         ui.label(env.text_fmt("ui_main_population", &args)?);
-                        for (id, value) in sim.depot.iter() {
-                            if id.as_str() != RESOURCE_ID_HUMAN {
+                        for (&id, value) in sim.depot.iter() {
+                            if id != env.shared.human_id {
                                 let res = config_get!(env.configs(), id);
                                 ui.label(format!("{} : {value}", env.text(&res.name)?));
                             }
@@ -125,7 +121,10 @@ impl App {
                         ui.text_edit_singleline(&mut self.spawn_resource_value);
                         if ui.button(env.text("ui_debug_spawn-resources")?).clicked() {
                             sim.depot.cor_put(
-                                &ResourceId::new(self.spawn_resource_name.clone()),
+                                &env.configs()
+                                    .indexer
+                                    .get_id(self.spawn_resource_name.clone())
+                                    .unwrap(),
                                 self.spawn_resource_value.parse().unwrap(),
                             );
                         }

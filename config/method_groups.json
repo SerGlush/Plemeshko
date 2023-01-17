@@ -1,10 +1,10 @@
 [
     {
-        "tag": "MethodGroup",
-        "name": "food_production",
+        "tag": "method-group",
+        "label": "food-production",
         "payload": {
             "variants": [
-                "hunt_animals"
+                "hunt-animals"
             ]
         }
     }

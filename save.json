@@ -8,10 +8,10 @@
             "name": "Hunting House",
             "selected_methods": [
                 {
-                    "id": "hunt_animals",
+                    "label": "hunt-animals",
                     "settings": [
                         {
-                            "group_id": "hunting_tool",
+                            "group": "hunting-tool",
                             "index": 0
                         }
                     ]

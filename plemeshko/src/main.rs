@@ -8,26 +8,28 @@
 
 use std::{sync::Mutex, time::Instant};
 
-use env::{SharedEnv, SimEnv};
-use sim::{Sim, SimSnapshot};
+use env::{config::Serializable, SharedEnv, SimEnv};
+use sim::{RawSimSnapshot, Sim};
 
 use crate::env::AppEnv;
 
 #[macro_use]
 mod util;
-mod app;
+#[macro_use]
 mod env;
+mod app;
 mod framework;
 mod sim;
 
-fn load_sim(env: &SimEnv) -> anyhow::Result<Sim> {
+fn load_sim(env: &mut SimEnv) -> anyhow::Result<Sim> {
     let mut cli_args_iter = std::env::args();
     cli_args_iter.next(); // exe
     Ok(match cli_args_iter.next() {
         Some(snapshot_path) => {
             let file = std::fs::File::open(snapshot_path)?;
             let reader = std::io::BufReader::new(file);
-            let snapshot = serde_json::from_reader::<_, SimSnapshot>(reader)?;
+            let snapshot = serde_json::from_reader::<_, RawSimSnapshot>(reader)?;
+            let snapshot = Serializable::from_serializable(snapshot, &mut env.configs.indexer);
             Sim::restore(env, snapshot)?
         }
         None => Sim::new(),
@@ -48,8 +50,8 @@ macro_rules! error_catch_print_exit {
 
 fn main() {
     // todo: consider RwLock / partial locking; multithreaded sim
-    let senv = error_catch_print_exit!(SharedEnv::new(), "Shared env init failed: {}");
-    let sim = error_catch_print_exit!(load_sim(&senv), "Error reading Sim snapshot: {}");
+    let mut senv = error_catch_print_exit!(SharedEnv::new(), "Shared env init failed: {:#}");
+    let sim = error_catch_print_exit!(load_sim(&mut senv), "Error reading Sim snapshot: {:#}");
     // sim and env are never dropped
     static_assertions::assert_not_impl_all!(Sim: Drop);
     static_assertions::assert_not_impl_all!(app::App: Drop);
@@ -69,7 +71,7 @@ fn main() {
                     match step_result {
                         Ok(_) => (),
                         Err(e) => {
-                            println!("Sim error: {e}");
+                            println!("Sim error: {e:#}");
                             // todo: signal to the ui when step fails
                             break;
                         }
