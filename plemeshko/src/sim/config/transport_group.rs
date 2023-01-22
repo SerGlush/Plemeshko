@@ -1,11 +1,13 @@
 use serde::Deserialize;
 
-use crate::env::config::{Config, ConfigId, ConfigLabel};
+use crate::env::{config::{Config, ConfigId, ConfigLabel}, text::TextId};
 
 #[derive(Deserialize)]
 pub struct RawTransportGroup {}
 
-pub struct TransportGroup {}
+pub struct TransportGroup {
+    pub name: TextId,
+}
 
 pub type TransportGroupLabel = ConfigLabel<TransportGroup>;
 pub type TransportGroupId = ConfigId<TransportGroup>;
@@ -17,9 +19,11 @@ impl Config for TransportGroup {
 
     fn prepare(
         _raw: Self::Raw,
-        _label: ConfigLabel<Self>,
+        label: ConfigLabel<Self>,
         _indexer: &mut crate::env::config::ConfigIndexer,
     ) -> Self {
-        TransportGroup {}
+        TransportGroup {
+            name: config_text_id!(label),
+        }
     }
 }

@@ -5,7 +5,7 @@
         "payload": {
             "settings": [
                 {
-                    "name": "sticks_&_rocks",
+                    "name": "sticks_and_rocks",
                     "input": {
                         "human": 8
                     },

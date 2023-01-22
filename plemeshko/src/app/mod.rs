@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     env::AppEnv,
     sim::{
-        config::{method::MethodId, transport::TransportId, transport_group::TransportGroupId},
+        config::{method::MethodId, transport::TransportId, transport_group::{TransportGroupId, self}},
         erection::Erection,
         Sim,
     },
@@ -27,8 +27,9 @@ pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &AppEnv) -> anyhow::
         ui.label(format!("{}:", erection.name()));
         for &transport_id in erection.transport().values() {
             let transport = config_get!(env.configs(), transport_id);
+            let transport_group = config_get!(env.configs(), transport.group);
             ui.label(env.text(&transport.name)?)
-                .on_hover_text(format!("transport capacity: {}", transport.capacity));
+                .on_hover_text(format!("Transport Group: {}\nTransport Capacity: {}", env.text(&transport_group.name)?, transport.capacity));
         }
         Ok(())
     })
@@ -36,8 +37,11 @@ pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &AppEnv) -> anyhow::
     for selected_method in erection.methods().iter() {
         let method = config_get!(env.configs(), selected_method.id);
         ui.horizontal(|ui| {
-            ui.label(env.text(&method.name)?)
-                .on_hover_text("Placeholder");
+            ui.label(env.text(&method.name)?);
+            for setting in selected_method.settings.iter() {
+                let setting_group = config_get!(env.configs(), setting.group);
+                ui.label(env.text(&setting_group.settings[setting.index].name)?);
+            }
             Ok(())
         })
         .inner?;

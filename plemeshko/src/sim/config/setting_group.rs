@@ -1,7 +1,8 @@
+use egui::plot::Text;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    env::config::{Config, ConfigId, ConfigLabel, Serializable},
+    env::{config::{Config, ConfigId, ConfigLabel, Serializable}, text::{TextId, TextIdentifier}},
     sim::units::Ticks,
 };
 
@@ -9,6 +10,7 @@ use super::resource::{RawResourceIo, ResourceIo};
 
 #[derive(Serialize, Deserialize)]
 pub struct RawSetting {
+    pub name: String,
     #[serde(flatten)]
     pub resource_io: RawResourceIo,
     #[serde(default)]
@@ -16,6 +18,7 @@ pub struct RawSetting {
 }
 
 pub struct Setting {
+    pub name: TextId,
     pub resource_io: ResourceIo,
     pub time_to_complete: Ticks,
 }
@@ -65,6 +68,7 @@ impl Serializable for Setting {
 
     fn from_serializable(raw: RawSetting, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
         Setting {
+            name: TextId::new(format!("{}_setting_{}", SettingGroup::TAG, raw.name)),
             resource_io: Serializable::from_serializable(raw.resource_io, indexer),
             time_to_complete: raw.time_to_complete,
         }
@@ -74,7 +78,10 @@ impl Serializable for Setting {
         self,
         indexer: &mut crate::env::config::ConfigIndexer,
     ) -> anyhow::Result<RawSetting> {
+        let text_prefix_len = SettingGroup::TAG.len() + "_setting_".len();
+        let name = self.name.as_id();
         Ok(RawSetting {
+            name: name.chars().skip(text_prefix_len).take(name.len() - text_prefix_len).collect(),
             resource_io: self.resource_io.into_serializable(indexer)?,
             time_to_complete: self.time_to_complete,
         })
