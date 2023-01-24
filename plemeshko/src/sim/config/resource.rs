@@ -52,11 +52,11 @@ impl Config for Resource {
 
     fn prepare(
         raw: Self::Raw,
-        id: ConfigLabel<Self>,
+        label: ConfigLabel<Self>,
         indexer: &mut crate::env::config::ConfigIndexer,
     ) -> Self {
         Resource {
-            name: config_text_id!(id),
+            name: config_text_id!(label),
             transport_group: indexer.get_or_create_id(raw.transport_group),
             transport_weight: raw.transport_weight,
         }

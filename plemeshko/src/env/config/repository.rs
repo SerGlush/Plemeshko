@@ -8,7 +8,7 @@ use anyhow::{anyhow, Result};
 
 use super::{id::UnderId, Config, ConfigId, ConfigIndexer};
 
-pub(super) type IdMap<C> = HashMap<UnderId, C>;
+pub type IdMap<C> = HashMap<ConfigId<C>, C>;
 
 pub(super) type AnyIdMap = dyn Any + Send + Sync;
 
@@ -18,7 +18,7 @@ pub struct ConfigRepository {
 }
 
 impl ConfigRepository {
-    fn get_store<C: Config>(&self) -> Result<&IdMap<C>> {
+    pub fn get_store<C: Config>(&self) -> Result<&IdMap<C>> {
         let any_store = self
             .configs
             .get(&TypeId::of::<C>())
@@ -30,7 +30,7 @@ impl ConfigRepository {
 
     pub fn get<C: Config>(&self, id: ConfigId<C>) -> Result<&C> {
         match self.get_store::<C>() {
-            Ok(store) => store.get(&id.0).ok_or(anyhow!(
+            Ok(store) => store.get(&id).ok_or(anyhow!(
                 "Key '{}' doesn't exist in the store for config '{}'",
                 self.indexer.get_label(id).map_or_else(
                     |_| Cow::Owned(id.0.to_string() + "?!"),

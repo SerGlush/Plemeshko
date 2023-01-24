@@ -41,11 +41,11 @@ impl Config for Method {
 
     fn prepare(
         raw: Self::Raw,
-        id: ConfigLabel<Self>,
+        label: ConfigLabel<Self>,
         indexer: &mut crate::env::config::ConfigIndexer,
     ) -> Self {
         Method {
-            name: config_text_id!(id),
+            name: config_text_id!(label),
             setting_groups: Serializable::from_serializable(raw.setting_groups, indexer),
         }
     }

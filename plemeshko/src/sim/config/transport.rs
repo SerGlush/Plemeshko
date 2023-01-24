@@ -37,11 +37,11 @@ impl Config for Transport {
 
     fn prepare(
         raw: Self::Raw,
-        id: ConfigLabel<Self>,
+        label: ConfigLabel<Self>,
         indexer: &mut crate::env::config::ConfigIndexer,
     ) -> Self {
         Transport {
-            name: config_text_id!(id),
+            name: config_text_id!(label),
             group: indexer.get_or_create_id(raw.group),
             capacity: raw.capacity,
             fuel: Serializable::from_serializable(raw.fuel, indexer),

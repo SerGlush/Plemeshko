@@ -3,6 +3,8 @@ ui_main_population = Population: { $population }
 
 ui_erections = Erections
 ui_erections_create = Create Erection
-ui_erections_builder = Erection Builder
+ui_erection_builder_title = Erection Builder
+ui_erection_builder_add_method = Add Method
+ui_erection_builder_create_erection = Create Erection
 
 ui_debug_spawn-resources = Spawn Resources

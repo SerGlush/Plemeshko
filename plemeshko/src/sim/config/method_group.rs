@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::env::config::{Config, ConfigId, ConfigLabel, Serializable};
+use crate::env::{config::{Config, ConfigId, ConfigLabel, Serializable}, text::TextId};
 
 use super::method::{MethodId, MethodLabel};
 
@@ -10,6 +10,7 @@ pub struct RawMethodGroup {
 }
 
 pub struct MethodGroup {
+    pub name: TextId,
     pub variants: Vec<MethodId>,
 }
 
@@ -23,10 +24,11 @@ impl Config for MethodGroup {
 
     fn prepare(
         raw: Self::Raw,
-        _id: ConfigLabel<Self>,
+        label: ConfigLabel<Self>,
         indexer: &mut crate::env::config::ConfigIndexer,
     ) -> Self {
         Self {
+            name: config_text_id!(label),
             variants: Serializable::from_serializable(raw.variants, indexer),
         }
     }

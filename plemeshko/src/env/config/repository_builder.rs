@@ -10,7 +10,7 @@ use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use serde_json::value::RawValue;
 
-use super::{indexer::ConfigIndexer, AnyIdMap, Config, ConfigLabel, ConfigRepository, IdMap};
+use super::{indexer::ConfigIndexer, AnyIdMap, Config, ConfigLabel, ConfigRepository, IdMap, ConfigId};
 
 #[derive(Deserialize)]
 pub struct RawConfig {
@@ -70,7 +70,7 @@ fn label_map_to_id_map<C: Config>(
                 let id =
                     indexer.get_or_create_id_raw(TypeId::of::<C>(), Cow::Borrowed(label.as_str()));
                 let cfg = C::prepare(cfg, ConfigLabel::new(label), indexer);
-                Ok::<_, anyhow::Error>((id, cfg))
+                Ok::<_, anyhow::Error>((ConfigId::new(id), cfg))
             })
             .try_collect::<IdMap<C>>()?,
     ))
