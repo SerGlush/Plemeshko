@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::env::{config::{Config, ConfigId, ConfigLabel}, text::TextId};
+use crate::env::{
+    config::{Config, ConfigId, ConfigLabel},
+    text::TextId,
+};
 
 #[derive(Deserialize)]
 pub struct RawTransportGroup {}

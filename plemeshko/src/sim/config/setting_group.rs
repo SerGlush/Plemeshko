@@ -2,7 +2,10 @@ use egui::plot::Text;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    env::{config::{Config, ConfigId, ConfigLabel, Serializable}, text::{TextId, TextIdentifier}},
+    env::{
+        config::{Config, ConfigId, ConfigLabel, Serializable},
+        text::{TextId, TextIdentifier},
+    },
     sim::units::Ticks,
 };
 
@@ -81,7 +84,11 @@ impl Serializable for Setting {
         let text_prefix_len = SettingGroup::TAG.len() + "_setting_".len();
         let name = self.name.as_id();
         Ok(RawSetting {
-            name: name.chars().skip(text_prefix_len).take(name.len() - text_prefix_len).collect(),
+            name: name
+                .chars()
+                .skip(text_prefix_len)
+                .take(name.len() - text_prefix_len)
+                .collect(),
             resource_io: self.resource_io.into_serializable(indexer)?,
             time_to_complete: self.time_to_complete,
         })

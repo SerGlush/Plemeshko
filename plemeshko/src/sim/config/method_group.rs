@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::env::{config::{Config, ConfigId, ConfigLabel, Serializable}, text::TextId};
+use crate::env::{
+    config::{Config, ConfigId, ConfigLabel, Serializable},
+    text::TextId,
+};
 
 use super::method::{MethodId, MethodLabel};
 

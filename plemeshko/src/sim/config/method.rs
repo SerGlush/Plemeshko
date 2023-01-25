@@ -1,12 +1,14 @@
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::env::{
     config::{Config, ConfigId, ConfigLabel, Serializable},
     text::TextId,
+    AppEnv,
 };
 
 use super::setting_group::{
-    RawSelectedSetting, SelectedSetting, SettingGroupId, SettingGroupLabel,
+    self, RawSelectedSetting, SelectedSetting, SettingGroupId, SettingGroupLabel,
 };
 
 #[derive(Deserialize)]
@@ -32,6 +34,23 @@ pub struct RawSelectedMethod {
 pub struct SelectedMethod {
     pub id: MethodId,
     pub settings: Vec<SelectedSetting>,
+}
+
+impl SelectedMethod {
+    pub fn new(env: &AppEnv, id: ConfigId<Method>, index: Option<usize>) -> Result<SelectedMethod> {
+        let method = config_get!(env.configs(), id);
+        Ok(SelectedMethod {
+            id: id,
+            settings: method
+                .setting_groups
+                .iter()
+                .map(|setting_group| SelectedSetting {
+                    group: *setting_group,
+                    index: index.unwrap_or(0),
+                })
+                .collect(),
+        })
+    }
 }
 
 impl Config for Method {

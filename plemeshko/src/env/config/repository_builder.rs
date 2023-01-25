@@ -10,7 +10,9 @@ use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use serde_json::value::RawValue;
 
-use super::{indexer::ConfigIndexer, AnyIdMap, Config, ConfigLabel, ConfigRepository, IdMap, ConfigId};
+use super::{
+    indexer::ConfigIndexer, AnyIdMap, Config, ConfigId, ConfigLabel, ConfigRepository, IdMap,
+};
 
 #[derive(Deserialize)]
 pub struct RawConfig {

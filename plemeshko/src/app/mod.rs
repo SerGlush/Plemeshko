@@ -6,6 +6,7 @@ use crate::{
         config::{
             method::{MethodId, SelectedMethod},
             method_group::MethodGroup,
+            setting_group::SelectedSetting,
             transport::TransportId,
             transport_group::{self, TransportGroupId},
         },
@@ -64,6 +65,30 @@ impl ErectionBuilder {
             ui.text_edit_singleline(&mut self.erection_name);
         });
 
+        for method in &mut self.erection_methods {
+            ui.horizontal(|ui| {
+                let method_name = env.text(&config_get!(env.configs(), method.id).name)?;
+                ui.label(method_name.as_ref());
+                for setting in &mut method.settings {
+                    let setting_group = config_get!(env.configs(), setting.group);
+                    let setting_name = env.text(&setting_group.settings[setting.index].name)?;
+                    ComboBox::from_id_source(setting_name.as_ref())
+                    .width(200.0)
+                    .selected_text(setting_name)
+                        .show_index(
+                            ui,
+                            &mut setting.index,
+                            setting_group.settings.len(),
+                            |index| match env.text(&setting_group.settings[index].name) {
+                                Result::Ok(setting_group_name) => setting_group_name.into_owned(),
+                                Err(err) => err.to_string(),
+                            },
+                        );
+                }
+                Ok(())
+            });
+        }
+
         ui.menu_button(env.text("ui_erection_builder_add_method")?, |ui| {
             let method_groups = env.configs().get_store::<MethodGroup>()?;
             for group in method_groups.values() {
@@ -71,10 +96,8 @@ impl ErectionBuilder {
                     for &method_id in &group.variants {
                         let method = config_get!(env.configs(), method_id);
                         if ui.button(env.text(&method.name)?).clicked() {
-                            self.erection_methods.push(SelectedMethod {
-                                id: method_id,
-                                settings: Vec::new(),
-                            })
+                            self.erection_methods
+                                .push(SelectedMethod::new(env, method_id, None)?);
                         }
                     }
                     Ok(())

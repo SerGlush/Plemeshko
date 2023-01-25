@@ -15,7 +15,7 @@
                     }
                 },
                 {
-                    "name": "stone_insruments",
+                    "name": "stone_instruments",
                     "input": {
                         "human": 8,
                         "stone_instrument": 8
