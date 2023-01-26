@@ -1,14 +1,15 @@
 use std::collections::HashMap;
 
 use crate::{
-    env::AppEnv,
+    env::{config::ConfigId, AppEnv},
     sim::{
         config::{
             method::{MethodId, SelectedMethod},
             method_group::MethodGroup,
-            setting_group::SelectedSetting,
-            transport::TransportId,
-            transport_group::{self, TransportGroupId},
+            resource::{self, Resource},
+            setting_group::{self, SelectedSetting},
+            transport::{TransportId, Transport},
+            transport_group::{self, TransportGroupId, TransportGroup},
         },
         erection::Erection,
         Sim,
@@ -23,7 +24,7 @@ pub struct ErectionBuilder {
     window_is_open: bool,
 
     erection_name: String,
-    erection_transport: HashMap<TransportGroupId, TransportId>,
+    erection_transport: HashMap<TransportGroupId, (TransportId, bool)>,
     erection_methods: Vec<SelectedMethod>,
 }
 
@@ -31,7 +32,7 @@ impl ErectionBuilder {
     pub fn new() -> ErectionBuilder {
         ErectionBuilder {
             erection_name: "input name".to_string(),
-            erection_transport: HashMap::<TransportGroupId, TransportId>::new(),
+            erection_transport: HashMap::<TransportGroupId, (TransportId, bool)>::new(),
             erection_methods: Vec::<SelectedMethod>::new(),
             window_is_open: false,
         }
@@ -63,6 +64,48 @@ impl ErectionBuilder {
     fn add_window_contents(&mut self, ui: &mut Ui, env: &AppEnv) -> Result<()> {
         ui.horizontal(|ui| {
             ui.text_edit_singleline(&mut self.erection_name);
+
+            self.erection_transport
+                .values_mut()
+                .for_each(|value| value.1 = false);
+
+            for selected_method in &self.erection_methods {
+                for selected_setting in &selected_method.settings {
+
+                    let setting_group = config_get!(env.configs(), selected_setting.group);
+                    let mut check_resource_group = |resource_id: &ConfigId<Resource>| {
+                        let resource = config_get!(env.configs(), *resource_id);
+
+                        let mut new_group_check: bool = true;
+                        for (key, value) in self.erection_transport.iter_mut() {
+                            if *key == resource.transport_group {
+                                value.1 = true;
+                                new_group_check = false;
+                            }
+                        }
+
+                        if new_group_check {
+                            //let transport = config_get!(env.configs(), );
+                            //self.erection_transport.insert(resource.transport_group, v);
+                        }
+
+                        Ok(())
+                    };
+
+                    setting_group.settings[selected_setting.index]
+                        .resource_io
+                        .input
+                        .keys()
+                        .try_for_each(&mut check_resource_group)?;
+                    setting_group.settings[selected_setting.index]
+                        .resource_io
+                        .output
+                        .keys()
+                        .try_for_each(&mut check_resource_group)?;
+                }
+            }
+
+            Ok(())
         });
 
         for method in &mut self.erection_methods {
@@ -73,8 +116,8 @@ impl ErectionBuilder {
                     let setting_group = config_get!(env.configs(), setting.group);
                     let setting_name = env.text(&setting_group.settings[setting.index].name)?;
                     ComboBox::from_id_source(setting_name.as_ref())
-                    .width(200.0)
-                    .selected_text(setting_name)
+                        .width(200.0)
+                        .selected_text(setting_name)
                         .show_index(
                             ui,
                             &mut setting.index,
@@ -96,8 +139,8 @@ impl ErectionBuilder {
                     for &method_id in &group.variants {
                         let method = config_get!(env.configs(), method_id);
                         if ui.button(env.text(&method.name)?).clicked() {
-                            self.erection_methods
-                                .push(SelectedMethod::new(env, method_id, None)?);
+                            let selected_method = SelectedMethod::new(env, method_id, None)?;
+                            self.erection_methods.push(selected_method.clone());
                         }
                     }
                     Ok(())
@@ -108,6 +151,15 @@ impl ErectionBuilder {
 
         ui.button(env.text("ui_erection_builder_create_erection")?);
         Ok(())
+    }
+
+    fn get_filtered_transports (group_id_filter: ConfigId<TransportGroup>, env: &AppEnv) -> Result<Vec<&Transport>> {
+        let transports = env.configs().get_store::<Transport>()?;
+
+        let filtered_transports = transports.values().filter(|values| {
+            values.group == group_id_filter
+        }).collect();
+        Ok(filtered_transports)
     }
 }
 
