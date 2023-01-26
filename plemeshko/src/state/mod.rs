@@ -81,11 +81,11 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
         }
         Ok(false) => {
             println!(
-                "Skipping loadings other components: Directory not found: {COMPONENTS_OTHER_DIR}"
+                "Skipping loading other components: Directory not found: {COMPONENTS_OTHER_DIR}"
             );
         }
         Err(e) => {
-            println!("Skipping loadings other components: Error checking directory: {e}");
+            println!("Skipping loading other components: Error checking directory: {e}");
         }
     }
     let human_id = shared_comps
