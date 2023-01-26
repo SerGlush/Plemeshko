@@ -1,28 +1,27 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::env::{
-    config::{Config, ConfigId, ConfigLabel, Serializable},
-    text::TextId,
-    AppEnv,
+use crate::state::{
+    components::SharedComponents,
+    config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Prepare},
+    serializable::{Serializable, SerializationContext},
+    text::{FatTextId, TextIdFactory},
 };
 
-use super::setting_group::{
-    self, RawSelectedSetting, SelectedSetting, SettingGroupId, SettingGroupLabel,
-};
+use super::setting_group::{RawSelectedSetting, SelectedSetting, SettingGroup, SettingGroupId};
 
 #[derive(Deserialize)]
 pub struct RawMethod {
-    pub setting_groups: Vec<SettingGroupLabel>,
+    pub setting_groups: Vec<FatConfigLabel<SettingGroup>>,
 }
 
 pub struct Method {
-    pub name: TextId,
+    pub name: FatTextId,
     pub setting_groups: Vec<SettingGroupId>,
 }
 
-pub type MethodLabel = ConfigLabel<Method>;
-pub type MethodId = ConfigId<Method>;
+pub type MethodLabel = FatConfigLabel<Method>;
+pub type MethodId = FatConfigId<Method>;
 
 #[derive(Serialize, Deserialize)]
 pub struct RawSelectedMethod {
@@ -37,10 +36,14 @@ pub struct SelectedMethod {
 }
 
 impl SelectedMethod {
-    pub fn new(env: &AppEnv, id: ConfigId<Method>, index: Option<usize>) -> Result<SelectedMethod> {
-        let method = config_get!(env.configs(), id);
+    pub fn new(
+        shared_comps: &SharedComponents,
+        id: MethodId,
+        index: Option<usize>,
+    ) -> Result<SelectedMethod> {
+        let method = shared_comps.get_config(id)?;
         Ok(SelectedMethod {
-            id: id,
+            id,
             settings: method
                 .setting_groups
                 .iter()
@@ -53,40 +56,47 @@ impl SelectedMethod {
     }
 }
 
+impl Prepare for RawMethod {
+    type Prepared = Method;
+
+    fn prepare(
+        self,
+        ctx: &mut ConfigsLoadingContext<'_>,
+        tif: &mut TextIdFactory,
+    ) -> anyhow::Result<Method> {
+        let name = tif.create("name").in_component(ctx.component_id());
+        tif.with_lock(|tif| {
+            Ok(Method {
+                name,
+                setting_groups: self.setting_groups.prepare(ctx, tif)?,
+            })
+        })
+    }
+}
+
 impl Config for Method {
     type Raw = RawMethod;
 
     const TAG: &'static str = "method";
-
-    fn prepare(
-        raw: Self::Raw,
-        label: ConfigLabel<Self>,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> Self {
-        Method {
-            name: config_text_id!(label),
-            setting_groups: Serializable::from_serializable(raw.setting_groups, indexer),
-        }
-    }
 }
 
 impl Serializable for SelectedMethod {
     type Raw = RawSelectedMethod;
 
-    fn from_serializable(raw: Self::Raw, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
-        Self {
-            id: Serializable::from_serializable(raw.label, indexer),
-            settings: Serializable::from_serializable(raw.settings, indexer),
-        }
+    fn from_serializable(
+        raw: Self::Raw,
+        ctx: &mut SerializationContext<'_>,
+    ) -> anyhow::Result<SelectedMethod> {
+        Ok(Self {
+            id: Serializable::from_serializable(raw.label, ctx)?,
+            settings: Serializable::from_serializable(raw.settings, ctx)?,
+        })
     }
 
-    fn into_serializable(
-        self,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> anyhow::Result<Self::Raw> {
+    fn into_serializable(self, ctx: &SerializationContext<'_>) -> anyhow::Result<Self::Raw> {
         Ok(RawSelectedMethod {
-            label: self.id.into_serializable(indexer)?,
-            settings: self.settings.into_serializable(indexer)?,
+            label: self.id.into_serializable(ctx)?,
+            settings: self.settings.into_serializable(ctx)?,
         })
     }
 }

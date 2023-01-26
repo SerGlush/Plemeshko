@@ -1,34 +1,35 @@
 use std::collections::HashMap;
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    env::{
-        config::{Config, ConfigId, ConfigLabel, Serializable},
-        text::TextId,
-    },
     sim::units::{ResourceAmount, ResourceWeight},
+    state::{
+        config::{Config, FatConfigId, FatConfigLabel, Prepare},
+        serializable::{Serializable, SerializationContext},
+        text::FatTextId,
+    },
 };
 
-use super::transport_group::{TransportGroupId, TransportGroupLabel};
+use super::transport_group::{TransportGroup, TransportGroupId};
 
 #[derive(Deserialize)]
 pub struct RawResource {
-    pub transport_group: TransportGroupLabel,
+    pub transport_group: FatConfigLabel<TransportGroup>,
     pub transport_weight: ResourceWeight,
 }
 
 #[derive(Debug)]
 pub struct Resource {
-    pub name: TextId,
+    pub name: FatTextId,
     pub transport_group: TransportGroupId,
     pub transport_weight: ResourceWeight,
 }
 
-pub type ResourceLabel = ConfigLabel<Resource>;
-pub type ResourceId = ConfigId<Resource>;
+pub type ResourceId = FatConfigId<Resource>;
 
-pub type RawResourceMap = HashMap<ResourceLabel, ResourceAmount>;
+pub type RawResourceMap = HashMap<FatConfigLabel<Resource>, ResourceAmount>;
 pub type ResourceMap = HashMap<ResourceId, ResourceAmount>;
 
 #[derive(Serialize, Deserialize)]
@@ -45,44 +46,60 @@ pub struct ResourceIo {
     pub output: ResourceMap,
 }
 
+impl Prepare for RawResource {
+    type Prepared = Resource;
+
+    fn prepare(
+        self,
+        ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
+        tif: &mut crate::state::text::TextIdFactory,
+    ) -> anyhow::Result<Self::Prepared> {
+        let name = tif.create("name").in_component(ctx.component_id());
+        tif.with_lock(|tif| {
+            Ok(Resource {
+                name,
+                transport_group: self.transport_group.prepare(ctx, tif)?,
+                transport_weight: self.transport_weight,
+            })
+        })
+    }
+}
+
 impl Config for Resource {
     type Raw = RawResource;
 
     const TAG: &'static str = "resource";
+}
+
+impl Prepare for RawResourceIo {
+    type Prepared = ResourceIo;
 
     fn prepare(
-        raw: Self::Raw,
-        label: ConfigLabel<Self>,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> Self {
-        Resource {
-            name: config_text_id!(label),
-            transport_group: indexer.get_or_create_id(raw.transport_group),
-            transport_weight: raw.transport_weight,
-        }
+        self,
+        ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
+        tif: &mut crate::state::text::TextIdFactory,
+    ) -> anyhow::Result<Self::Prepared> {
+        Ok(ResourceIo {
+            input: tif.with_branch("input", |tif| self.input.prepare(ctx, tif))?,
+            output: tif.with_branch("output", |tif| self.output.prepare(ctx, tif))?,
+        })
     }
 }
 
 impl Serializable for ResourceIo {
     type Raw = RawResourceIo;
 
-    fn from_serializable(
-        raw: RawResourceIo,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> Self {
-        ResourceIo {
-            input: Serializable::from_serializable(raw.input, indexer),
-            output: Serializable::from_serializable(raw.output, indexer),
-        }
+    fn from_serializable(raw: RawResourceIo, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+        Ok(ResourceIo {
+            input: Serializable::from_serializable(raw.input, ctx)?,
+            output: Serializable::from_serializable(raw.output, ctx)?,
+        })
     }
 
-    fn into_serializable(
-        self,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> anyhow::Result<RawResourceIo> {
+    fn into_serializable(self, ctx: &SerializationContext<'_>) -> anyhow::Result<RawResourceIo> {
         Ok(RawResourceIo {
-            input: self.input.into_serializable(indexer)?,
-            output: self.output.into_serializable(indexer)?,
+            input: self.input.into_serializable(ctx)?,
+            output: self.output.into_serializable(ctx)?,
         })
     }
 }

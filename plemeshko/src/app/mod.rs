@@ -1,19 +1,17 @@
 use std::collections::HashMap;
 
 use crate::{
-    env::{config::ConfigId, AppEnv},
     sim::{
         config::{
-            method::{MethodId, SelectedMethod},
+            method::SelectedMethod,
             method_group::MethodGroup,
-            resource::{self, Resource},
-            setting_group::{self, SelectedSetting},
-            transport::{TransportId, Transport},
-            transport_group::{self, TransportGroupId, TransportGroup},
+            resource::ResourceId,
+            transport::{Transport, TransportId},
+            transport_group::TransportGroupId,
         },
         erection::Erection,
-        Sim,
     },
+    state::{components::SharedComponents, config::ConfigIndexerMap, AppState},
     util::cor::Cor,
 };
 use anyhow::{Ok, Result};
@@ -46,12 +44,19 @@ impl ErectionBuilder {
         self.window_is_open = false;
     }
 
-    pub fn draw(&mut self, env: &AppEnv, context: &egui::Context) -> Result<()> {
+    pub fn draw(
+        &mut self,
+        st: &AppState,
+        shared_comps: &SharedComponents,
+        egui_ctx: &egui::Context,
+    ) -> Result<()> {
         let mut window_is_open = self.window_is_open;
         if window_is_open {
-            Window::new(env.text("ui_erection_builder_title")?)
+            Window::new(st.get_text_core("ui_erection_builder_title")?)
                 .open(&mut window_is_open)
-                .show(context, |ui| self.add_window_contents(ui, env))
+                .show(egui_ctx, |ui| {
+                    self.add_window_contents(st, shared_comps, ui)
+                })
                 .unwrap()
                 .inner
                 .transpose()?;
@@ -61,7 +66,12 @@ impl ErectionBuilder {
         Ok(())
     }
 
-    fn add_window_contents(&mut self, ui: &mut Ui, env: &AppEnv) -> Result<()> {
+    fn add_window_contents(
+        &mut self,
+        st: &AppState,
+        shared_comps: &SharedComponents,
+        ui: &mut Ui,
+    ) -> Result<()> {
         ui.horizontal(|ui| {
             ui.text_edit_singleline(&mut self.erection_name);
 
@@ -71,10 +81,9 @@ impl ErectionBuilder {
 
             for selected_method in &self.erection_methods {
                 for selected_setting in &selected_method.settings {
-
-                    let setting_group = config_get!(env.configs(), selected_setting.group);
-                    let mut check_resource_group = |resource_id: &ConfigId<Resource>| {
-                        let resource = config_get!(env.configs(), *resource_id);
+                    let setting_group = shared_comps.get_config(selected_setting.group)?;
+                    let mut check_resource_group = |resource_id: &ResourceId| {
+                        let resource = shared_comps.get_config(*resource_id)?;
 
                         let mut new_group_check: bool = true;
                         for (key, value) in self.erection_transport.iter_mut() {
@@ -85,7 +94,7 @@ impl ErectionBuilder {
                         }
 
                         if new_group_check {
-                            //let transport = config_get!(env.configs(), );
+                            //let transport = shared_comps.get_config()?;
                             //self.erection_transport.insert(resource.transport_group, v);
                         }
 
@@ -110,11 +119,11 @@ impl ErectionBuilder {
 
         for method in &mut self.erection_methods {
             ui.horizontal(|ui| {
-                let method_name = env.text(&config_get!(env.configs(), method.id).name)?;
+                let method_name = st.get_text(&shared_comps.get_config(method.id)?.name)?;
                 ui.label(method_name.as_ref());
                 for setting in &mut method.settings {
-                    let setting_group = config_get!(env.configs(), setting.group);
-                    let setting_name = env.text(&setting_group.settings[setting.index].name)?;
+                    let setting_group = shared_comps.get_config(setting.group)?;
+                    let setting_name = st.get_text(&setting_group.settings[setting.index].name)?;
                     ComboBox::from_id_source(setting_name.as_ref())
                         .width(200.0)
                         .selected_text(setting_name)
@@ -122,7 +131,7 @@ impl ErectionBuilder {
                             ui,
                             &mut setting.index,
                             setting_group.settings.len(),
-                            |index| match env.text(&setting_group.settings[index].name) {
+                            |index| match st.get_text(&setting_group.settings[index].name) {
                                 Result::Ok(setting_group_name) => setting_group_name.into_owned(),
                                 Err(err) => err.to_string(),
                             },
@@ -132,14 +141,15 @@ impl ErectionBuilder {
             });
         }
 
-        ui.menu_button(env.text("ui_erection_builder_add_method")?, |ui| {
-            let method_groups = env.configs().get_store::<MethodGroup>()?;
-            for group in method_groups.values() {
-                ui.menu_button(env.text(&group.name)?, |ui| {
-                    for &method_id in &group.variants {
-                        let method = config_get!(env.configs(), method_id);
-                        if ui.button(env.text(&method.name)?).clicked() {
-                            let selected_method = SelectedMethod::new(env, method_id, None)?;
+        ui.menu_button(st.get_text_core("ui_erection_builder_add_method")?, |ui| {
+            for method_group in shared_comps.iter_configs::<MethodGroup>() {
+                let method_group = method_group?.1;
+                ui.menu_button(st.get_text(&method_group.name)?, |ui| {
+                    for &method_id in &method_group.variants {
+                        let method = shared_comps.get_config(method_id)?;
+                        if ui.button(st.get_text(&method.name)?).clicked() {
+                            let selected_method =
+                                SelectedMethod::new(shared_comps, method_id, None)?;
                             self.erection_methods.push(selected_method.clone());
                         }
                     }
@@ -149,16 +159,26 @@ impl ErectionBuilder {
             Ok(())
         });
 
-        ui.button(env.text("ui_erection_builder_create_erection")?);
+        if ui
+            .button(st.get_text_core("ui_erection_builder_create_erection")?)
+            .clicked()
+        {
+            todo!();
+        }
         Ok(())
     }
 
-    fn get_filtered_transports (group_id_filter: ConfigId<TransportGroup>, env: &AppEnv) -> Result<Vec<&Transport>> {
-        let transports = env.configs().get_store::<Transport>()?;
-
-        let filtered_transports = transports.values().filter(|values| {
-            values.group == group_id_filter
-        }).collect();
+    fn get_filtered_transports(
+        shared_comps: &SharedComponents,
+        group_id_filter: TransportGroupId,
+    ) -> Result<Vec<&Transport>> {
+        let mut filtered_transports = Vec::new();
+        for transport in shared_comps.iter_configs::<Transport>() {
+            let transport = transport?.1;
+            if transport.group == group_id_filter {
+                filtered_transports.push(transport);
+            }
+        }
         Ok(filtered_transports)
     }
 }
@@ -170,28 +190,34 @@ pub struct App {
     erection_builder: ErectionBuilder,
 }
 
-pub fn draw_erection(erection: &Erection, ui: &mut Ui, env: &AppEnv) -> anyhow::Result<()> {
+pub fn draw_erection(
+    st: &AppState,
+    shared_comps: &SharedComponents,
+    ui: &mut Ui,
+    erection: &Erection,
+) -> anyhow::Result<()> {
     ui.horizontal(|ui| {
         ui.label(format!("{}:", erection.name()));
         for &transport_id in erection.transport().values() {
-            let transport = config_get!(env.configs(), transport_id);
-            let transport_group = config_get!(env.configs(), transport.group);
-            ui.label(env.text(&transport.name)?).on_hover_text(format!(
-                "Transport Group: {}\nTransport Capacity: {}",
-                env.text(&transport_group.name)?,
-                transport.capacity
-            ));
+            let transport = shared_comps.get_config(transport_id)?;
+            let transport_group = shared_comps.get_config(transport.group)?;
+            ui.label(st.get_text(&transport.name)?)
+                .on_hover_text(format!(
+                    "Transport Group: {}\nTransport Capacity: {}",
+                    st.get_text(&transport_group.name)?,
+                    transport.capacity
+                ));
         }
         Ok(())
     })
     .inner?;
     for selected_method in erection.methods().iter() {
-        let method = config_get!(env.configs(), selected_method.id);
+        let method = shared_comps.get_config(selected_method.id)?;
         ui.horizontal(|ui| {
-            ui.label(env.text(&method.name)?);
+            ui.label(st.get_text(&method.name)?);
             for setting in selected_method.settings.iter() {
-                let setting_group = config_get!(env.configs(), setting.group);
-                ui.label(env.text(&setting_group.settings[setting.index].name)?);
+                let setting_group = shared_comps.get_config(setting.group)?;
+                ui.label(st.get_text(&setting_group.settings[setting.index].name)?);
             }
             Ok(())
         })
@@ -210,67 +236,73 @@ impl App {
         }
     }
 
-    pub fn update(&mut self, _sim: &mut Sim) -> anyhow::Result<()> {
+    pub fn update(&mut self, _st: &mut AppState) -> anyhow::Result<()> {
         Ok(())
     }
 
-    pub fn gui(
-        &mut self,
-        context: &egui::Context,
-        sim: &mut Sim,
-        env: &mut AppEnv,
-    ) -> anyhow::Result<()> {
+    pub fn gui(&mut self, st: &mut AppState, egui_ctx: &egui::Context) -> anyhow::Result<()> {
+        let shared_comps = st.shared.components.read().unwrap();
         CentralPanel::default()
-            .show(context, |ui| {
+            .show(egui_ctx, |ui| {
                 ui.horizontal(|ui| {
-                    if ui.button(env.text("ui_main")?).clicked() {
+                    if ui.button(st.get_text_core("ui_main")?).clicked() {
                         self.current_panel = 0;
                     }
-                    if ui.button(env.text("ui_erections")?).clicked() {
+                    if ui.button(st.get_text_core("ui_erections")?).clicked() {
                         self.current_panel = 1;
                     }
-                    if ui.button(env.text("ui_debug")?).clicked() {
+                    if ui.button(st.get_text_core("ui_debug")?).clicked() {
                         self.current_panel = 2;
                     }
                     Ok(())
                 })
                 .inner?;
+                let mut sim_guard = st.shared.sim.lock().unwrap();
+                let sim = sim_guard.as_mut().unwrap();
                 match self.current_panel {
                     0 => {
                         let mut args = FluentArgs::new();
                         args.set(
                             "population",
                             sim.depot
-                                .get(&env.shared.human_id)
+                                .get(&st.shared.human_id)
                                 .map(Clone::clone)
                                 .unwrap_or_default()
                                 .to_string(),
                         );
-                        ui.label(env.text_fmt("ui_main_population", &args)?);
+                        ui.label(st.fmt_text_core("ui_main_population", &args)?);
                         for (&id, value) in sim.depot.iter() {
-                            if id != env.shared.human_id {
-                                let res = config_get!(env.configs(), id);
-                                ui.label(format!("{} : {value}", env.text(&res.name)?));
+                            if id != st.shared.human_id {
+                                let res = shared_comps.get_config(id)?;
+                                ui.label(format!("{} : {value}", st.get_text(&res.name)?));
                             }
                         }
                     }
                     1 => {
-                        if ui.button(env.text("ui_erections_create")?).clicked() {
+                        if ui
+                            .button(st.get_text_core("ui_erections_create")?)
+                            .clicked()
+                        {
                             self.erection_builder.open();
                         }
                         for erection in sim.erections.iter() {
-                            draw_erection(erection, ui, env)?;
+                            draw_erection(st, &shared_comps, ui, erection)?;
                         }
                     }
                     2 => {
                         ui.text_edit_singleline(&mut self.spawn_resource_name);
                         ui.text_edit_singleline(&mut self.spawn_resource_value);
-                        if ui.button(env.text("ui_debug_spawn-resources")?).clicked() {
+                        if ui
+                            .button(st.get_text_core("ui_debug_spawn-resources")?)
+                            .clicked()
+                        {
                             sim.depot.cor_put(
-                                &env.configs()
-                                    .indexer
-                                    .get_id(self.spawn_resource_name.clone())
-                                    .unwrap(),
+                                &shared_comps
+                                    .get_core()?
+                                    .configs
+                                    .get_id_from_raw(self.spawn_resource_name.as_str())
+                                    .unwrap()
+                                    .in_core(),
                                 self.spawn_resource_value.parse().unwrap(),
                             );
                         }
@@ -281,7 +313,7 @@ impl App {
             })
             .inner?;
 
-        self.erection_builder.draw(env, context);
+        self.erection_builder.draw(st, &shared_comps, egui_ctx)?;
 
         Ok(())
     }

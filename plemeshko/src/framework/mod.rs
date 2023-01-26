@@ -1,8 +1,6 @@
-use std::{ops::DerefMut, sync::Mutex};
-
 use winit::event::Event;
 
-use crate::{app::App, env::AppEnv, sim::Sim};
+use crate::{app::App, sim::Sim, state::AppState};
 
 use self::{
     graphics::{Graphics, RenderError},
@@ -13,7 +11,7 @@ mod graphics;
 mod gui;
 mod window;
 
-pub fn run(sim: &'static Mutex<Sim>, mut env: AppEnv) -> ! {
+pub fn run(mut app_st: AppState) -> ! {
     let (event_loop, window) = window::initialize();
     let mut graphics = futures::executor::block_on(Graphics::new(&window));
     let mut gui = Gui::new(
@@ -38,7 +36,7 @@ pub fn run(sim: &'static Mutex<Sim>, mut env: AppEnv) -> ! {
                     }
                     winit::event::WindowEvent::CloseRequested => {
                         *control_flow = winit::event_loop::ControlFlow::Exit;
-                        sim.lock().unwrap().exit();
+                        app_st.shared.sim.lock().unwrap().as_mut().map(Sim::exit);
                     }
                     winit::event::WindowEvent::ScaleFactorChanged {
                         new_inner_size,
@@ -54,7 +52,7 @@ pub fn run(sim: &'static Mutex<Sim>, mut env: AppEnv) -> ! {
             }
         }
         Event::MainEventsCleared => {
-            match app.update(sim.lock().unwrap().deref_mut()) {
+            match app.update(&mut app_st) {
                 Ok(_) => (),
                 Err(e) => {
                     *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
@@ -66,9 +64,7 @@ pub fn run(sim: &'static Mutex<Sim>, mut env: AppEnv) -> ! {
         }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
-                if let Err(e) = gui.run(&window, |ctx| {
-                    app.gui(ctx, sim.lock().unwrap().deref_mut(), &mut env)
-                }) {
+                if let Err(e) = gui.run(&window, |egui_ctx| app.gui(&mut app_st, egui_ctx)) {
                     *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
                     println!("App update error: {e:#}");
                     return;

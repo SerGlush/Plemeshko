@@ -1,35 +1,23 @@
+mod id;
+
+pub use id::*;
+
 use std::{
-    borrow::Cow, error::Error, ffi::OsString, fmt::Display, io, path::PathBuf, str::FromStr,
+    borrow::Cow,
+    error::Error,
+    ffi::OsString,
+    fmt::Display,
+    io,
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use fluent::*;
 use fluent_syntax::parser::ParserError;
-use serde::Deserialize;
 use unic_langid::{LanguageIdentifier, LanguageIdentifierError};
-
-use super::TEXT_DIR;
 
 pub struct TextRepository {
     bundle: FluentBundle<FluentResource>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct TextId(String);
-
-pub trait TextIdentifier {
-    fn as_id(&self) -> &str;
-}
-
-impl TextIdentifier for str {
-    fn as_id(&self) -> &str {
-        self
-    }
-}
-
-impl TextIdentifier for TextId {
-    fn as_id(&self) -> &str {
-        self.0.as_str()
-    }
 }
 
 #[derive(Debug)]
@@ -112,9 +100,15 @@ fn load_directory(
 }
 
 impl TextRepository {
-    pub fn new() -> Result<Self, TextRepositoryCreationError> {
+    pub fn new() -> Self {
+        TextRepository {
+            bundle: FluentBundle::new(vec![unic_langid::langid!("en")]),
+        }
+    }
+
+    pub fn from_directory(path: &Path) -> Result<Self, TextRepositoryCreationError> {
         let default_langid = unic_langid::langid!("en");
-        let mut dir_iter = std::fs::read_dir(TEXT_DIR).map_err(TextRepositoryCreationError::Io)?;
+        let mut dir_iter = std::fs::read_dir(path).map_err(TextRepositoryCreationError::Io)?;
         let mut max_similar_path = match dir_iter.next() {
             Some(Ok(dir_entry)) => dir_entry.path(),
             Some(Err(e)) => return Err(TextRepositoryCreationError::Io(e)),
@@ -167,9 +161,12 @@ impl TextRepository {
         load_directory(&mut self.bundle, path)
     }
 
-    pub fn available_translations() -> anyhow::Result<Vec<(LanguageIdentifier, PathBuf)>> {
+    /// Lists subdirectories' names parsed as language identifiers along with their full paths.
+    pub fn available_translations(
+        dir: &Path,
+    ) -> anyhow::Result<Vec<(LanguageIdentifier, PathBuf)>> {
         let mut translations = Vec::new();
-        for dir_entry in std::fs::read_dir(TEXT_DIR)? {
+        for dir_entry in std::fs::read_dir(dir)? {
             let dir_entry = dir_entry.map_err(TextRepositoryCreationError::Io)?;
             let entry_path = dir_entry.path();
             if !entry_path.is_dir() {
@@ -193,8 +190,8 @@ impl TextRepository {
     ) -> Result<Cow<'a, str>, TextRetrievalError> {
         let msg = self
             .bundle
-            .get_message(id.as_id())
-            .ok_or_else(|| TextRetrievalError::NotFound(id.as_id().to_owned()))?;
+            .get_message(id.as_text_id())
+            .ok_or_else(|| TextRetrievalError::NotFound(id.as_text_id().to_owned()))?;
         let mut errors = Vec::new();
         let cow = self.bundle.format_pattern(
             msg.value().ok_or(TextRetrievalError::EmptyMessage)?,
@@ -205,12 +202,6 @@ impl TextRepository {
             return Err(TextRetrievalError::Formatting(errors));
         }
         Ok(cow)
-    }
-}
-
-impl TextId {
-    pub fn new(id: String) -> Self {
-        TextId(id)
     }
 }
 

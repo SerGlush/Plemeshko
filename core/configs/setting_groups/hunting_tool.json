@@ -5,7 +5,7 @@
         "payload": {
             "settings": [
                 {
-                    "name": "sticks_and_rocks",
+                    "name (unused)": "sticks-and-rocks",
                     "input": {
                         "human": 8
                     },
@@ -15,15 +15,15 @@
                     }
                 },
                 {
-                    "name": "stone_instruments",
+                    "name (unused)": "stone-instruments",
                     "input": {
                         "human": 8,
-                        "stone_instrument": 8
+                        "stone-instrument": 8
                     },
                     "output": {
                         "human": 8,
                         "food": 80,
-                        "stone_instrument": 6
+                        "stone-instrument": 6
                     }
                 }
             ]

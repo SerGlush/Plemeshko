@@ -1,50 +1,56 @@
 use serde::Deserialize;
 
 use crate::{
-    env::{
-        config::{Config, ConfigId, ConfigLabel, Serializable},
-        text::TextId,
-    },
     sim::units::ResourceWeight,
+    state::{
+        config::{Config, FatConfigId, FatConfigLabel, Prepare},
+        text::FatTextId,
+    },
 };
 
 use super::{
     resource::{RawResourceIo, ResourceIo},
-    transport_group::{TransportGroupId, TransportGroupLabel},
+    transport_group::{TransportGroup, TransportGroupId},
 };
 
 #[derive(Deserialize)]
 pub struct RawTransport {
-    pub group: TransportGroupLabel,
+    pub group: FatConfigLabel<TransportGroup>,
     pub capacity: ResourceWeight,
     pub fuel: RawResourceIo,
 }
 
 pub struct Transport {
-    pub name: TextId,
+    pub name: FatTextId,
     pub group: TransportGroupId,
     pub capacity: ResourceWeight,
     pub fuel: ResourceIo,
 }
 
-pub type TransportLabel = ConfigLabel<Transport>;
-pub type TransportId = ConfigId<Transport>;
+pub type TransportId = FatConfigId<Transport>;
+
+impl Prepare for RawTransport {
+    type Prepared = Transport;
+
+    fn prepare(
+        self,
+        ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
+        tif: &mut crate::state::text::TextIdFactory,
+    ) -> anyhow::Result<Self::Prepared> {
+        let name = tif.create("name").in_component(ctx.component_id());
+        tif.with_lock(|tif| {
+            Ok(Transport {
+                name,
+                group: self.group.prepare(ctx, tif)?,
+                capacity: self.capacity,
+                fuel: self.fuel.prepare(ctx, tif)?,
+            })
+        })
+    }
+}
 
 impl Config for Transport {
     type Raw = RawTransport;
 
     const TAG: &'static str = "transport";
-
-    fn prepare(
-        raw: Self::Raw,
-        label: ConfigLabel<Self>,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> Self {
-        Transport {
-            name: config_text_id!(label),
-            group: indexer.get_or_create_id(raw.group),
-            capacity: raw.capacity,
-            fuel: Serializable::from_serializable(raw.fuel, indexer),
-        }
-    }
 }

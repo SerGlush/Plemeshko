@@ -2,72 +2,42 @@
 #![feature(map_try_insert)]
 #![feature(int_roundings)]
 #![feature(iterator_try_collect)]
+#![feature(associated_type_bounds)]
+#![feature(fs_try_exists)]
 #![deny(elided_lifetimes_in_paths)]
 #![allow(clippy::mut_mutex_lock)] // false positives
 #![allow(dead_code)]
 
-use std::{sync::Mutex, time::Instant};
+use std::time::Instant;
 
-use env::{config::Serializable, SharedEnv, SimEnv};
-use sim::{RawSimSnapshot, Sim};
-
-use crate::env::AppEnv;
+use sim::Sim;
+use state::initialize_state;
 
 #[macro_use]
 mod util;
 #[macro_use]
-mod env;
+mod state;
 mod app;
 mod framework;
 mod sim;
 
-fn load_sim(env: &mut SimEnv) -> anyhow::Result<Sim> {
-    let mut cli_args_iter = std::env::args();
-    cli_args_iter.next(); // exe
-    Ok(match cli_args_iter.next() {
-        Some(snapshot_path) => {
-            let file = std::fs::File::open(snapshot_path)?;
-            let reader = std::io::BufReader::new(file);
-            let snapshot = serde_json::from_reader::<_, RawSimSnapshot>(reader)?;
-            let snapshot = Serializable::from_serializable(snapshot, &mut env.configs.indexer);
-            Sim::restore(env, snapshot)?
-        }
-        None => Sim::new(),
-    })
-}
-
-macro_rules! error_catch_print_exit {
-    ($e:expr, $msg:literal) => {
-        match $e {
-            Ok(value) => value,
-            Err(e) => {
-                println!($msg, e);
-                std::process::exit(1);
-            }
-        }
-    };
-}
-
-fn main() {
-    // todo: consider RwLock / partial locking; multithreaded sim
-    let mut senv = error_catch_print_exit!(SharedEnv::new(), "Shared env init failed: {:#}");
-    let sim = error_catch_print_exit!(load_sim(&mut senv), "Error reading Sim snapshot: {:#}");
-    // sim and env are never dropped
-    static_assertions::assert_not_impl_all!(Sim: Drop);
-    static_assertions::assert_not_impl_all!(app::App: Drop);
-    let (sim, senv) = Box::leak(Box::new((Mutex::new(sim), senv)));
-    let aenv = error_catch_print_exit!(AppEnv::new(senv), "App env init failed: {}");
+fn main() -> anyhow::Result<()> {
+    let (shared_st, app_st) = initialize_state()?;
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
             let mut tick_delay = Sim::TICK_DELAY;
             loop {
                 let instant = Instant::now();
                 {
-                    let mut sim = sim.lock().unwrap();
+                    let mut sim = shared_st.sim.lock().unwrap();
+                    let Some(sim) = sim.as_mut() else {
+                        println!("Sim is None");
+                        break;
+                    };
                     if sim.exited() {
                         break;
                     }
-                    let step_result = sim.step(senv);
+                    let step_result = sim.step(shared_st);
                     match step_result {
                         Ok(_) => (),
                         Err(e) => {
@@ -89,6 +59,6 @@ fn main() {
             }
         });
 
-        framework::run(sim, aenv);
-    });
+        framework::run(app_st);
+    })
 }

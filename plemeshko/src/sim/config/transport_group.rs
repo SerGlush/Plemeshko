@@ -1,32 +1,34 @@
 use serde::Deserialize;
 
-use crate::env::{
-    config::{Config, ConfigId, ConfigLabel},
-    text::TextId,
+use crate::state::{
+    config::{Config, FatConfigId, Prepare},
+    text::FatTextId,
 };
 
 #[derive(Deserialize)]
 pub struct RawTransportGroup {}
 
 pub struct TransportGroup {
-    pub name: TextId,
+    pub name: FatTextId,
 }
 
-pub type TransportGroupLabel = ConfigLabel<TransportGroup>;
-pub type TransportGroupId = ConfigId<TransportGroup>;
+pub type TransportGroupId = FatConfigId<TransportGroup>;
+
+impl Prepare for RawTransportGroup {
+    type Prepared = TransportGroup;
+
+    fn prepare(
+        self,
+        ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
+        tif: &mut crate::state::text::TextIdFactory,
+    ) -> anyhow::Result<Self::Prepared> {
+        let name = tif.create("name").in_component(ctx.component_id());
+        Ok(TransportGroup { name })
+    }
+}
 
 impl Config for TransportGroup {
     type Raw = RawTransportGroup;
 
     const TAG: &'static str = "transport-group";
-
-    fn prepare(
-        _raw: Self::Raw,
-        label: ConfigLabel<Self>,
-        _indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> Self {
-        TransportGroup {
-            name: config_text_id!(label),
-        }
-    }
 }

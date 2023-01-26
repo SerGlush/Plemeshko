@@ -4,9 +4,14 @@ pub mod units;
 
 use std::time::Duration;
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::env::{config::Serializable, SimEnv};
+use crate::state::{
+    components::SharedComponents,
+    serializable::{Serializable, SerializationContext},
+    SharedState,
+};
 
 use self::{
     config::resource::{RawResourceMap, ResourceMap},
@@ -34,13 +39,13 @@ impl Sim {
     pub const TICK_DELAY: Duration = Duration::from_secs(1);
     pub const TICK_THRESHOLD: Duration = Duration::from_millis(1);
 
-    pub fn restore(env: &SimEnv, snapshot: SimSnapshot) -> anyhow::Result<Self> {
+    pub fn restore(shared_comps: &SharedComponents, snapshot: SimSnapshot) -> anyhow::Result<Self> {
         let SimSnapshot { depot, erections } = snapshot;
         Ok(Sim {
             depot,
             erections: erections
                 .into_iter()
-                .map(|s| Erection::restore(env, s))
+                .map(|s| Erection::restore(shared_comps, s))
                 .try_collect()?,
             exited: false,
         })
@@ -70,7 +75,7 @@ impl Sim {
         // todo: finalization code, mb dropping resources / saving state
     }
 
-    pub fn step(&mut self, env: &SimEnv) -> anyhow::Result<()> {
+    pub fn step(&mut self, env: &SharedState) -> anyhow::Result<()> {
         if self.exited {
             panic!("Sim is in exiting state when step was called");
         }
@@ -84,20 +89,17 @@ impl Sim {
 impl Serializable for SimSnapshot {
     type Raw = RawSimSnapshot;
 
-    fn from_serializable(raw: Self::Raw, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
-        SimSnapshot {
-            depot: Serializable::from_serializable(raw.depot, indexer),
-            erections: Serializable::from_serializable(raw.erections, indexer),
-        }
+    fn from_serializable(raw: Self::Raw, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+        Ok(SimSnapshot {
+            depot: Serializable::from_serializable(raw.depot, ctx)?,
+            erections: Serializable::from_serializable(raw.erections, ctx)?,
+        })
     }
 
-    fn into_serializable(
-        self,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> anyhow::Result<Self::Raw> {
+    fn into_serializable(self, ctx: &SerializationContext<'_>) -> Result<Self::Raw> {
         Ok(RawSimSnapshot {
-            depot: self.depot.into_serializable(indexer)?,
-            erections: self.erections.into_serializable(indexer)?,
+            depot: self.depot.into_serializable(ctx)?,
+            erections: self.erections.into_serializable(ctx)?,
         })
     }
 }

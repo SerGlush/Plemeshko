@@ -1,8 +1,14 @@
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    env::{config::Serializable, SimEnv},
     sim::units::ResourceAmount,
+    state::{
+        components::SharedComponents,
+        config::FatConfigLabel,
+        serializable::{Serializable, SerializationContext},
+        SharedState,
+    },
     util::cor::Cor,
 };
 use std::{
@@ -17,8 +23,8 @@ use super::{
     config::{
         method::{RawSelectedMethod, SelectedMethod},
         resource::{RawResourceMap, ResourceId, ResourceIo, ResourceMap},
-        transport::{Transport, TransportId, TransportLabel},
-        transport_group::{TransportGroupId, TransportGroupLabel},
+        transport::{Transport, TransportId},
+        transport_group::{TransportGroup, TransportGroupId},
     },
     units::ResourceWeight,
 };
@@ -27,7 +33,7 @@ use super::{
 pub struct RawErectionSnapshot {
     name: String,
     selected_methods: Vec<RawSelectedMethod>,
-    transport: HashMap<TransportGroupLabel, TransportLabel>,
+    transport: HashMap<FatConfigLabel<TransportGroup>, FatConfigLabel<Transport>>,
     storage: RawResourceMap,
     count: u32,
     active: u32,
@@ -54,13 +60,13 @@ pub struct Erection {
 
 impl Erection {
     pub fn new(
-        env: &SimEnv,
+        shared_comps: &SharedComponents,
         name: String,
         selected_methods: Vec<SelectedMethod>,
         transport: HashMap<TransportGroupId, TransportId>,
     ) -> anyhow::Result<Self> {
         Self::restore(
-            env,
+            shared_comps,
             ErectionSnapshot {
                 name,
                 selected_methods,
@@ -73,13 +79,16 @@ impl Erection {
         )
     }
 
-    pub fn restore(env: &SimEnv, snapshot: ErectionSnapshot) -> anyhow::Result<Self> {
+    pub fn restore(
+        shared_comps: &SharedComponents,
+        snapshot: ErectionSnapshot,
+    ) -> anyhow::Result<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
         for selected_method in snapshot.selected_methods.iter() {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
-                let setting_group = config_get!(env.configs, selected_setting.group);
+                let setting_group = shared_comps.get_config(selected_setting.group)?;
                 let setting = &setting_group.settings[selected_setting.index];
                 for (resource_id, delta) in setting.resource_io.output.iter() {
                     single_output
@@ -141,12 +150,17 @@ impl Erection {
         self.state.active = active;
     }
 
-    fn step_input(&mut self, env: &SimEnv, depot: &mut ResourceMap) -> anyhow::Result<()> {
+    fn step_input(
+        &mut self,
+        shared_st: &SharedState,
+        depot: &mut ResourceMap,
+    ) -> anyhow::Result<()> {
+        let shared_comps = shared_st.components.read().unwrap();
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let mut requested_resources = Vec::with_capacity(self.single_io.input.len());
         for (res_id, &single_input) in self.single_io.input.iter() {
             let req_input = single_input * self.active() as i64;
-            let res = config_get!(env.configs, *res_id);
+            let res = shared_comps.get_config(*res_id)?;
             let already_stored = self
                 .state
                 .storage
@@ -164,10 +178,8 @@ impl Erection {
                 .raw_entry_mut()
                 .from_key(&res.transport_group)
             {
-                let tr = config_get!(
-                    env.configs,
-                    *self.state.transport.get(&res.transport_group).unwrap()
-                );
+                let tr_id = *self.state.transport.get(&res.transport_group).unwrap();
+                let tr = shared_comps.get_config(tr_id)?;
                 vacant.insert(res.transport_group, (tr, ResourceWeight(0)));
             }
         }
@@ -242,12 +254,17 @@ impl Erection {
     }
 
     // todo: fair output scheduler
-    fn step_output(&mut self, env: &SimEnv, depot: &mut ResourceMap) -> anyhow::Result<()> {
+    fn step_output(
+        &mut self,
+        shared_st: &SharedState,
+        depot: &mut ResourceMap,
+    ) -> anyhow::Result<()> {
+        let shared_comps = shared_st.components.read().unwrap();
         let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
         let active = self.active() as i64;
         for (&res_id, res_amount) in self.state.storage.iter_mut() {
             // humans are always exported back to the global storage
-            if self.state.reserve_export_threshold > 0 && res_id != env.human_id {
+            if self.state.reserve_export_threshold > 0 && res_id != shared_st.human_id {
                 // other resources are exported when above the reserve limit
                 if let Some(&single_input) = self.single_io.input.get(&res_id) {
                     let tick_input = single_input * active;
@@ -256,16 +273,14 @@ impl Erection {
                     }
                 }
             }
-            let res = config_get!(env.configs, res_id);
+            let res = shared_comps.get_config(res_id)?;
             let (tr, transported_weight_already) = match transport_state
                 .raw_entry_mut()
                 .from_key(&res.transport_group)
             {
                 RawEntryMut::Vacant(vacant) => {
-                    let tr = config_get!(
-                        env.configs,
-                        *self.state.transport.get(&res.transport_group).unwrap()
-                    );
+                    let tr_id = *self.state.transport.get(&res.transport_group).unwrap();
+                    let tr = shared_comps.get_config(tr_id)?;
                     vacant
                         .insert(res.transport_group, (tr, ResourceWeight(0)))
                         .1
@@ -312,7 +327,7 @@ impl Erection {
         Ok(())
     }
 
-    pub fn step(&mut self, env: &SimEnv, depot: &mut ResourceMap) -> anyhow::Result<()> {
+    pub fn step(&mut self, env: &SharedState, depot: &mut ResourceMap) -> anyhow::Result<()> {
         self.step_input(env, depot)?;
         self.step_process();
         self.step_output(env, depot)
@@ -322,27 +337,24 @@ impl Erection {
 impl Serializable for ErectionSnapshot {
     type Raw = RawErectionSnapshot;
 
-    fn from_serializable(raw: Self::Raw, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
-        ErectionSnapshot {
+    fn from_serializable(raw: Self::Raw, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+        Ok(ErectionSnapshot {
             name: raw.name,
-            selected_methods: Serializable::from_serializable(raw.selected_methods, indexer),
-            transport: Serializable::from_serializable(raw.transport, indexer),
-            storage: Serializable::from_serializable(raw.storage, indexer),
+            selected_methods: Serializable::from_serializable(raw.selected_methods, ctx)?,
+            transport: Serializable::from_serializable(raw.transport, ctx)?,
+            storage: Serializable::from_serializable(raw.storage, ctx)?,
             count: raw.count,
             active: raw.active,
             reserve_export_threshold: raw.reserve_export_threshold,
-        }
+        })
     }
 
-    fn into_serializable(
-        self,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> anyhow::Result<Self::Raw> {
+    fn into_serializable(self, ctx: &SerializationContext<'_>) -> Result<Self::Raw> {
         Ok(RawErectionSnapshot {
             name: self.name,
-            selected_methods: self.selected_methods.into_serializable(indexer)?,
-            transport: self.transport.into_serializable(indexer)?,
-            storage: self.storage.into_serializable(indexer)?,
+            selected_methods: self.selected_methods.into_serializable(ctx)?,
+            transport: self.transport.into_serializable(ctx)?,
+            storage: self.storage.into_serializable(ctx)?,
             count: self.count,
             active: self.active,
             reserve_export_threshold: self.reserve_export_threshold,

@@ -48,6 +48,9 @@ macro_rules! declare_unit {
                 self.0 / rhs.0
             }
         }
+
+        trivially_serializable!($name);
+        trivial_config_prepare!($name);
     };
 }
 

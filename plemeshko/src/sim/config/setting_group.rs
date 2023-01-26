@@ -1,19 +1,19 @@
-use egui::plot::Text;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    env::{
-        config::{Config, ConfigId, ConfigLabel, Serializable},
-        text::{TextId, TextIdentifier},
-    },
     sim::units::Ticks,
+    state::{
+        config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Prepare},
+        serializable::{Serializable, SerializationContext},
+        text::{FatTextId, TextIdFactory},
+    },
 };
 
 use super::resource::{RawResourceIo, ResourceIo};
 
 #[derive(Serialize, Deserialize)]
 pub struct RawSetting {
-    pub name: String,
     #[serde(flatten)]
     pub resource_io: RawResourceIo,
     #[serde(default)]
@@ -21,7 +21,7 @@ pub struct RawSetting {
 }
 
 pub struct Setting {
-    pub name: TextId,
+    pub name: FatTextId,
     pub resource_io: ResourceIo,
     pub time_to_complete: Ticks,
 }
@@ -35,12 +35,11 @@ pub struct SettingGroup {
     pub settings: Vec<Setting>,
 }
 
-pub type SettingGroupLabel = ConfigLabel<SettingGroup>;
-pub type SettingGroupId = ConfigId<SettingGroup>;
+pub type SettingGroupId = FatConfigId<SettingGroup>;
 
 #[derive(Serialize, Deserialize)]
 pub struct RawSelectedSetting {
-    pub group: SettingGroupLabel,
+    pub group: FatConfigLabel<SettingGroup>,
     pub index: usize,
 }
 
@@ -50,67 +49,58 @@ pub struct SelectedSetting {
     pub index: usize,
 }
 
+impl Prepare for RawSetting {
+    type Prepared = Setting;
+
+    fn prepare(
+        self,
+        ctx: &mut ConfigsLoadingContext<'_>,
+        tif: &mut TextIdFactory,
+    ) -> anyhow::Result<Self::Prepared> {
+        let name = tif.create("name").in_component(ctx.component_id());
+        tif.with_lock(|tif| {
+            Ok(Setting {
+                name,
+                resource_io: self.resource_io.prepare(ctx, tif)?,
+                time_to_complete: self.time_to_complete,
+            })
+        })
+    }
+}
+
+impl Prepare for RawSettingGroup {
+    type Prepared = SettingGroup;
+
+    fn prepare(
+        self,
+        ctx: &mut ConfigsLoadingContext<'_>,
+        tif: &mut TextIdFactory,
+    ) -> anyhow::Result<Self::Prepared> {
+        Ok(SettingGroup {
+            settings: tif.with_branch("settings", |tif| self.settings.prepare(ctx, tif))?,
+        })
+    }
+}
+
 impl Config for SettingGroup {
     type Raw = RawSettingGroup;
 
     const TAG: &'static str = "setting-group";
-
-    fn prepare(
-        raw: Self::Raw,
-        _id: ConfigLabel<Self>,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> Self {
-        SettingGroup {
-            settings: Serializable::from_serializable(raw.settings, indexer),
-        }
-    }
-}
-
-impl Serializable for Setting {
-    type Raw = RawSetting;
-
-    fn from_serializable(raw: RawSetting, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
-        Setting {
-            name: TextId::new(format!("{}_setting_{}", SettingGroup::TAG, raw.name)),
-            resource_io: Serializable::from_serializable(raw.resource_io, indexer),
-            time_to_complete: raw.time_to_complete,
-        }
-    }
-
-    fn into_serializable(
-        self,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> anyhow::Result<RawSetting> {
-        let text_prefix_len = SettingGroup::TAG.len() + "_setting_".len();
-        let name = self.name.as_id();
-        Ok(RawSetting {
-            name: name
-                .chars()
-                .skip(text_prefix_len)
-                .take(name.len() - text_prefix_len)
-                .collect(),
-            resource_io: self.resource_io.into_serializable(indexer)?,
-            time_to_complete: self.time_to_complete,
-        })
-    }
 }
 
 impl Serializable for SelectedSetting {
     type Raw = RawSelectedSetting;
 
-    fn from_serializable(raw: Self::Raw, indexer: &mut crate::env::config::ConfigIndexer) -> Self {
-        SelectedSetting {
-            group: Serializable::from_serializable(raw.group, indexer),
+    fn from_serializable(raw: Self::Raw, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+        Ok(SelectedSetting {
+            group: Serializable::from_serializable(raw.group, ctx)?,
             index: raw.index,
-        }
+        })
     }
 
-    fn into_serializable(
-        self,
-        indexer: &mut crate::env::config::ConfigIndexer,
-    ) -> anyhow::Result<Self::Raw> {
+    fn into_serializable(self, ctx: &SerializationContext<'_>) -> anyhow::Result<Self::Raw> {
         Ok(RawSelectedSetting {
-            group: self.group.into_serializable(indexer)?,
+            group: self.group.into_serializable(ctx)?,
             index: self.index,
         })
     }

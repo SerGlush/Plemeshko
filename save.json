@@ -1,24 +1,24 @@
 {
     "depot": {
-        "human": 100,
-        "food": 10000
+        "/human": 100,
+        "/food": 10000
     },
     "erections": [
         {
             "name": "Hunting House",
             "selected_methods": [
                 {
-                    "label": "hunt-animals",
+                    "label": "/hunt-animals",
                     "settings": [
                         {
-                            "group": "hunting-tool",
+                            "group": "/hunting-tool",
                             "index": 0
                         }
                     ]
                 }
             ],
             "transport": {
-                "solid": "manual"
+                "/solid": "/manual"
             },
             "storage": {},
             "count": 4,
