@@ -129,10 +129,9 @@ impl AppState {
 
     /// Retrieve text entry from the core component.
     pub fn get_text_core<'a>(&'a self, id: &str) -> Result<Cow<'a, str>> {
-        let id = unsafe { std::mem::transmute::<_, &TextIdRef>(id) };
         self.components
             .get_component(ComponentId::core())?
-            .get_text(id, None)
+            .get_text(TextIdRef::from_str(id), None)
     }
 
     /// Format text entry using specified arguments.
@@ -144,10 +143,9 @@ impl AppState {
 
     /// Format text entry from the core component using specified arguments.
     pub fn fmt_text_core<'a>(&'a self, id: &str, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
-        let id = unsafe { std::mem::transmute::<_, &TextIdRef>(id) };
         self.components
             .get_component(ComponentId::core())?
-            .get_text(id, Some(args))
+            .get_text(TextIdRef::from_str(id), Some(args))
     }
 
     pub fn get_texture(&self, id: FatTextureId) -> Result<&RetainedImage> {

@@ -27,6 +27,10 @@ impl TextIdRef {
     pub(super) fn report(&self) -> String {
         self.0.to_owned()
     }
+
+    pub(in crate::state) fn from_str(value: &str) -> &Self {
+        unsafe { std::mem::transmute(value) }
+    }
 }
 
 impl TextIdFactory {
