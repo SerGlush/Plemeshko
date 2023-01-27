@@ -6,6 +6,7 @@ use crate::state::{
     components::{app::AppComponent, shared::SharedComponent, ComponentId},
     config::{ConfigRepository, ConfigTypeRegistry},
     text::TextRepository,
+    texture::TextureRepository,
 };
 
 use super::{app::AppComponents, shared::SharedComponents, ComponentIndexer};
@@ -45,6 +46,7 @@ impl<'a, S> ComponentLoadingContext<'a, S> {
 
 const COMPONENT_DIR_CONFIGS: &str = "configs";
 const COMPONENT_DIR_TEXTS: &str = "texts";
+const COMPONENT_DIR_TEXTURES: &str = "textures";
 
 impl ComponentLoader {
     pub fn new() -> Result<Self> {
@@ -100,9 +102,20 @@ impl ComponentLoader {
         } else {
             ConfigRepository::new(&self.config_type_registry, &mut ctx)?
         };
+        assert!(dir.pop());
+
+        dir.push(COMPONENT_DIR_TEXTURES);
+        let textures = if std::fs::try_exists(&dir)
+            .with_context(|| "Checking existence of component's textures directory.")?
+        {
+            TextureRepository::from_directory(&dir)?
+        } else {
+            TextureRepository::new()
+        };
+        assert!(dir.pop());
 
         let shared_comp = SharedComponent { configs };
-        let app_comp = AppComponent { texts };
+        let app_comp = AppComponent { texts, textures };
         let component_index = component_id.0 as usize;
         if app_comps.0.len() == component_index {
             app_comps.0.push(Some(app_comp));

@@ -6,6 +6,7 @@ pub mod components;
 pub mod indexer;
 pub mod label_factory;
 pub mod text;
+pub mod texture;
 
 use std::{
     borrow::Cow,
@@ -13,6 +14,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use egui_extras::RetainedImage;
 use fluent::FluentArgs;
 
 use crate::sim::{config::resource::ResourceId, RawSimSnapshot, Sim};
@@ -24,6 +26,7 @@ use self::{
     config::{ConfigIndexerMap, FatConfigId},
     serializable::{Serializable, SerializationContext},
     text::{FatTextId, TextIdentifier},
+    texture::FatTextureId,
 };
 
 const COMPONENTS_OTHER_DIR: &str = "mods";
@@ -148,5 +151,15 @@ impl AppState {
         self.components
             .get_component(ComponentId::core())?
             .get_text(id, Some(args))
+    }
+
+    pub fn get_texture(&self, id: FatTextureId) -> Result<&RetainedImage> {
+        self.components.get_component(id.0)?.textures.get(id.1)
+    }
+
+    pub fn get_texture_core(&self, label: &str) -> Result<&RetainedImage> {
+        let core_textures = &self.components.get_component(ComponentId::core())?.textures;
+        let id = core_textures.get_id_from_raw(label)?;
+        core_textures.get(id)
     }
 }

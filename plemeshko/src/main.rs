@@ -4,6 +4,7 @@
 #![feature(iterator_try_collect)]
 #![feature(associated_type_bounds)]
 #![feature(fs_try_exists)]
+#![feature(new_uninit)]
 #![deny(elided_lifetimes_in_paths)]
 #![allow(clippy::mut_mutex_lock)] // false positives
 #![allow(dead_code)]

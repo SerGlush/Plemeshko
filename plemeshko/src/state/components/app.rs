@@ -3,12 +3,16 @@ use std::borrow::Cow;
 use anyhow::{anyhow, Result};
 use fluent::FluentArgs;
 
-use crate::state::text::{TextIdentifier, TextRepository, TextRetrievalError};
+use crate::state::{
+    text::{TextIdentifier, TextRepository, TextRetrievalError},
+    texture::TextureRepository,
+};
 
 use super::ComponentId;
 
 pub struct AppComponent {
     pub texts: TextRepository,
+    pub textures: TextureRepository,
 }
 
 #[derive(Default)]

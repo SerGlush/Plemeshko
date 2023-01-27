@@ -245,6 +245,8 @@ impl App {
         CentralPanel::default()
             .show(egui_ctx, |ui| {
                 ui.horizontal(|ui| {
+                    st.get_texture_core("test")?
+                        .show_size(ui, Vec2::new(24.0, 24.0));
                     if ui.button(st.get_text_core("ui_main")?).clicked() {
                         self.current_panel = 0;
                     }
