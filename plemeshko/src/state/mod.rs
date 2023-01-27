@@ -1,10 +1,11 @@
 #[macro_use]
 pub mod config;
-pub mod components;
-pub mod indexer;
-pub mod text;
 #[macro_use]
 pub mod serializable;
+pub mod components;
+pub mod indexer;
+pub mod label_factory;
+pub mod text;
 
 use std::{
     borrow::Cow,
