@@ -9,7 +9,7 @@ pub mod text;
 pub mod texture;
 
 use std::{
-    borrow::Cow,
+    borrow::{Borrow, Cow},
     sync::{Mutex, RwLock},
 };
 
@@ -25,7 +25,7 @@ use self::{
     },
     config::{ConfigIndexerMap, FatConfigId},
     serializable::{Serializable, SerializationContext},
-    text::{FatTextId, TextIdentifier},
+    text::{FatTextId, TextIdRef},
     texture::FatTextureId,
 };
 
@@ -122,14 +122,14 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
 impl AppState {
     /// Retrieve text entry.
     pub fn get_text<'a>(&'a self, id: &FatTextId) -> Result<Cow<'a, str>> {
-        self.components.get_component(id.0)?.get_text(&id.1, None)
+        self.components
+            .get_component(id.0)?
+            .get_text(id.1.borrow(), None)
     }
 
     /// Retrieve text entry from the core component.
-    pub fn get_text_core<'a>(
-        &'a self,
-        id: &(impl TextIdentifier + ?Sized),
-    ) -> Result<Cow<'a, str>> {
+    pub fn get_text_core<'a>(&'a self, id: &str) -> Result<Cow<'a, str>> {
+        let id = unsafe { std::mem::transmute::<_, &TextIdRef>(id) };
         self.components
             .get_component(ComponentId::core())?
             .get_text(id, None)
@@ -139,15 +139,12 @@ impl AppState {
     pub fn fmt_text<'a>(&'a self, id: FatTextId, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
         self.components
             .get_component(id.0)?
-            .get_text(&id.1, Some(args))
+            .get_text(id.1.borrow(), Some(args))
     }
 
     /// Format text entry from the core component using specified arguments.
-    pub fn fmt_text_core<'a>(
-        &'a self,
-        id: &(impl TextIdentifier + ?Sized),
-        args: &'a FluentArgs<'_>,
-    ) -> Result<Cow<'a, str>> {
+    pub fn fmt_text_core<'a>(&'a self, id: &str, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
+        let id = unsafe { std::mem::transmute::<_, &TextIdRef>(id) };
         self.components
             .get_component(ComponentId::core())?
             .get_text(id, Some(args))

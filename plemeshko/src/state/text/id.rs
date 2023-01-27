@@ -1,9 +1,14 @@
+use std::borrow::Borrow;
+
 use serde::Deserialize;
 
 use crate::state::{components::ComponentId, label_factory::LabelFactory};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash)]
 pub struct TextId(pub(super) String);
+
+#[repr(transparent)]
+pub struct TextIdRef(pub(super) str);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FatTextId(pub ComponentId, pub TextId);
@@ -12,13 +17,15 @@ pub struct FatTextId(pub ComponentId, pub TextId);
 #[repr(transparent)]
 pub struct TextIdFactory(LabelFactory);
 
-pub trait TextIdentifier {
-    fn as_text_id(&self) -> &str;
-}
-
 impl TextId {
     pub fn in_component(self, component_id: ComponentId) -> FatTextId {
         FatTextId(component_id, self)
+    }
+}
+
+impl TextIdRef {
+    pub(super) fn report(&self) -> String {
+        self.0.to_owned()
     }
 }
 
@@ -53,14 +60,8 @@ impl TextIdFactory {
     }
 }
 
-impl TextIdentifier for str {
-    fn as_text_id(&self) -> &str {
-        self
-    }
-}
-
-impl TextIdentifier for TextId {
-    fn as_text_id(&self) -> &str {
-        self.0.as_str()
+impl Borrow<TextIdRef> for TextId {
+    fn borrow(&self) -> &TextIdRef {
+        unsafe { std::mem::transmute(self.0.as_str()) }
     }
 }

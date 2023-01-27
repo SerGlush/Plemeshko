@@ -185,13 +185,13 @@ impl TextRepository {
 
     pub fn get<'a>(
         &'a self,
-        id: &(impl TextIdentifier + ?Sized),
+        id: &TextIdRef,
         args: Option<&'a FluentArgs<'_>>,
     ) -> Result<Cow<'a, str>, TextRetrievalError> {
         let msg = self
             .bundle
-            .get_message(id.as_text_id())
-            .ok_or_else(|| TextRetrievalError::NotFound(id.as_text_id().to_owned()))?;
+            .get_message(&id.0)
+            .ok_or_else(|| TextRetrievalError::NotFound(id.report()))?;
         let mut errors = Vec::new();
         let cow = self.bundle.format_pattern(
             msg.value().ok_or(TextRetrievalError::EmptyMessage)?,
