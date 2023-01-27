@@ -25,11 +25,9 @@ impl TextureRepository {
         Ok(repo)
     }
 
-    pub fn get(&self, id: TextureId) -> Result<&RetainedImage> {
+    pub fn get(&self, id: TextureId) -> Option<&RetainedImage> {
         let index: usize = id.0.try_into().unwrap();
-        self.textures
-            .get(index)
-            .ok_or_else(|| anyhow!("Texture not found: {}", self.indexer.report_id(id.0)))
+        self.textures.get(index)
     }
 
     pub fn get_id_from_raw(&self, label: &str) -> Result<TextureId> {

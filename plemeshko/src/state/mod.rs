@@ -13,7 +13,7 @@ use std::{
     sync::{Mutex, RwLock},
 };
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use egui_extras::RetainedImage;
 use fluent::FluentArgs;
 
@@ -47,6 +47,7 @@ pub struct AppState {
     pub shared: &'static SharedState,
     pub components: AppComponents,
     pub component_loader: ComponentLoader,
+    fallback_texture: RetainedImage,
 }
 
 fn load_sim(ctx: &mut SerializationContext<'_>) -> anyhow::Result<Sim> {
@@ -114,6 +115,10 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
         shared: shared_st,
         components: app_comps,
         component_loader,
+        fallback_texture: RetainedImage::from_color_image(
+            "<fallback>",
+            egui::ColorImage::example(),
+        ),
     };
     Ok((shared_st, app_st))
 }
@@ -149,12 +154,22 @@ impl AppState {
     }
 
     pub fn get_texture(&self, id: FatTextureId) -> Result<&RetainedImage> {
-        self.components.get_component(id.0)?.textures.get(id.1)
+        Ok(self
+            .components
+            .get_component(id.0)?
+            .textures
+            .get(id.1)
+            .unwrap_or(&self.fallback_texture))
     }
 
     pub fn get_texture_core(&self, label: &str) -> Result<&RetainedImage> {
         let core_textures = &self.components.get_component(ComponentId::core())?.textures;
-        let id = core_textures.get_id_from_raw(label)?;
-        core_textures.get(id)
+        let id = match core_textures.get_id_from_raw(label) {
+            Ok(id) => id,
+            Err(_) => return Ok(&self.fallback_texture),
+        };
+        core_textures
+            .get(id)
+            .ok_or_else(|| anyhow!("Invalid associated label's id: {label}"))
     }
 }
