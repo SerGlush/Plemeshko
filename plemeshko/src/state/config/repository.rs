@@ -39,15 +39,20 @@ impl ConfigRepository {
         builder.build(cfg_ty_reg, ctx)
     }
 
-    pub fn get_storage<C: Config>(&self) -> Result<&Vec<C>> {
+    fn get_storage_and_indexer<C: Config>(&self) -> Result<(&Vec<C>, &ConfigIndexer)> {
         let any_store = self
             .configs
             .get(&TypeId::of::<C>())
             .ok_or_else(|| anyhow!("Store not registered: {}", C::TAG))?;
-        any_store
+        let storage = any_store
             .0
             .downcast_ref()
-            .ok_or_else(|| anyhow!("Storage had type not matching its key: {}", C::TAG))
+            .ok_or_else(|| anyhow!("Storage had type not matching its key: {}", C::TAG))?;
+        Ok((storage, &any_store.1))
+    }
+
+    pub fn get_storage<C: Config>(&self) -> Result<&Vec<C>> {
+        Ok(self.get_storage_and_indexer()?.0)
     }
 
     pub fn iter<C: Config>(&self) -> Result<impl Iterator<Item = (ConfigId<C>, &C)>> {
@@ -59,17 +64,15 @@ impl ConfigRepository {
     }
 
     pub fn get<C: Config>(&self, id: ConfigId<C>) -> Result<&C> {
-        self.get_storage::<C>().and_then(|store| {
-            let index: usize = id.0.try_into().unwrap();
-            store.get(index).ok_or(anyhow!(
-                "Key '{}' doesn't exist in the store for config '{}'",
-                self.configs.get_label(id).map_or_else(
-                    |_| Cow::Owned(id.0.to_string() + "?!"),
-                    |label| Cow::Borrowed(&label.0)
-                ),
-                C::TAG
-            ))
-        })
+        self.get_storage_and_indexer::<C>()
+            .and_then(|(store, indexer)| {
+                let index: usize = id.0.try_into().unwrap();
+                store.get(index).ok_or(anyhow!(
+                    "Key '{}' doesn't exist in the store for config '{}'",
+                    indexer.report_id(id),
+                    C::TAG
+                ))
+            })
     }
 }
 

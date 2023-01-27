@@ -37,6 +37,10 @@ impl ConfigIndexer {
             .get_label(id.0)
             .map(|label| unsafe { std::mem::transmute(label) })
     }
+
+    pub(super) fn report_id<C: Config>(&self, id: ConfigId<C>) -> String {
+        self.0.report_id(id.0)
+    }
 }
 
 pub trait ConfigIndexerMap {
