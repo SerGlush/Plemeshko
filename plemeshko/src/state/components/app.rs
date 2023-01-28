@@ -25,7 +25,10 @@ impl AppComponent {
         args: Option<&'a FluentArgs<'_>>,
     ) -> Result<Cow<'a, str>> {
         self.texts.get(text_id, args).or_else(|e| match e {
-            TextRetrievalError::NotFound(id) => Ok(Cow::Owned(id)),
+            TextRetrievalError::NotFound(id) => {
+                log::warn!("Text retrieval failed for: {id}");
+                Ok(Cow::Owned(id))
+            }
             e => Err(e.into()),
         })
     }

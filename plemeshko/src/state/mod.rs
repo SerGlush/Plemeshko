@@ -166,7 +166,10 @@ impl AppState {
         let core_textures = &self.components.get_component(ComponentId::core())?.textures;
         let id = match core_textures.get_id_from_raw(label) {
             Ok(id) => id,
-            Err(_) => return Ok(&self.fallback_texture),
+            Err(e) => {
+                log::warn!("Core texture retrieval failed: {e}");
+                return Ok(&self.fallback_texture);
+            }
         };
         core_textures
             .get(id)
