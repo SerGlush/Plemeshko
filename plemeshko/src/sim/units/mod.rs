@@ -66,9 +66,9 @@ macro_rules! impl_binop_unit {
     };
 }
 
-mod time;
+mod ticks;
 
-pub use time::*;
+pub use ticks::*;
 
 declare_unit!(ResourceWeight, i64);
 declare_unit!(ResourceAmount, i64);
