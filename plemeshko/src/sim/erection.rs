@@ -89,7 +89,7 @@ impl Erection {
             // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
             for selected_setting in selected_method.settings.iter() {
                 let setting_group = shared_comps.get_config(selected_setting.group)?;
-                let setting = &setting_group.settings[selected_setting.index];
+                let setting = setting_group.setting(shared_comps, selected_setting.index)?;
                 for (resource_id, delta) in setting.resource_io.output.iter() {
                     single_output
                         .entry(resource_id.to_owned())

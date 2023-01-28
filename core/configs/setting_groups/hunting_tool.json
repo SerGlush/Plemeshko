@@ -1,31 +1,39 @@
 [
     {
+        "tag": "setting",
+        "label": "sticks-and-rocks",
+        "payload": {
+            "input": {
+                "human": 8
+            },
+            "output": {
+                "human": 8,
+                "food": 70
+            }
+        }
+    },
+    {
+        "tag": "setting",
+        "label": "stone-instruments",
+        "payload": {
+            "input": {
+                "human": 8,
+                "stone-instrument": 8
+            },
+            "output": {
+                "human": 8,
+                "food": 80,
+                "stone-instrument": 6
+            }
+        }
+    },
+    {
         "tag": "setting-group",
         "label": "hunting-tool",
         "payload": {
             "settings": [
-                {
-                    "name (unused)": "sticks-and-rocks",
-                    "input": {
-                        "human": 8
-                    },
-                    "output": {
-                        "human": 8,
-                        "food": 70
-                    }
-                },
-                {
-                    "name (unused)": "stone-instruments",
-                    "input": {
-                        "human": 8,
-                        "stone-instrument": 8
-                    },
-                    "output": {
-                        "human": 8,
-                        "food": 80,
-                        "stone-instrument": 6
-                    }
-                }
+                "sticks-and-rocks",
+                "stone-instruments"
             ]
         }
     }

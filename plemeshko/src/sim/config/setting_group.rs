@@ -1,38 +1,22 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    sim::units::Ticks,
-    state::{
-        config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Prepare},
-        serializable::{Serializable, SerializationContext},
-        text::{FatTextId, TextIdFactory},
-    },
+use crate::state::{
+    components::SharedComponents,
+    config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Prepare},
+    serializable::{Serializable, SerializationContext},
+    text::TextIdFactory,
 };
 
-use super::resource::{RawResourceIo, ResourceIo};
-
-#[derive(Serialize, Deserialize)]
-pub struct RawSetting {
-    #[serde(flatten)]
-    pub resource_io: RawResourceIo,
-    #[serde(default)]
-    pub time_to_complete: Ticks,
-}
-
-pub struct Setting {
-    pub name: FatTextId,
-    pub resource_io: ResourceIo,
-    pub time_to_complete: Ticks,
-}
+use super::setting::{Setting, SettingId};
 
 #[derive(Deserialize)]
 pub struct RawSettingGroup {
-    pub settings: Vec<RawSetting>,
+    pub settings: Vec<FatConfigLabel<Setting>>,
 }
 
 pub struct SettingGroup {
-    pub settings: Vec<Setting>,
+    pub settings: Vec<SettingId>,
 }
 
 pub type SettingGroupId = FatConfigId<SettingGroup>;
@@ -49,22 +33,13 @@ pub struct SelectedSetting {
     pub index: usize,
 }
 
-impl Prepare for RawSetting {
-    type Prepared = Setting;
-
-    fn prepare(
-        self,
-        ctx: &mut ConfigsLoadingContext<'_>,
-        tif: &mut TextIdFactory,
-    ) -> anyhow::Result<Self::Prepared> {
-        let name = tif.create("name").in_component(ctx.component_id());
-        tif.with_lock(|tif| {
-            Ok(Setting {
-                name,
-                resource_io: self.resource_io.prepare(ctx, tif)?,
-                time_to_complete: self.time_to_complete,
-            })
-        })
+impl SettingGroup {
+    pub fn setting<'a>(
+        &self,
+        shared_comps: &'a SharedComponents,
+        index: usize,
+    ) -> Result<&'a Setting> {
+        shared_comps.get_config(self.settings[index])
     }
 }
 

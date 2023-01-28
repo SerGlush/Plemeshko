@@ -1,2 +1,2 @@
-setting-group_hunting-tool_settings_0_name = with Sticks & Rocks
-setting-group_hunting-tool_settings_1_name = with Stone Instruments
+setting_sticks-and-rocks_name = with Sticks & Rocks
+setting_stone-instruments_name = with Stone Instruments

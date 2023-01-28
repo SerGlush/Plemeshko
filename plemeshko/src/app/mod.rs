@@ -101,12 +101,13 @@ impl ErectionBuilder {
                         Ok(())
                     };
 
-                    setting_group.settings[selected_setting.index]
+                    let setting = setting_group.setting(shared_comps, selected_setting.index)?;
+                    setting
                         .resource_io
                         .input
                         .keys()
                         .try_for_each(&mut check_resource_group)?;
-                    setting_group.settings[selected_setting.index]
+                    setting
                         .resource_io
                         .output
                         .keys()
@@ -121,17 +122,21 @@ impl ErectionBuilder {
             ui.horizontal(|ui| {
                 let method_name = st.get_text(&shared_comps.get_config(method.id)?.name)?;
                 ui.label(method_name.as_ref());
-                for setting in &mut method.settings {
-                    let setting_group = shared_comps.get_config(setting.group)?;
-                    let setting_name = st.get_text(&setting_group.settings[setting.index].name)?;
+                for selected_setting in &mut method.settings {
+                    let setting_group = shared_comps.get_config(selected_setting.group)?;
+                    let setting = setting_group.setting(shared_comps, selected_setting.index)?;
+                    let setting_name = st.get_text(&setting.name)?;
                     ComboBox::from_id_source(setting_name.as_ref())
                         .width(200.0)
                         .selected_text(setting_name)
                         .show_index(
                             ui,
-                            &mut setting.index,
+                            &mut selected_setting.index,
                             setting_group.settings.len(),
-                            |index| match st.get_text(&setting_group.settings[index].name) {
+                            |index| match setting_group
+                                .setting(shared_comps, index)
+                                .and_then(|setting| st.get_text(&setting.name))
+                            {
                                 Result::Ok(setting_group_name) => setting_group_name.into_owned(),
                                 Err(err) => err.to_string(),
                             },
@@ -217,7 +222,7 @@ pub fn draw_erection(
             ui.label(st.get_text(&method.name)?);
             for setting in selected_method.settings.iter() {
                 let setting_group = shared_comps.get_config(setting.group)?;
-                ui.label(st.get_text(&setting_group.settings[setting.index].name)?);
+                ui.label(st.get_text(&setting_group.setting(shared_comps, setting.index)?.name)?);
             }
             Ok(())
         })
