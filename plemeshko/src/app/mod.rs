@@ -114,34 +114,39 @@ impl ErectionBuilder {
             Ok(())
         });
 
-        for method in &mut self.erection_methods {
-            ui.horizontal(|ui| {
-                let method_name = st.get_text(&shared_comps.get_config(method.id)?.name)?;
-                ui.label(method_name.as_ref());
-                for selected_setting_id in &mut method.settings {
-                    let selected_setting = shared_comps.get_config(*selected_setting_id)?;
-                    let setting_group = shared_comps.get_config(selected_setting.group)?;
-                    let selected_setting_name = st.get_text(&selected_setting.name)?;
-                    ComboBox::from_id_source(&selected_setting_name)
-                        .width(200.0)
-                        .selected_text(selected_setting_name)
-                        .show_ui(ui, |ui| {
-                            for &setting_id in &setting_group.settings {
-                                let setting = shared_comps.get_config(setting_id)?;
-                                if ui
-                                    .selectable_label(false, st.get_text(&setting.name)?)
-                                    .clicked()
-                                {
-                                    *selected_setting_id = setting_id;
+        for (method_index, method) in self.erection_methods.iter_mut().enumerate() {
+            ui.push_id(method_index, |ui| {
+                ui.horizontal(|ui| {
+                    let method_name = st.get_text(&shared_comps.get_config(method.id)?.name)?;
+                    ui.label(method_name.as_ref());
+                    for selected_setting_id in &mut method.settings {
+                        let selected_setting = shared_comps.get_config(*selected_setting_id)?;
+                        let setting_group = shared_comps.get_config(selected_setting.group)?;
+                        let selected_setting_name = st.get_text(&selected_setting.name)?;
+                        ComboBox::from_id_source(&selected_setting_name)
+                            .width(200.0)
+                            .selected_text(selected_setting_name)
+                            .show_ui(ui, |ui| {
+                                for &setting_id in &setting_group.settings {
+                                    let setting = shared_comps.get_config(setting_id)?;
+                                    if ui
+                                        .selectable_label(false, st.get_text(&setting.name)?)
+                                        .clicked()
+                                    {
+                                        *selected_setting_id = setting_id;
+                                    }
                                 }
-                            }
-                            Ok(())
-                        })
-                        .inner
-                        .transpose()?;
-                }
+                                Ok(())
+                            })
+                            .inner
+                            .transpose()?;
+                    }
+                    Ok(())
+                })
+                .inner?;
                 Ok(())
-            });
+            })
+            .inner?;
         }
 
         ui.menu_button(st.get_text_core("ui_erection-builder_add-method")?, |ui| {
