@@ -3,14 +3,14 @@ use std::{io::Read, path::Path};
 use anyhow::{anyhow, Context, Result};
 use egui_extras::RetainedImage;
 
-use crate::state::{indexer::Indexer, label_factory::LabelFactory};
+use crate::state::{label_factory::LabelFactory, raw_indexer::RawIndexer};
 
 use super::{RawTextureId, TextureId};
 
 #[derive(Default)]
 pub struct TextureRepository {
     textures: Vec<RetainedImage>,
-    indexer: Indexer<String, RawTextureId>,
+    indexer: RawIndexer<String, RawTextureId>,
 }
 
 impl TextureRepository {

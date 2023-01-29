@@ -9,8 +9,8 @@ use educe::Educe;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::state::{
-    components::{concat_label, split_label, ComponentId, ComponentLabel},
-    serializable::{Serializable, SerializationContext},
+    components::{concat_label, split_label, ComponentId, ComponentLabel, ComponentsRef},
+    serializable::Serializable,
     text::TextIdFactory,
 };
 
@@ -122,12 +122,14 @@ impl<C: Config> Prepare for FatConfigLabel<C> {
     ) -> Result<FatConfigId<C>> {
         Ok(match self.0 {
             Some(comp_id) => {
-                let comp_id = ctx.component_indexer.get_id(&comp_id)?;
+                let comp_id = ctx.components.indexer.get_id(&comp_id)?;
                 let cfg_id = ctx
-                    .shared_components
-                    .get_component_mut(comp_id)?
+                    .components
+                    .shared
+                    .get_component(comp_id)?
                     .configs
-                    .get_or_create_id(Cow::Owned(self.1))?;
+                    .get_indexer::<C>()?
+                    .get_id(&self.1)?;
                 FatConfigId(comp_id, cfg_id)
             }
             None => {
@@ -141,26 +143,27 @@ impl<C: Config> Prepare for FatConfigLabel<C> {
 impl<C: Config> Serializable for FatConfigId<C> {
     type Raw = FatConfigLabel<C>;
 
-    fn from_serializable(raw: Self::Raw, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+    fn from_serializable(raw: Self::Raw, ctx: &ComponentsRef<'_>) -> Result<Self> {
         let comp_label = &raw.0.ok_or_else(|| {
             anyhow!(
                 "Deserializing local label outside any component: ?/{}",
                 raw.1
             )
         })?;
-        let comp_id = ctx.component_indexer.get_id(comp_label)?;
+        let comp_id = ctx.indexer.get_id(comp_label)?;
         let cfg_id = ctx
-            .shared_components
-            .get_component_mut(comp_id)?
+            .shared
+            .get_component(comp_id)?
             .configs
-            .get_or_create_id(Cow::Owned(raw.1))?;
+            .get_indexer::<C>()?
+            .get_id(&raw.1)?;
         Ok(FatConfigId(comp_id, cfg_id))
     }
 
-    fn into_serializable(self, ctx: &SerializationContext<'_>) -> Result<Self::Raw> {
-        let comp_label = ctx.component_indexer.get_label(self.0)?;
+    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> Result<Self::Raw> {
+        let comp_label = ctx.indexer.get_label(self.0)?;
         let cfg_label = ctx
-            .shared_components
+            .shared
             .get_component(self.0)?
             .configs
             .get_label(self.1)?;

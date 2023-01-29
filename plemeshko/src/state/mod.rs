@@ -3,8 +3,8 @@ pub mod config;
 #[macro_use]
 pub mod serializable;
 pub mod components;
-pub mod indexer;
 pub mod label_factory;
+pub mod raw_indexer;
 pub mod text;
 pub mod texture;
 
@@ -21,10 +21,11 @@ use crate::sim::{config::resource::ResourceId, RawSimSnapshot, Sim};
 
 use self::{
     components::{
-        AppComponents, ComponentId, ComponentLoader, SharedComponents, COMPONENT_CORE_LABEL,
+        AppComponents, ComponentId, ComponentLoader, ComponentsRef, SharedComponents,
+        COMPONENT_CORE_LABEL,
     },
-    config::{ConfigIndexerMap, FatConfigId},
-    serializable::{Serializable, SerializationContext},
+    config::FatConfigId,
+    serializable::Serializable,
     text::{FatTextId, TextIdRef},
     texture::FatTextureId,
 };
@@ -50,7 +51,7 @@ pub struct AppState {
     fallback_texture: RetainedImage,
 }
 
-fn load_sim(ctx: &mut SerializationContext<'_>) -> anyhow::Result<Sim> {
+fn load_sim(ctx: &mut ComponentsRef<'_>) -> anyhow::Result<Sim> {
     let mut cli_args_iter = std::env::args();
     cli_args_iter.next(); // exe
     Ok(match cli_args_iter.next() {
@@ -59,7 +60,7 @@ fn load_sim(ctx: &mut SerializationContext<'_>) -> anyhow::Result<Sim> {
             let reader = std::io::BufReader::new(file);
             let snapshot = serde_json::from_reader::<_, RawSimSnapshot>(reader)?;
             let snapshot = Serializable::from_serializable(snapshot, ctx)?;
-            Sim::restore(ctx.shared_components, snapshot)?
+            Sim::restore(ctx.shared, snapshot)?
         }
         None => Sim::new(),
     })
@@ -70,7 +71,7 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
     let mut shared_comps = SharedComponents::default();
     let mut app_comps = AppComponents::default();
     let mut component_loader = ComponentLoader::new()?;
-    component_loader.load_single(
+    let components_changed = component_loader.load_single(
         &mut shared_comps,
         &mut app_comps,
         COMPONENT_CORE_LABEL.to_owned(),
@@ -78,11 +79,11 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
     )?;
     match std::fs::try_exists(COMPONENTS_OTHER_DIR) {
         Ok(true) => {
-            component_loader.load_each(
+            components_changed.consume(component_loader.load_each(
                 &mut shared_comps,
                 &mut app_comps,
                 std::path::Path::new(COMPONENTS_OTHER_DIR),
-            )?;
+            )?);
         }
         Ok(false) => {
             println!(
@@ -93,16 +94,18 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
             println!("Skipping loading other components: Error checking directory: {e}");
         }
     }
+    component_loader.finalize(components_changed, &mut shared_comps)?;
+
     let human_id = shared_comps
         .get_core()?
         .configs
         .get_id_from_raw(RESOURCE_LABEL_HUMAN)?;
 
     let sim = {
-        let mut ser_ctx = SerializationContext {
-            component_indexer: component_loader.indexer(),
-            app_components: &app_comps,
-            shared_components: &mut shared_comps,
+        let mut ser_ctx = ComponentsRef {
+            indexer: component_loader.indexer(),
+            app: &app_comps,
+            shared: &shared_comps,
         };
         load_sim(&mut ser_ctx).with_context(|| "Error reading Sim snapshot")?
     };

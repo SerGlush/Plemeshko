@@ -6,8 +6,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     sim::units::{ResourceAmount, ResourceWeight},
     state::{
+        components::ComponentsRef,
         config::{Config, FatConfigId, FatConfigLabel, Prepare},
-        serializable::{Serializable, SerializationContext},
+        serializable::Serializable,
         text::FatTextId,
     },
 };
@@ -89,14 +90,14 @@ impl Prepare for RawResourceIo {
 impl Serializable for ResourceIo {
     type Raw = RawResourceIo;
 
-    fn from_serializable(raw: RawResourceIo, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+    fn from_serializable(raw: RawResourceIo, ctx: &ComponentsRef<'_>) -> Result<Self> {
         Ok(ResourceIo {
             input: Serializable::from_serializable(raw.input, ctx)?,
             output: Serializable::from_serializable(raw.output, ctx)?,
         })
     }
 
-    fn into_serializable(self, ctx: &SerializationContext<'_>) -> anyhow::Result<RawResourceIo> {
+    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> anyhow::Result<RawResourceIo> {
         Ok(RawResourceIo {
             input: self.input.into_serializable(ctx)?,
             output: self.output.into_serializable(ctx)?,

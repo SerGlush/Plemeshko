@@ -8,8 +8,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::state::{
-    components::SharedComponents,
-    serializable::{Serializable, SerializationContext},
+    components::{ComponentsRef, SharedComponents},
+    serializable::Serializable,
     SharedState,
 };
 
@@ -89,14 +89,14 @@ impl Sim {
 impl Serializable for SimSnapshot {
     type Raw = RawSimSnapshot;
 
-    fn from_serializable(raw: Self::Raw, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+    fn from_serializable(raw: Self::Raw, ctx: &ComponentsRef<'_>) -> Result<Self> {
         Ok(SimSnapshot {
             depot: Serializable::from_serializable(raw.depot, ctx)?,
             erections: Serializable::from_serializable(raw.erections, ctx)?,
         })
     }
 
-    fn into_serializable(self, ctx: &SerializationContext<'_>) -> Result<Self::Raw> {
+    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> Result<Self::Raw> {
         Ok(RawSimSnapshot {
             depot: self.depot.into_serializable(ctx)?,
             erections: self.erections.into_serializable(ctx)?,

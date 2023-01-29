@@ -1,19 +1,16 @@
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::state::{
-    components::SharedComponents,
-    config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Prepare},
-    serializable::{Serializable, SerializationContext},
+    components::{ComponentIndexer, SharedComponents},
+    config::{Config, ConfigsLoadingContext, FatConfigId, Prepare},
     text::TextIdFactory,
 };
 
 use super::setting::{Setting, SettingId};
 
 #[derive(Deserialize)]
-pub struct RawSettingGroup {
-    pub settings: Vec<FatConfigLabel<Setting>>,
-}
+pub struct RawSettingGroup {}
 
 pub struct SettingGroup {
     pub settings: Vec<SettingId>,
@@ -21,38 +18,16 @@ pub struct SettingGroup {
 
 pub type SettingGroupId = FatConfigId<SettingGroup>;
 
-#[derive(Serialize, Deserialize)]
-pub struct RawSelectedSetting {
-    pub group: FatConfigLabel<SettingGroup>,
-    pub index: usize,
-}
-
-#[derive(Clone)]
-pub struct SelectedSetting {
-    pub group: SettingGroupId,
-    pub index: usize,
-}
-
-impl SettingGroup {
-    pub fn setting<'a>(
-        &self,
-        shared_comps: &'a SharedComponents,
-        index: usize,
-    ) -> Result<&'a Setting> {
-        shared_comps.get_config(self.settings[index])
-    }
-}
-
 impl Prepare for RawSettingGroup {
     type Prepared = SettingGroup;
 
     fn prepare(
         self,
-        ctx: &mut ConfigsLoadingContext<'_>,
-        tif: &mut TextIdFactory,
+        _ctx: &mut ConfigsLoadingContext<'_>,
+        _tif: &mut TextIdFactory,
     ) -> anyhow::Result<Self::Prepared> {
         Ok(SettingGroup {
-            settings: tif.with_branch("settings", |tif| self.settings.prepare(ctx, tif))?,
+            settings: Vec::new(),
         })
     }
 }
@@ -61,22 +36,41 @@ impl Config for SettingGroup {
     type Raw = RawSettingGroup;
 
     const TAG: &'static str = "setting-group";
-}
 
-impl Serializable for SelectedSetting {
-    type Raw = RawSelectedSetting;
+    fn finalize(indexer: &ComponentIndexer, shared_comps: &mut SharedComponents) -> Result<()> {
+        // clear all setting groups
+        for setting_group in shared_comps.iter_configs_mut::<SettingGroup>() {
+            let setting_group = setting_group?.1;
+            setting_group.settings.clear();
+        }
 
-    fn from_serializable(raw: Self::Raw, ctx: &mut SerializationContext<'_>) -> Result<Self> {
-        Ok(SelectedSetting {
-            group: Serializable::from_serializable(raw.group, ctx)?,
-            index: raw.index,
-        })
-    }
-
-    fn into_serializable(self, ctx: &SerializationContext<'_>) -> anyhow::Result<Self::Raw> {
-        Ok(RawSelectedSetting {
-            group: self.group.into_serializable(ctx)?,
-            index: self.index,
-        })
+        // for all components - find all settings and push to respective groups
+        let component_slot_ids = indexer.indices();
+        for component_slot_id in component_slot_ids {
+            let component_setting_ids = match shared_comps.get_component_slot(component_slot_id)? {
+                Some(component) => component
+                    .configs
+                    .get_indexer::<Setting>()?
+                    .indices::<Setting>(),
+                None => continue,
+            };
+            let component_id = component_slot_id.assume_occupied();
+            for component_setting_id in component_setting_ids {
+                let setting_group_id = shared_comps
+                    .get_component_slot(component_slot_id)
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .configs
+                    .get_storage::<Setting>()?
+                    .get(component_setting_id)?
+                    .group;
+                shared_comps
+                    .get_config_mut(setting_group_id)?
+                    .settings
+                    .push(FatConfigId(component_id, component_setting_id));
+            }
+        }
+        Ok(())
     }
 }

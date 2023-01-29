@@ -10,7 +10,7 @@ use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use serde_json::value::RawValue;
 
-use crate::state::components::ComponentLoadingContext;
+use crate::state::components::{ComponentId, ComponentsRef};
 
 use super::{indexer::ConfigIndexer, type_registry::ConfigTypeRegistry, ConfigRepository};
 
@@ -24,13 +24,27 @@ pub struct RawConfig {
 
 pub struct ConfigRepositoryBuilder(HashMap<TypeId, (Box<dyn Any>, ConfigIndexer)>);
 
-pub type ComponentLoadingConfigsState = HashMap<TypeId, (Box<dyn Any>, ConfigIndexer)>;
-pub type ConfigsLoadingContext<'a> = ComponentLoadingContext<'a, ComponentLoadingConfigsState>;
+pub struct ConfigsLoadingContext<'a> {
+    /// Components already loaded.
+    pub components: ComponentsRef<'a>,
+
+    /// Id of the component being loaded.
+    pub(super) component_id: ComponentId,
+
+    // todo: encapsulate
+    pub st: &'a mut HashMap<TypeId, (Box<dyn Any>, ConfigIndexer)>,
+}
+
+impl ConfigsLoadingContext<'_> {
+    pub fn component_id(&self) -> ComponentId {
+        self.component_id
+    }
+}
 
 impl ConfigRepositoryBuilder {
     pub fn new(reg: &ConfigTypeRegistry) -> Result<Self> {
         let mut configs = HashMap::new();
-        for (&type_id, (new_map, _)) in reg.type_map.iter() {
+        for (&type_id, (new_map, _, _, _)) in reg.type_map.iter() {
             let indexer = ConfigIndexer::new();
             let map = new_map();
             configs
@@ -43,14 +57,22 @@ impl ConfigRepositoryBuilder {
     pub fn build(
         mut self,
         cfg_ty_reg: &ConfigTypeRegistry,
-        ctx: &mut ComponentLoadingContext<'_, ()>,
+        components: ComponentsRef<'_>,
+        component_id: ComponentId,
     ) -> Result<ConfigRepository> {
-        for (type_id, (_, labelmap_to_idmap)) in cfg_ty_reg.type_map.iter() {
+        for (type_id, (_, labelmap_to_idmap, _, _)) in cfg_ty_reg.type_map.iter() {
             let Some(label_to_raw) = self.0.get_mut(type_id) else {
                 continue;
             };
             let label_to_raw = std::mem::replace(&mut label_to_raw.0, Box::new(()));
-            let config_storage = labelmap_to_idmap(&mut ctx.with_st(&mut self.0), label_to_raw)?;
+            let config_storage = labelmap_to_idmap(
+                &mut ConfigsLoadingContext {
+                    components,
+                    component_id,
+                    st: &mut self.0,
+                },
+                label_to_raw,
+            )?;
             self.0.get_mut(type_id).unwrap().0 = config_storage;
         }
 

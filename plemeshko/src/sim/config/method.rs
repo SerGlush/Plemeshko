@@ -1,14 +1,17 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::state::{
-    components::SharedComponents,
+    components::{ComponentsRef, SharedComponents},
     config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Prepare},
-    serializable::{Serializable, SerializationContext},
+    serializable::Serializable,
     text::{FatTextId, TextIdFactory},
 };
 
-use super::setting_group::{RawSelectedSetting, SelectedSetting, SettingGroup, SettingGroupId};
+use super::{
+    setting::{Setting, SettingId},
+    setting_group::{SettingGroup, SettingGroupId},
+};
 
 #[derive(Deserialize)]
 pub struct RawMethod {
@@ -26,13 +29,13 @@ pub type MethodId = FatConfigId<Method>;
 #[derive(Serialize, Deserialize)]
 pub struct RawSelectedMethod {
     pub label: MethodLabel,
-    pub settings: Vec<RawSelectedSetting>,
+    pub settings: Vec<FatConfigLabel<Setting>>,
 }
 
 #[derive(Clone)]
 pub struct SelectedMethod {
     pub id: MethodId,
-    pub settings: Vec<SelectedSetting>,
+    pub settings: Vec<SettingId>,
 }
 
 impl SelectedMethod {
@@ -42,16 +45,19 @@ impl SelectedMethod {
         index: Option<usize>,
     ) -> Result<SelectedMethod> {
         let method = shared_comps.get_config(id)?;
+        let index = index.unwrap_or(0);
         Ok(SelectedMethod {
             id,
             settings: method
                 .setting_groups
                 .iter()
-                .map(|setting_group| SelectedSetting {
-                    group: *setting_group,
-                    index: index.unwrap_or(0),
+                .map(|&setting_group| {
+                    match shared_comps.get_config(setting_group)?.settings.get(index) {
+                        Some(setting_id) => Ok(*setting_id),
+                        None => Err(anyhow!("When creating `SelectedMethod`: Setting index in group out of range: {index}")),
+                    }
                 })
-                .collect(),
+                .try_collect()?,
         })
     }
 }
@@ -85,7 +91,7 @@ impl Serializable for SelectedMethod {
 
     fn from_serializable(
         raw: Self::Raw,
-        ctx: &mut SerializationContext<'_>,
+        ctx: &ComponentsRef<'_>,
     ) -> anyhow::Result<SelectedMethod> {
         Ok(Self {
             id: Serializable::from_serializable(raw.label, ctx)?,
@@ -93,7 +99,7 @@ impl Serializable for SelectedMethod {
         })
     }
 
-    fn into_serializable(self, ctx: &SerializationContext<'_>) -> anyhow::Result<Self::Raw> {
+    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> anyhow::Result<Self::Raw> {
         Ok(RawSelectedMethod {
             label: self.id.into_serializable(ctx)?,
             settings: self.settings.into_serializable(ctx)?,

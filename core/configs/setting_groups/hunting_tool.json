@@ -3,6 +3,7 @@
         "tag": "setting",
         "label": "sticks-and-rocks",
         "payload": {
+            "group": "hunting-tool",
             "input": {
                 "human": 8
             },
@@ -16,6 +17,7 @@
         "tag": "setting",
         "label": "stone-instruments",
         "payload": {
+            "group": "hunting-tool",
             "input": {
                 "human": 8,
                 "stone-instrument": 8
@@ -30,11 +32,6 @@
     {
         "tag": "setting-group",
         "label": "hunting-tool",
-        "payload": {
-            "settings": [
-                "sticks-and-rocks",
-                "stone-instruments"
-            ]
-        }
+        "payload": {}
     }
 ]

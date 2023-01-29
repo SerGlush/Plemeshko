@@ -7,18 +7,23 @@ use std::{
 use anyhow::{anyhow, Result};
 use educe::Educe;
 
-use crate::state::indexer::Indexer;
+use crate::state::raw_indexer::RawIndexer;
 
 use super::{Config, ConfigId, ConfigLabel, RawConfigId};
 
 #[derive(Educe)]
 #[educe(Default)]
 #[repr(transparent)]
-pub struct ConfigIndexer(Indexer<String, RawConfigId>);
+pub struct ConfigIndexer(RawIndexer<String, RawConfigId>);
 
+// todo: prevent usage of incompatible `C` for ConfigIndexer (parametrize by C)
 impl ConfigIndexer {
     pub fn new() -> Self {
         ConfigIndexer::default()
+    }
+
+    pub fn get_id<C: Config>(&self, label: &ConfigLabel<C>) -> Result<ConfigId<C>> {
+        self.get_id_from_raw(&label.0)
     }
 
     pub fn get_id_from_raw<C: Config>(&self, label: &str) -> Result<ConfigId<C>> {
@@ -36,6 +41,10 @@ impl ConfigIndexer {
         self.0
             .get_label(id.0)
             .map(|label| unsafe { std::mem::transmute(label) })
+    }
+
+    pub fn indices<C: Config>(&self) -> impl Iterator<Item = ConfigId<C>> {
+        (0..self.0.id_to_label.len()).map(|i| ConfigId::new(i.try_into().unwrap()))
     }
 
     pub(super) fn report_id<C: Config>(&self, id: ConfigId<C>) -> String {

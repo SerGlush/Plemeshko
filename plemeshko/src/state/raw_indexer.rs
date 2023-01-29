@@ -10,19 +10,14 @@ use educe::Educe;
 
 #[derive(Educe)]
 #[educe(Default)]
-pub struct Indexer<Label, Id> {
-    label_to_id: HashMap<Label, Id>,
-    id_to_label: Vec<Label>,
+pub struct RawIndexer<Label, Id> {
+    pub label_to_id: HashMap<Label, Id>,
+    pub id_to_label: Vec<Label>,
 }
 
-// #[derive(Educe)]
-// #[educe(Default)]
-// #[repr(transparent)]
-// pub struct Indexed<Label, Id, T>((Vec<T>, Indexer<Label, Id>));
-
-impl<Label: Hash + Eq, Id: Copy> Indexer<Label, Id> {
+impl<Label: Hash + Eq, Id: Copy> RawIndexer<Label, Id> {
     pub fn new() -> Self {
-        Indexer::default()
+        RawIndexer::default()
     }
 
     pub fn create_id(&mut self, label: Label) -> Result<Id>
@@ -82,7 +77,7 @@ impl<Label: Hash + Eq, Id: Copy> Indexer<Label, Id> {
     }
 }
 
-impl<Id> Indexer<String, Id> {
+impl<Id> RawIndexer<String, Id> {
     pub fn report_id(&self, id: Id) -> String
     where
         Id: TryInto<usize, Error: Debug>,

@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     sim::units::ResourceAmount,
     state::{
-        components::SharedComponents,
+        components::{ComponentsRef, SharedComponents},
         config::FatConfigLabel,
-        serializable::{Serializable, SerializationContext},
+        serializable::Serializable,
         SharedState,
     },
     util::cor::Cor,
@@ -86,10 +86,8 @@ impl Erection {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
         for selected_method in snapshot.selected_methods.iter() {
-            // let method = sim.configs.get(&selected_method.id).map_err(SimError::ConfigRetrievalFailed)?;
-            for selected_setting in selected_method.settings.iter() {
-                let setting_group = shared_comps.get_config(selected_setting.group)?;
-                let setting = setting_group.setting(shared_comps, selected_setting.index)?;
+            for &setting_id in selected_method.settings.iter() {
+                let setting = shared_comps.get_config(setting_id)?;
                 for (resource_id, delta) in setting.resource_io.output.iter() {
                     single_output
                         .entry(resource_id.to_owned())
@@ -337,7 +335,7 @@ impl Erection {
 impl Serializable for ErectionSnapshot {
     type Raw = RawErectionSnapshot;
 
-    fn from_serializable(raw: Self::Raw, ctx: &mut SerializationContext<'_>) -> Result<Self> {
+    fn from_serializable(raw: Self::Raw, ctx: &ComponentsRef<'_>) -> Result<Self> {
         Ok(ErectionSnapshot {
             name: raw.name,
             selected_methods: Serializable::from_serializable(raw.selected_methods, ctx)?,
@@ -349,7 +347,7 @@ impl Serializable for ErectionSnapshot {
         })
     }
 
-    fn into_serializable(self, ctx: &SerializationContext<'_>) -> Result<Self::Raw> {
+    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> Result<Self::Raw> {
         Ok(RawErectionSnapshot {
             name: self.name,
             selected_methods: self.selected_methods.into_serializable(ctx)?,

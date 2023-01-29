@@ -10,10 +10,7 @@
                 {
                     "label": "/hunt-animals",
                     "settings": [
-                        {
-                            "group": "/hunting-tool",
-                            "index": 0
-                        }
+                        "/sticks-and-rocks"
                     ]
                 }
             ],

@@ -4,49 +4,38 @@ use anyhow::{anyhow, Context, Result};
 
 use crate::state::{
     components::{app::AppComponent, shared::SharedComponent, ComponentId},
-    config::{ConfigRepository, ConfigTypeRegistry},
+    config::{ConfigRepositoryBuilder, ConfigTypeRegistry},
     text::TextRepository,
     texture::TextureRepository,
 };
 
-use super::{app::AppComponents, shared::SharedComponents, ComponentIndexer};
+use super::{app::AppComponents, shared::SharedComponents, ComponentIndexer, ComponentsRef};
 
 pub struct ComponentLoader {
     indexer: ComponentIndexer,
     config_type_registry: ConfigTypeRegistry,
 }
 
-pub struct ComponentLoadingContext<'a, S> {
-    pub component_indexer: &'a ComponentIndexer,
-    pub app_components: &'a mut AppComponents,
-    pub shared_components: &'a mut SharedComponents,
-
-    /// Id of the component being loaded.
-    pub(super) component_id: ComponentId,
-
-    /// State of the current loading stage.
-    pub st: &'a mut S,
-}
-
-impl<'a, S> ComponentLoadingContext<'a, S> {
-    pub fn component_id(&self) -> ComponentId {
-        self.component_id
-    }
-
-    pub fn with_st<'b, T>(&'b mut self, st: &'b mut T) -> ComponentLoadingContext<'b, T> {
-        ComponentLoadingContext {
-            st,
-            component_indexer: self.component_indexer,
-            app_components: self.app_components,
-            shared_components: self.shared_components,
-            component_id: self.component_id,
-        }
-    }
-}
-
 const COMPONENT_DIR_CONFIGS: &str = "configs";
 const COMPONENT_DIR_TEXTS: &str = "texts";
 const COMPONENT_DIR_TEXTURES: &str = "textures";
+
+#[must_use]
+pub struct ComponentsChangedToken(());
+
+impl ComponentsChangedToken {
+    pub fn new() -> Self {
+        ComponentsChangedToken(())
+    }
+
+    pub fn consume(&self, _other: Self) {}
+}
+
+impl Drop for ComponentsChangedToken {
+    fn drop(&mut self) {
+        panic!("Components changed without finalization.");
+    }
+}
 
 impl ComponentLoader {
     pub fn new() -> Result<Self> {
@@ -73,16 +62,9 @@ impl ComponentLoader {
         app_comps: &mut AppComponents,
         label: String,
         mut dir: PathBuf,
-    ) -> Result<()> {
+    ) -> Result<ComponentsChangedToken> {
         // todo: reclaim unloaded component slots (or not? misusing unloaded's ids with replacement's ones may be confusing)
         let component_id = ComponentId(self.indexer.0.create_id(label)?);
-        let mut ctx = ComponentLoadingContext {
-            component_indexer: &self.indexer,
-            app_components: app_comps,
-            shared_components: shared_comps,
-            component_id,
-            st: &mut (),
-        };
 
         dir.push(COMPONENT_DIR_TEXTS);
         let texts = if std::fs::try_exists(&dir)
@@ -95,12 +77,22 @@ impl ComponentLoader {
         assert!(dir.pop());
 
         dir.push(COMPONENT_DIR_CONFIGS);
-        let configs = if std::fs::try_exists(&dir)
-            .with_context(|| "Checking existence of component's configs directory.")?
-        {
-            ConfigRepository::from_directory(&self.config_type_registry, &mut ctx, &dir)?
-        } else {
-            ConfigRepository::new(&self.config_type_registry, &mut ctx)?
+        let configs = {
+            let mut builder = ConfigRepositoryBuilder::new(&self.config_type_registry)?;
+            if std::fs::try_exists(&dir)
+                .with_context(|| "Checking existence of component's configs directory.")?
+            {
+                builder.load_directory(&self.config_type_registry, &dir)?;
+            }
+            builder.build(
+                &self.config_type_registry,
+                ComponentsRef {
+                    indexer: &self.indexer,
+                    app: app_comps,
+                    shared: shared_comps,
+                },
+                component_id,
+            )?
         };
         assert!(dir.pop());
 
@@ -125,7 +117,7 @@ impl ComponentLoader {
             app_comps.0[component_index] = Some(app_comp);
             shared_comps.0[component_index] = Some(shared_comp);
         }
-        Ok(())
+        Ok(ComponentsChangedToken(()))
     }
 
     /// Loads specified directory subdirectories as components.
@@ -134,7 +126,8 @@ impl ComponentLoader {
         shared_comps: &mut SharedComponents,
         app_comps: &mut AppComponents,
         top_dir: &Path,
-    ) -> Result<()> {
+    ) -> Result<ComponentsChangedToken> {
+        let changed_token = ComponentsChangedToken::new();
         for top_entry in std::fs::read_dir(top_dir)? {
             let top_entry_path = top_entry?.path();
             if top_entry_path.is_dir() {
@@ -148,8 +141,27 @@ impl ComponentLoader {
                     })?
                     .to_string_lossy()
                     .into_owned();
-                self.load_single(shared_comps, app_comps, label, top_entry_path)?;
+                changed_token.consume(self.load_single(
+                    shared_comps,
+                    app_comps,
+                    label,
+                    top_entry_path,
+                )?);
             }
+        }
+        Ok(changed_token)
+    }
+
+    /// Finalizes initialization of some configs.
+    /// Should runs every time components finished changing to make them ready.
+    pub fn finalize(
+        &self,
+        changed: ComponentsChangedToken,
+        shared_comps: &mut SharedComponents,
+    ) -> Result<()> {
+        std::mem::forget(changed);
+        for f in self.config_type_registry.finalizers() {
+            f(&self.indexer, shared_comps)?;
         }
         Ok(())
     }

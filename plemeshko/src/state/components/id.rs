@@ -5,8 +5,33 @@ use serde::Deserializer;
 #[repr(transparent)]
 pub struct ComponentLabel(pub(super) String);
 
+pub(super) type RawComponentId = u16;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct ComponentId(pub(super) RawComponentId);
+
+#[derive(Clone, Copy)]
+pub struct ComponentSlotId(pub(super) usize);
+
 pub const COMPONENT_CORE_LABEL: &str = "";
-const COMPONENT_LABEL_SEPARATOR: char = '/';
+pub const COMPONENT_LABEL_SEPARATOR: char = '/';
+
+impl ComponentId {
+    pub fn core() -> Self {
+        ComponentId(0)
+    }
+
+    pub(super) fn to_index(self) -> usize {
+        self.0.try_into().unwrap()
+    }
+}
+
+impl ComponentSlotId {
+    pub fn assume_occupied(self) -> ComponentId {
+        ComponentId(self.0.try_into().unwrap())
+    }
+}
 
 /// Separates component label prefix from object label.
 /// Component label is `None` when there is no label, meaning "local" component.
@@ -36,21 +61,5 @@ pub fn concat_label(comp: Option<ComponentLabel>, postfix: &str) -> String {
             comp.0 + postfix
         }
         None => postfix.to_owned(),
-    }
-}
-
-pub(super) type RawComponentId = u16;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct ComponentId(pub(super) RawComponentId);
-
-impl ComponentId {
-    pub fn core() -> Self {
-        ComponentId(0)
-    }
-
-    pub(super) fn to_index(self) -> usize {
-        self.0.try_into().unwrap()
     }
 }
