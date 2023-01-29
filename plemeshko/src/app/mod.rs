@@ -1,4 +1,10 @@
+mod util;
+
 use std::collections::HashMap;
+
+use anyhow::{Ok, Result};
+use egui::*;
+use fluent::FluentArgs;
 
 use crate::{
     sim::{
@@ -11,9 +17,8 @@ use crate::{
     state::{components::SharedComponents, AppState},
     util::cor::Cor,
 };
-use anyhow::{Ok, Result};
-use egui::*;
-use fluent::FluentArgs;
+
+use util::*;
 
 pub struct ErectionBuilder {
     window_is_open: bool,
@@ -114,40 +119,36 @@ impl ErectionBuilder {
             Ok(())
         });
 
-        for (method_index, method) in self.erection_methods.iter_mut().enumerate() {
-            ui.push_id(method_index, |ui| {
-                ui.horizontal(|ui| {
-                    let method_name = st.get_text(&shared_comps.get_config(method.id)?.name)?;
-                    ui.label(method_name.as_ref());
-                    for selected_setting_id in &mut method.settings {
-                        let selected_setting = shared_comps.get_config(*selected_setting_id)?;
-                        let setting_group = shared_comps.get_config(selected_setting.group)?;
-                        let selected_setting_name = st.get_text(&selected_setting.name)?;
-                        ComboBox::from_id_source(&selected_setting_name)
-                            .width(200.0)
-                            .selected_text(selected_setting_name)
-                            .show_ui(ui, |ui| {
-                                for &setting_id in &setting_group.settings {
-                                    let setting = shared_comps.get_config(setting_id)?;
-                                    if ui
-                                        .selectable_label(false, st.get_text(&setting.name)?)
-                                        .clicked()
-                                    {
-                                        *selected_setting_id = setting_id;
-                                    }
+        draw_iter_indexed(ui, self.erection_methods.iter_mut(), |ui, method| {
+            ui.horizontal(|ui| {
+                let method_name = st.get_text(&shared_comps.get_config(method.id)?.name)?;
+                ui.label(method_name.as_ref());
+                for selected_setting_id in &mut method.settings {
+                    let selected_setting = shared_comps.get_config(*selected_setting_id)?;
+                    let setting_group = shared_comps.get_config(selected_setting.group)?;
+                    let selected_setting_name = st.get_text(&selected_setting.name)?;
+                    ComboBox::from_id_source(&selected_setting_name)
+                        .width(200.0)
+                        .selected_text(selected_setting_name)
+                        .show_ui(ui, |ui| {
+                            for &setting_id in &setting_group.settings {
+                                let setting = shared_comps.get_config(setting_id)?;
+                                if ui
+                                    .selectable_label(false, st.get_text(&setting.name)?)
+                                    .clicked()
+                                {
+                                    *selected_setting_id = setting_id;
                                 }
-                                Ok(())
-                            })
-                            .inner
-                            .transpose()?;
-                    }
-                    Ok(())
-                })
-                .inner?;
+                            }
+                            Ok(())
+                        })
+                        .inner
+                        .transpose()?;
+                }
                 Ok(())
             })
-            .inner?;
-        }
+            .inner
+        })?;
 
         ui.menu_button(st.get_text_core("ui_erection-builder_add-method")?, |ui| {
             for method_group in shared_comps.iter_configs::<MethodGroup>() {
