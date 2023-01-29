@@ -335,7 +335,7 @@ impl Erection {
 impl Serializable for ErectionSnapshot {
     type Raw = RawErectionSnapshot;
 
-    fn from_serializable(raw: Self::Raw, ctx: &ComponentsRef<'_>) -> Result<Self> {
+    fn from_serializable(raw: Self::Raw, ctx: ComponentsRef<'_>) -> Result<Self> {
         Ok(ErectionSnapshot {
             name: raw.name,
             selected_methods: Serializable::from_serializable(raw.selected_methods, ctx)?,
@@ -347,7 +347,7 @@ impl Serializable for ErectionSnapshot {
         })
     }
 
-    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> Result<Self::Raw> {
+    fn into_serializable(self, ctx: ComponentsRef<'_>) -> Result<Self::Raw> {
         Ok(RawErectionSnapshot {
             name: self.name,
             selected_methods: self.selected_methods.into_serializable(ctx)?,

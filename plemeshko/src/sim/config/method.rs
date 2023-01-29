@@ -70,7 +70,7 @@ impl Prepare for RawMethod {
         ctx: &mut ConfigsLoadingContext<'_>,
         tif: &mut TextIdFactory,
     ) -> anyhow::Result<Method> {
-        let name = tif.create("name").in_component(ctx.component_id());
+        let name = tif.create("name").in_component(ctx.this_component.id());
         tif.with_lock(|tif| {
             Ok(Method {
                 name,
@@ -89,17 +89,14 @@ impl Config for Method {
 impl Serializable for SelectedMethod {
     type Raw = RawSelectedMethod;
 
-    fn from_serializable(
-        raw: Self::Raw,
-        ctx: &ComponentsRef<'_>,
-    ) -> anyhow::Result<SelectedMethod> {
+    fn from_serializable(raw: Self::Raw, ctx: ComponentsRef<'_>) -> anyhow::Result<SelectedMethod> {
         Ok(Self {
             id: Serializable::from_serializable(raw.label, ctx)?,
             settings: Serializable::from_serializable(raw.settings, ctx)?,
         })
     }
 
-    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> anyhow::Result<Self::Raw> {
+    fn into_serializable(self, ctx: ComponentsRef<'_>) -> anyhow::Result<Self::Raw> {
         Ok(RawSelectedMethod {
             label: self.id.into_serializable(ctx)?,
             settings: self.settings.into_serializable(ctx)?,

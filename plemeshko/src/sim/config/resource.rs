@@ -55,7 +55,7 @@ impl Prepare for RawResource {
         ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
         tif: &mut crate::state::text::TextIdFactory,
     ) -> anyhow::Result<Self::Prepared> {
-        let name = tif.create("name").in_component(ctx.component_id());
+        let name = tif.create("name").in_component(ctx.this_component.id());
         tif.with_lock(|tif| {
             Ok(Resource {
                 name,
@@ -90,14 +90,14 @@ impl Prepare for RawResourceIo {
 impl Serializable for ResourceIo {
     type Raw = RawResourceIo;
 
-    fn from_serializable(raw: RawResourceIo, ctx: &ComponentsRef<'_>) -> Result<Self> {
+    fn from_serializable(raw: RawResourceIo, ctx: ComponentsRef<'_>) -> Result<Self> {
         Ok(ResourceIo {
             input: Serializable::from_serializable(raw.input, ctx)?,
             output: Serializable::from_serializable(raw.output, ctx)?,
         })
     }
 
-    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> anyhow::Result<RawResourceIo> {
+    fn into_serializable(self, ctx: ComponentsRef<'_>) -> anyhow::Result<RawResourceIo> {
         Ok(RawResourceIo {
             input: self.input.into_serializable(ctx)?,
             output: self.output.into_serializable(ctx)?,

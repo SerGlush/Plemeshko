@@ -5,7 +5,7 @@ use egui_extras::RetainedImage;
 
 use crate::state::{label_factory::LabelFactory, raw_indexer::RawIndexer};
 
-use super::{RawTextureId, TextureId};
+use super::{RawTextureId, TextureId, TextureLabel};
 
 #[derive(Default)]
 pub struct TextureRepository {
@@ -30,8 +30,12 @@ impl TextureRepository {
         self.textures.get(index)
     }
 
+    pub fn get_id(&self, label: &TextureLabel) -> Result<TextureId> {
+        self.indexer.get_id(&label.0).map(TextureId)
+    }
+
     pub fn get_id_from_raw(&self, label: &str) -> Result<TextureId> {
-        Ok(TextureId(self.indexer.get_id(label)?))
+        self.indexer.get_id(label).map(TextureId)
     }
 
     fn load_directory<P: AsRef<Path>>(

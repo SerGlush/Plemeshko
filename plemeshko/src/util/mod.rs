@@ -1,5 +1,9 @@
 pub mod cor;
 
+mod rect;
+
+pub use rect::*;
+
 pub fn display_each<E: std::fmt::Display>(
     f: &mut std::fmt::Formatter<'_>,
     es: impl Iterator<Item = E>,

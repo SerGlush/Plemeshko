@@ -28,7 +28,7 @@ impl Prepare for RawMethodGroup {
         ctx: &mut ConfigsLoadingContext<'_>,
         tif: &mut TextIdFactory,
     ) -> Result<MethodGroup> {
-        let name = tif.create("name").in_component(ctx.component_id());
+        let name = tif.create("name").in_component(ctx.this_component.id());
         tif.with_lock(|tif| {
             Ok(MethodGroup {
                 name,

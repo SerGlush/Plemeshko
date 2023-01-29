@@ -4,7 +4,7 @@ use anyhow::{anyhow, Context, Result};
 
 use crate::state::{
     components::{app::AppComponent, shared::SharedComponent, ComponentId},
-    config::{ConfigRepositoryBuilder, ConfigTypeRegistry},
+    config::{ComponentPreConfigsRef, ConfigRepositoryBuilder, ConfigTypeRegistry},
     text::TextRepository,
     texture::TextureRepository,
 };
@@ -76,6 +76,16 @@ impl ComponentLoader {
         };
         assert!(dir.pop());
 
+        dir.push(COMPONENT_DIR_TEXTURES);
+        let textures = if std::fs::try_exists(&dir)
+            .with_context(|| "Checking existence of component's textures directory.")?
+        {
+            TextureRepository::from_directory(&dir)?
+        } else {
+            TextureRepository::new()
+        };
+        assert!(dir.pop());
+
         dir.push(COMPONENT_DIR_CONFIGS);
         let configs = {
             let mut builder = ConfigRepositoryBuilder::new(&self.config_type_registry)?;
@@ -91,18 +101,8 @@ impl ComponentLoader {
                     app: app_comps,
                     shared: shared_comps,
                 },
-                component_id,
+                ComponentPreConfigsRef::new(component_id, &textures),
             )?
-        };
-        assert!(dir.pop());
-
-        dir.push(COMPONENT_DIR_TEXTURES);
-        let textures = if std::fs::try_exists(&dir)
-            .with_context(|| "Checking existence of component's textures directory.")?
-        {
-            TextureRepository::from_directory(&dir)?
-        } else {
-            TextureRepository::new()
         };
         assert!(dir.pop());
 

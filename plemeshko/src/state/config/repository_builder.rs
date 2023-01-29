@@ -10,7 +10,10 @@ use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use serde_json::value::RawValue;
 
-use crate::state::components::{ComponentId, ComponentsRef};
+use crate::state::{
+    components::{ComponentId, ComponentsRef},
+    texture::TextureRepository,
+};
 
 use super::{indexer::ConfigIndexer, type_registry::ConfigTypeRegistry, ConfigRepository};
 
@@ -24,20 +27,32 @@ pub struct RawConfig {
 
 pub struct ConfigRepositoryBuilder(HashMap<TypeId, (Box<dyn Any>, ConfigIndexer)>);
 
+#[derive(Clone, Copy)]
+pub struct ComponentPreConfigsRef<'a> {
+    pub(super) id: ComponentId,
+    pub textures: &'a TextureRepository,
+}
+
 pub struct ConfigsLoadingContext<'a> {
     /// Components already loaded.
-    pub components: ComponentsRef<'a>,
+    /// Used to resolve other components' indices and their assets' indices.
+    pub other_components: ComponentsRef<'a>,
 
-    /// Id of the component being loaded.
-    pub(super) component_id: ComponentId,
+    /// Already loaded parts of the current component.
+    /// Used to resolve other local assets' indices.
+    pub this_component: ComponentPreConfigsRef<'a>,
 
     // todo: encapsulate
     pub st: &'a mut HashMap<TypeId, (Box<dyn Any>, ConfigIndexer)>,
 }
 
-impl ConfigsLoadingContext<'_> {
-    pub fn component_id(&self) -> ComponentId {
-        self.component_id
+impl<'a> ComponentPreConfigsRef<'a> {
+    pub fn new(id: ComponentId, textures: &'a TextureRepository) -> Self {
+        ComponentPreConfigsRef { id, textures }
+    }
+
+    pub fn id(self) -> ComponentId {
+        self.id
     }
 }
 
@@ -54,11 +69,11 @@ impl ConfigRepositoryBuilder {
         Ok(ConfigRepositoryBuilder(configs))
     }
 
-    pub fn build(
+    pub fn build<'a>(
         mut self,
         cfg_ty_reg: &ConfigTypeRegistry,
-        components: ComponentsRef<'_>,
-        component_id: ComponentId,
+        components: ComponentsRef<'a>,
+        pre_cfg: ComponentPreConfigsRef<'a>,
     ) -> Result<ConfigRepository> {
         for (type_id, (_, labelmap_to_idmap, _, _)) in cfg_ty_reg.type_map.iter() {
             let Some(label_to_raw) = self.0.get_mut(type_id) else {
@@ -67,8 +82,8 @@ impl ConfigRepositoryBuilder {
             let label_to_raw = std::mem::replace(&mut label_to_raw.0, Box::new(()));
             let config_storage = labelmap_to_idmap(
                 &mut ConfigsLoadingContext {
-                    components,
-                    component_id,
+                    other_components: components,
+                    this_component: pre_cfg,
                     st: &mut self.0,
                 },
                 label_to_raw,

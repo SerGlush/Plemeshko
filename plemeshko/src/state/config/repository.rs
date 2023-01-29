@@ -6,11 +6,11 @@ use std::{
 
 use anyhow::{anyhow, Result};
 
-use crate::state::components::{ComponentId, ComponentsRef};
+use crate::state::components::ComponentsRef;
 
 use super::{
-    Config, ConfigId, ConfigIndexer, ConfigIndexerMap, ConfigLabel, ConfigRepositoryBuilder,
-    ConfigTypeRegistry,
+    ComponentPreConfigsRef, Config, ConfigId, ConfigIndexer, ConfigIndexerMap, ConfigLabel,
+    ConfigRepositoryBuilder, ConfigTypeRegistry,
 };
 
 pub(super) type AnySendSync = dyn Any + Send + Sync;
@@ -28,23 +28,23 @@ pub struct ConfigRepository {
 }
 
 impl ConfigRepository {
-    pub fn new(
+    pub fn new<'a>(
         cfg_ty_reg: &ConfigTypeRegistry,
-        comps: ComponentsRef<'_>,
-        comp_id: ComponentId,
+        comps: ComponentsRef<'a>,
+        pre_cfg: ComponentPreConfigsRef<'a>,
     ) -> Result<Self> {
-        ConfigRepositoryBuilder::new(cfg_ty_reg)?.build(cfg_ty_reg, comps, comp_id)
+        ConfigRepositoryBuilder::new(cfg_ty_reg)?.build(cfg_ty_reg, comps, pre_cfg)
     }
 
-    pub fn from_directory(
+    pub fn from_directory<'a>(
         cfg_ty_reg: &ConfigTypeRegistry,
-        comps: ComponentsRef<'_>,
-        comp_id: ComponentId,
+        comps: ComponentsRef<'a>,
+        pre_cfg: ComponentPreConfigsRef<'a>,
         directory: &Path,
     ) -> Result<Self> {
         let mut builder = ConfigRepositoryBuilder::new(cfg_ty_reg)?;
         builder.load_directory(cfg_ty_reg, directory)?;
-        builder.build(cfg_ty_reg, comps, comp_id)
+        builder.build(cfg_ty_reg, comps, pre_cfg)
     }
 
     pub fn get_indexer<C: Config>(&self) -> Result<&ConfigIndexer> {

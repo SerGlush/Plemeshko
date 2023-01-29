@@ -37,7 +37,7 @@ impl Prepare for RawTransport {
         ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
         tif: &mut crate::state::text::TextIdFactory,
     ) -> anyhow::Result<Self::Prepared> {
-        let name = tif.create("name").in_component(ctx.component_id());
+        let name = tif.create("name").in_component(ctx.this_component.id());
         tif.with_lock(|tif| {
             Ok(Transport {
                 name,

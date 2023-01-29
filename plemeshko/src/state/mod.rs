@@ -51,7 +51,7 @@ pub struct AppState {
     fallback_texture: RetainedImage,
 }
 
-fn load_sim(ctx: &mut ComponentsRef<'_>) -> anyhow::Result<Sim> {
+fn load_sim(comps: ComponentsRef<'_>) -> anyhow::Result<Sim> {
     let mut cli_args_iter = std::env::args();
     cli_args_iter.next(); // exe
     Ok(match cli_args_iter.next() {
@@ -59,8 +59,8 @@ fn load_sim(ctx: &mut ComponentsRef<'_>) -> anyhow::Result<Sim> {
             let file = std::fs::File::open(snapshot_path)?;
             let reader = std::io::BufReader::new(file);
             let snapshot = serde_json::from_reader::<_, RawSimSnapshot>(reader)?;
-            let snapshot = Serializable::from_serializable(snapshot, ctx)?;
-            Sim::restore(ctx.shared, snapshot)?
+            let snapshot = Serializable::from_serializable(snapshot, comps)?;
+            Sim::restore(comps.shared, snapshot)?
         }
         None => Sim::new(),
     })
@@ -102,12 +102,12 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
         .get_id_from_raw(RESOURCE_LABEL_HUMAN)?;
 
     let sim = {
-        let mut ser_ctx = ComponentsRef {
+        let comps = ComponentsRef {
             indexer: component_loader.indexer(),
             app: &app_comps,
             shared: &shared_comps,
         };
-        load_sim(&mut ser_ctx).with_context(|| "Error reading Sim snapshot")?
+        load_sim(comps).with_context(|| "Error reading Sim snapshot")?
     };
     let shared_st: &SharedState = Box::leak(Box::new(SharedState {
         components: RwLock::new(shared_comps),

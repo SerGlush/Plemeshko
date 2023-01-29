@@ -4,12 +4,12 @@ use std::{
     marker::PhantomData,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use educe::Educe;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use crate::state::{
-    components::{concat_label, split_label, ComponentId, ComponentLabel, ComponentsRef},
+    components::{ComponentId, ComponentsRef, RawFatLabel},
     serializable::Serializable,
     text::TextIdFactory,
 };
@@ -22,13 +22,11 @@ use super::{prepare::Prepare, Config, ConfigIndexerMap, ConfigsLoadingContext};
 #[repr(transparent)]
 pub struct ConfigLabel<C>(pub(super) String, pub(super) PhantomData<C>);
 
-#[derive(Educe)]
+#[derive(Educe, Serialize, Deserialize)]
 #[educe(Hash, PartialEq, Eq, Debug, Clone)]
-pub struct FatConfigLabel<C>(
-    /// Component prefix of the label, `None` when the label is local (allowed only inside components).
-    pub Option<ComponentLabel>,
-    pub ConfigLabel<C>,
-);
+#[serde(transparent)]
+#[repr(transparent)]
+pub struct FatConfigLabel<C>(RawFatLabel, PhantomData<C>);
 
 pub(super) type RawConfigId = u32;
 
@@ -44,6 +42,16 @@ pub struct FatConfigId<C>(pub ComponentId, pub ConfigId<C>);
 impl<C> ConfigLabel<C> {
     pub(super) fn new(label: String) -> Self {
         ConfigLabel(label, PhantomData)
+    }
+}
+
+impl<C> FatConfigLabel<C> {
+    pub fn config(&self) -> &ConfigLabel<C> {
+        unsafe { std::mem::transmute(&self.0 .1) }
+    }
+
+    pub fn into_config(self) -> ConfigLabel<C> {
+        ConfigLabel::new(self.0 .1)
     }
 }
 
@@ -91,27 +99,6 @@ impl<C: Config> Prepare for ConfigLabel<C> {
     }
 }
 
-impl<'de, C: Config> Deserialize<'de> for FatConfigLabel<C> {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw = String::deserialize(deserializer)?;
-        let (comp, postfix) = split_label::<D>(&raw)?;
-        Ok(FatConfigLabel(comp, ConfigLabel::new(postfix.to_owned())))
-    }
-}
-
-impl<C: Config> Serialize for FatConfigLabel<C> {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let raw = concat_label(self.0.clone(), &self.1 .0);
-        serializer.serialize_str(&raw)
-    }
-}
-
 impl<C: Config> Prepare for FatConfigLabel<C> {
     type Prepared = FatConfigId<C>;
 
@@ -120,21 +107,21 @@ impl<C: Config> Prepare for FatConfigLabel<C> {
         ctx: &mut ConfigsLoadingContext<'_>,
         _tif: &mut TextIdFactory,
     ) -> Result<FatConfigId<C>> {
-        Ok(match self.0 {
-            Some(comp_id) => {
-                let comp_id = ctx.components.indexer.get_id(&comp_id)?;
+        Ok(match &self.0 .0 {
+            Some(comp_label) => {
+                let comp_id = ctx.other_components.indexer.get_id(comp_label)?;
                 let cfg_id = ctx
-                    .components
+                    .other_components
                     .shared
                     .get_component(comp_id)?
                     .configs
                     .get_indexer::<C>()?
-                    .get_id(&self.1)?;
+                    .get_id(self.config())?;
                 FatConfigId(comp_id, cfg_id)
             }
             None => {
-                let cfg_id = ctx.st.get_or_create_id(Cow::Owned(self.1))?;
-                FatConfigId(ctx.component_id(), cfg_id)
+                let cfg_id = ctx.st.get_or_create_id(Cow::Owned(self.into_config()))?;
+                FatConfigId(ctx.this_component.id(), cfg_id)
             }
         })
     }
@@ -143,30 +130,27 @@ impl<C: Config> Prepare for FatConfigLabel<C> {
 impl<C: Config> Serializable for FatConfigId<C> {
     type Raw = FatConfigLabel<C>;
 
-    fn from_serializable(raw: Self::Raw, ctx: &ComponentsRef<'_>) -> Result<Self> {
-        let comp_label = &raw.0.ok_or_else(|| {
-            anyhow!(
-                "Deserializing local label outside any component: ?/{}",
-                raw.1
-            )
-        })?;
-        let comp_id = ctx.indexer.get_id(comp_label)?;
-        let cfg_id = ctx
+    fn from_serializable(raw: Self::Raw, comps: ComponentsRef<'_>) -> Result<Self> {
+        let comp_id = raw.0.deserialize_component_id(comps)?;
+        let cfg_id = comps
             .shared
             .get_component(comp_id)?
             .configs
             .get_indexer::<C>()?
-            .get_id(&raw.1)?;
+            .get_id(raw.config())?;
         Ok(FatConfigId(comp_id, cfg_id))
     }
 
-    fn into_serializable(self, ctx: &ComponentsRef<'_>) -> Result<Self::Raw> {
-        let comp_label = ctx.indexer.get_label(self.0)?;
-        let cfg_label = ctx
+    fn into_serializable(self, comps: ComponentsRef<'_>) -> Result<Self::Raw> {
+        let comp_label = comps.indexer.get_label(self.0)?;
+        let cfg_label = comps
             .shared
             .get_component(self.0)?
             .configs
             .get_label(self.1)?;
-        Ok(FatConfigLabel(Some(comp_label.clone()), cfg_label.clone()))
+        Ok(FatConfigLabel(
+            RawFatLabel(Some(comp_label.clone()), cfg_label.0.clone()),
+            PhantomData,
+        ))
     }
 }

@@ -26,7 +26,7 @@ impl Prepare for RawTransportGroup {
         ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
         tif: &mut crate::state::text::TextIdFactory,
     ) -> anyhow::Result<Self::Prepared> {
-        let name = tif.create("name").in_component(ctx.component_id());
+        let name = tif.create("name").in_component(ctx.this_component.id());
         Ok(TransportGroup {
             name,
             transports: Vec::new(),
