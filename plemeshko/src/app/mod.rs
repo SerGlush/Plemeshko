@@ -77,9 +77,29 @@ impl ErectionBuilder {
         ui.horizontal(|ui| {
             ui.text_edit_singleline(&mut self.erection_name);
 
-            self.erection_transport
-                .values_mut()
-                .for_each(|value| value.1 = false);
+            self.erection_transport.values_mut().try_for_each(|value| {
+                let selected_transport = shared_comps.get_config(value.0)?;
+                value.1 = false;
+
+                let selected_transport_name = st.get_text(&selected_transport.name)?;
+                ComboBox::from_id_source(selected_transport_name.as_ref())
+                    .selected_text(selected_transport_name.as_ref())
+                    .show_ui(ui, |ui| {
+                        let transport_group = shared_comps.get_config(selected_transport.group)?;
+                        for transport_id in &transport_group.transports {
+                            let transport = shared_comps.get_config(*transport_id)?;
+                            let transport_name = st.get_text(&transport.name)?;
+
+                            if ui.selectable_label(false, transport_name).clicked() {
+                                value.0 = *transport_id;
+                            }
+                        }
+
+                        Ok(())
+                    });
+
+                Ok(())
+            })?;
 
             for selected_method in &self.erection_methods {
                 for &setting_id in &selected_method.settings {
@@ -96,8 +116,19 @@ impl ErectionBuilder {
                         }
 
                         if new_group_check {
-                            //let transport = shared_comps.get_config()?;
-                            //self.erection_transport.insert(resource.transport_group, v);
+                            let transport_ids = &shared_comps
+                                .get_config(resource.transport_group)?
+                                .transports;
+                            let transport_id = transport_ids
+                                .iter()
+                                .try_find(|&&id| {
+                                    let transport = shared_comps.get_config(id)?;
+                                    Ok(transport.group == resource.transport_group
+                                        && transport.ui_priority == 0)
+                                })?
+                                .unwrap();
+                            self.erection_transport
+                                .insert(resource.transport_group, (*transport_id, true));
                         }
 
                         Ok(())
@@ -172,7 +203,18 @@ impl ErectionBuilder {
             .button(st.get_text_core("ui_erection-builder_create-erection")?)
             .clicked()
         {
-            todo!();
+            let mut sim_guard = st.shared.sim.lock().unwrap();
+            let sim = sim_guard.as_mut().unwrap();
+
+            sim.erections.push(Erection::new(
+                shared_comps,
+                self.erection_name.clone(),
+                self.erection_methods.clone(),
+                self.erection_transport
+                    .iter()
+                    .map(|(&key, &(value, _))| (key, value))
+                    .collect(),
+            )?);
         }
         Ok(())
     }

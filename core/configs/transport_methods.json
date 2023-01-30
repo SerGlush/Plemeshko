@@ -5,7 +5,9 @@
         "payload": {
             "group": "solid",
             "capacity": 400,
-            "fuel": {}
+            "fuel": {},
+
+            "ui_priority": 0
         }
     }
 ]

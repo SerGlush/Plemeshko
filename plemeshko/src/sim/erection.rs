@@ -72,8 +72,8 @@ impl Erection {
                 selected_methods,
                 transport,
                 storage: ResourceMap::new(),
-                count: 0,
-                active: 0,
+                count: 1,
+                active: 1,
                 reserve_export_threshold: 1,
             },
         )

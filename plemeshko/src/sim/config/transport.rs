@@ -18,6 +18,7 @@ pub struct RawTransport {
     pub group: FatConfigLabel<TransportGroup>,
     pub capacity: ResourceWeight,
     pub fuel: RawResourceIo,
+    pub ui_priority: u32,
 }
 
 pub struct Transport {
@@ -25,6 +26,7 @@ pub struct Transport {
     pub group: TransportGroupId,
     pub capacity: ResourceWeight,
     pub fuel: ResourceIo,
+    pub ui_priority: u32,
 }
 
 pub type TransportId = FatConfigId<Transport>;
@@ -44,6 +46,7 @@ impl Prepare for RawTransport {
                 group: self.group.prepare(ctx, tif)?,
                 capacity: self.capacity,
                 fuel: self.fuel.prepare(ctx, tif)?,
+                ui_priority: self.ui_priority,
             })
         })
     }

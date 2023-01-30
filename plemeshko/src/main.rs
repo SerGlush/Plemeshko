@@ -6,6 +6,7 @@
 #![feature(fs_try_exists)]
 #![feature(new_uninit)]
 #![feature(map_many_mut)]
+#![feature(try_find)]
 #![deny(elided_lifetimes_in_paths)]
 #![allow(clippy::mut_mutex_lock)] // false positives
 #![allow(dead_code)]
