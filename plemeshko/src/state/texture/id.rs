@@ -30,14 +30,14 @@ pub struct FatTextureId(pub ComponentId, pub TextureId);
 
 #[derive(Serialize, Deserialize)]
 pub struct FatTexturePartLabel {
-    texture: FatTextureLabel,
+    pub texture: FatTextureLabel,
     #[serde(flatten)]
-    uv: Option<Rect<f32>>,
+    pub uv: Option<Rect<f32>>,
 }
 
 pub struct FatTexturePartId {
-    texture: FatTextureId,
-    uv: Option<Rect<f32>>,
+    pub texture: FatTextureId,
+    pub uv: Option<Rect<f32>>,
 }
 
 impl FatTexturePartId {
