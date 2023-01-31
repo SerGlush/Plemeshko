@@ -6,14 +6,14 @@ use crate::state::{
     text::FatTextId,
 };
 
-use super::transport_method::{Transport, TransportId};
+use super::transport_method::{TransportMethod, TransportMethodId};
 
 #[derive(Deserialize)]
 pub struct RawTransportGroup {}
 
 pub struct TransportGroup {
     pub name: FatTextId,
-    pub transports: Vec<TransportId>,
+    pub transports: Vec<TransportMethodId>,
 }
 
 pub type TransportGroupId = FatConfigId<TransportGroup>;
@@ -55,8 +55,8 @@ impl Config for TransportGroup {
             let component_transport_ids = match shared_comps.component_slot(component_slot_id)? {
                 Some(component) => component
                     .configs
-                    .indexer::<Transport>()?
-                    .indices::<Transport>(),
+                    .indexer::<TransportMethod>()?
+                    .indices::<TransportMethod>(),
                 None => continue,
             };
             let component_id = component_slot_id.assume_occupied();
@@ -67,7 +67,7 @@ impl Config for TransportGroup {
                     .as_ref()
                     .unwrap()
                     .configs
-                    .storage::<Transport>()?
+                    .storage::<TransportMethod>()?
                     .get(component_transport_id)?
                     .group;
                 shared_comps

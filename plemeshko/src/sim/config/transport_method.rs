@@ -14,14 +14,14 @@ use super::{
 };
 
 #[derive(Deserialize)]
-pub struct RawTransport {
+pub struct RawTransportMethod {
     pub group: FatConfigLabel<TransportGroup>,
     pub capacity: ResourceWeight,
     pub fuel: RawResourceIo,
     pub ui_priority: u32,
 }
 
-pub struct Transport {
+pub struct TransportMethod {
     pub name: FatTextId,
     pub group: TransportGroupId,
     pub capacity: ResourceWeight,
@@ -29,10 +29,10 @@ pub struct Transport {
     pub ui_priority: u32,
 }
 
-pub type TransportId = FatConfigId<Transport>;
+pub type TransportMethodId = FatConfigId<TransportMethod>;
 
-impl Prepare for RawTransport {
-    type Prepared = Transport;
+impl Prepare for RawTransportMethod {
+    type Prepared = TransportMethod;
 
     fn prepare(
         self,
@@ -41,7 +41,7 @@ impl Prepare for RawTransport {
     ) -> anyhow::Result<Self::Prepared> {
         let name = tif.create("name").in_component(ctx.this_component.id());
         tif.with_lock(|tif| {
-            Ok(Transport {
+            Ok(TransportMethod {
                 name,
                 group: self.group.prepare(ctx, tif)?,
                 capacity: self.capacity,
@@ -52,8 +52,8 @@ impl Prepare for RawTransport {
     }
 }
 
-impl Config for Transport {
-    type Raw = RawTransport;
+impl Config for TransportMethod {
+    type Raw = RawTransportMethod;
 
-    const TAG: &'static str = "transport";
+    const TAG: &'static str = "transport-method";
 }

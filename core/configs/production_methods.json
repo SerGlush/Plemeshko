@@ -1,6 +1,6 @@
 [
     {
-        "tag": "method",
+        "tag": "production-method",
         "label": "hunt-animals",
         "payload": {
             "setting_groups": [

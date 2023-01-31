@@ -21,10 +21,10 @@ use std::{
 
 use super::{
     config::{
-        production_method::{RawSelectedMethod, SelectedMethod},
+        production_method::{FixedProductionMethod, RawFixedProductionMethod},
         resource::{RawResourceMap, ResourceId, ResourceIo, ResourceMap},
         transport_group::{TransportGroup, TransportGroupId},
-        transport_method::{Transport, TransportId},
+        transport_method::{TransportMethod, TransportMethodId},
     },
     units::ResourceWeight,
 };
@@ -32,8 +32,8 @@ use super::{
 #[derive(Serialize, Deserialize)]
 pub struct RawProductionSnapshot {
     name: String,
-    selected_methods: Vec<RawSelectedMethod>,
-    transport: HashMap<FatConfigLabel<TransportGroup>, FatConfigLabel<Transport>>,
+    selected_methods: Vec<RawFixedProductionMethod>,
+    transport: HashMap<FatConfigLabel<TransportGroup>, FatConfigLabel<TransportMethod>>,
     storage: RawResourceMap,
     count: u32,
     active: u32,
@@ -43,8 +43,8 @@ pub struct RawProductionSnapshot {
 #[derive(Clone)]
 pub struct ProductionSnapshot {
     name: String,
-    selected_methods: Vec<SelectedMethod>,
-    transport: HashMap<TransportGroupId, TransportId>,
+    selected_methods: Vec<FixedProductionMethod>,
+    transport: HashMap<TransportGroupId, TransportMethodId>,
     storage: ResourceMap,
     count: u32,
     active: u32,
@@ -62,8 +62,8 @@ impl Production {
     pub fn new(
         shared_comps: &SharedComponents,
         name: String,
-        selected_methods: Vec<SelectedMethod>,
-        transport: HashMap<TransportGroupId, TransportId>,
+        selected_methods: Vec<FixedProductionMethod>,
+        transport: HashMap<TransportGroupId, TransportMethodId>,
     ) -> anyhow::Result<Self> {
         Self::restore(
             shared_comps,
@@ -120,11 +120,11 @@ impl Production {
         &self.state.name
     }
 
-    pub fn methods(&self) -> &Vec<SelectedMethod> {
+    pub fn methods(&self) -> &Vec<FixedProductionMethod> {
         &self.state.selected_methods
     }
 
-    pub fn transport(&self) -> &HashMap<TransportGroupId, TransportId> {
+    pub fn transport(&self) -> &HashMap<TransportGroupId, TransportMethodId> {
         &self.state.transport
     }
 
@@ -154,7 +154,8 @@ impl Production {
         depot: &mut ResourceMap,
     ) -> anyhow::Result<()> {
         let shared_comps = shared_st.components.read().unwrap();
-        let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
+        let mut transport_state =
+            HashMap::<TransportGroupId, (&TransportMethod, ResourceWeight)>::new();
         let mut requested_resources = Vec::with_capacity(self.single_io.input.len());
         for (res_id, &single_input) in self.single_io.input.iter() {
             let req_input = single_input * self.active() as i64;
@@ -258,7 +259,8 @@ impl Production {
         depot: &mut ResourceMap,
     ) -> anyhow::Result<()> {
         let shared_comps = shared_st.components.read().unwrap();
-        let mut transport_state = HashMap::<TransportGroupId, (&Transport, ResourceWeight)>::new();
+        let mut transport_state =
+            HashMap::<TransportGroupId, (&TransportMethod, ResourceWeight)>::new();
         let active = self.active() as i64;
         for (&res_id, res_amount) in self.state.storage.iter_mut() {
             // humans are always exported back to the global storage

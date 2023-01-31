@@ -14,39 +14,38 @@ use super::{
 };
 
 #[derive(Deserialize)]
-pub struct RawMethod {
+pub struct RawProductionMethod {
     pub setting_groups: Vec<FatConfigLabel<SettingGroup>>,
 }
 
-pub struct Method {
+pub struct ProductionMethod {
     pub name: FatTextId,
     pub setting_groups: Vec<SettingGroupId>,
 }
 
-pub type MethodLabel = FatConfigLabel<Method>;
-pub type MethodId = FatConfigId<Method>;
+pub type ProductionMethodId = FatConfigId<ProductionMethod>;
 
 #[derive(Serialize, Deserialize)]
-pub struct RawSelectedMethod {
-    pub label: MethodLabel,
+pub struct RawFixedProductionMethod {
+    pub label: FatConfigLabel<ProductionMethod>,
     pub settings: Vec<FatConfigLabel<Setting>>,
 }
 
 #[derive(Clone)]
-pub struct SelectedMethod {
-    pub id: MethodId,
+pub struct FixedProductionMethod {
+    pub id: ProductionMethodId,
     pub settings: Vec<SettingId>,
 }
 
-impl SelectedMethod {
+impl FixedProductionMethod {
     pub fn new(
         shared_comps: &SharedComponents,
-        id: MethodId,
+        id: ProductionMethodId,
         index: Option<usize>,
-    ) -> Result<SelectedMethod> {
+    ) -> Result<FixedProductionMethod> {
         let method = shared_comps.config(id)?;
         let index = index.unwrap_or(0);
-        Ok(SelectedMethod {
+        Ok(FixedProductionMethod {
             id,
             settings: method
                 .setting_groups
@@ -54,7 +53,7 @@ impl SelectedMethod {
                 .map(|&setting_group| {
                     match shared_comps.config(setting_group)?.settings.get(index) {
                         Some(setting_id) => Ok(*setting_id),
-                        None => Err(anyhow!("When creating `SelectedMethod`: Setting index in group out of range: {index}")),
+                        None => Err(anyhow!("When creating `FixedProductionMethod`: Setting index in group out of range: {index}")),
                     }
                 })
                 .try_collect()?,
@@ -62,17 +61,17 @@ impl SelectedMethod {
     }
 }
 
-impl Prepare for RawMethod {
-    type Prepared = Method;
+impl Prepare for RawProductionMethod {
+    type Prepared = ProductionMethod;
 
     fn prepare(
         self,
         ctx: &mut ConfigsLoadingContext<'_>,
         tif: &mut TextIdFactory,
-    ) -> anyhow::Result<Method> {
+    ) -> anyhow::Result<ProductionMethod> {
         let name = tif.create("name").in_component(ctx.this_component.id());
         tif.with_lock(|tif| {
-            Ok(Method {
+            Ok(ProductionMethod {
                 name,
                 setting_groups: self.setting_groups.prepare(ctx, tif)?,
             })
@@ -80,16 +79,19 @@ impl Prepare for RawMethod {
     }
 }
 
-impl Config for Method {
-    type Raw = RawMethod;
+impl Config for ProductionMethod {
+    type Raw = RawProductionMethod;
 
-    const TAG: &'static str = "method";
+    const TAG: &'static str = "production-method";
 }
 
-impl Serializable for SelectedMethod {
-    type Raw = RawSelectedMethod;
+impl Serializable for FixedProductionMethod {
+    type Raw = RawFixedProductionMethod;
 
-    fn from_serializable(raw: Self::Raw, ctx: ComponentsRef<'_>) -> anyhow::Result<SelectedMethod> {
+    fn from_serializable(
+        raw: Self::Raw,
+        ctx: ComponentsRef<'_>,
+    ) -> anyhow::Result<FixedProductionMethod> {
         Ok(Self {
             id: Serializable::from_serializable(raw.label, ctx)?,
             settings: Serializable::from_serializable(raw.settings, ctx)?,
@@ -97,7 +99,7 @@ impl Serializable for SelectedMethod {
     }
 
     fn into_serializable(self, ctx: ComponentsRef<'_>) -> anyhow::Result<Self::Raw> {
-        Ok(RawSelectedMethod {
+        Ok(RawFixedProductionMethod {
             label: self.id.into_serializable(ctx)?,
             settings: self.settings.into_serializable(ctx)?,
         })

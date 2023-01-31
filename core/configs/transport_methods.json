@@ -1,6 +1,6 @@
 [
     {
-        "tag": "transport",
+        "tag": "transport-method",
         "label": "manual",
         "payload": {
             "group": "solid",

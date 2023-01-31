@@ -1,6 +1,6 @@
 [
     {
-        "tag": "method-group",
+        "tag": "production-method-group",
         "label": "food-production",
         "payload": {
             "variants": [

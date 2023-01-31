@@ -9,8 +9,9 @@ use fluent::FluentArgs;
 use crate::{
     sim::{
         config::{
-            method_group::MethodGroup, production_method::SelectedMethod, resource::Resource,
-            transport_group::TransportGroupId, transport_method::TransportId,
+            production_method::FixedProductionMethod,
+            production_method_group::ProductionMethodGroup, resource::Resource,
+            transport_group::TransportGroupId, transport_method::TransportMethodId,
         },
         production::Production,
     },
@@ -24,16 +25,16 @@ pub struct ProductionBuilder {
     window_is_open: bool,
 
     production_name: String,
-    production_transport: HashMap<TransportGroupId, (TransportId, bool)>,
-    production_methods: Vec<SelectedMethod>,
+    production_transport: HashMap<TransportGroupId, (TransportMethodId, bool)>,
+    production_methods: Vec<FixedProductionMethod>,
 }
 
 impl ProductionBuilder {
     pub fn new() -> ProductionBuilder {
         ProductionBuilder {
             production_name: "input name".to_string(),
-            production_transport: HashMap::<TransportGroupId, (TransportId, bool)>::new(),
-            production_methods: Vec::<SelectedMethod>::new(),
+            production_transport: HashMap::<TransportGroupId, (TransportMethodId, bool)>::new(),
+            production_methods: Vec::<FixedProductionMethod>::new(),
             window_is_open: false,
         }
     }
@@ -180,14 +181,14 @@ impl ProductionBuilder {
         })?;
 
         ui.menu_button(st.text_core("ui_production-builder_add-method")?, |ui| {
-            for method_group in shared_comps.iter_configs::<MethodGroup>() {
+            for method_group in shared_comps.iter_configs::<ProductionMethodGroup>() {
                 let method_group = method_group?.1;
                 ui.menu_button(st.text(&method_group.name)?, |ui| {
                     for (method_id, method) in method_group.variants.configs_with_ids(shared_comps)
                     {
                         if ui.button(st.text(&method.name)?).clicked() {
                             let selected_method =
-                                SelectedMethod::new(shared_comps, method_id, None)?;
+                                FixedProductionMethod::new(shared_comps, method_id, None)?;
                             self.production_methods.push(selected_method.clone());
                         }
                     }
