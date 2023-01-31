@@ -3,7 +3,7 @@
         "/human": 100,
         "/food": 10000
     },
-    "erections": [
+    "productions": [
         {
             "name": "Hunting House",
             "selected_methods": [

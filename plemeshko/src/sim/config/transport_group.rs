@@ -6,7 +6,7 @@ use crate::state::{
     text::FatTextId,
 };
 
-use super::transport::{Transport, TransportId};
+use super::transport_method::{Transport, TransportId};
 
 #[derive(Deserialize)]
 pub struct RawTransportGroup {}

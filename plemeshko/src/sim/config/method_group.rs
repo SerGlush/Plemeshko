@@ -6,7 +6,7 @@ use crate::state::{
     text::{FatTextId, TextIdFactory},
 };
 
-use super::method::{Method, MethodId};
+use super::production_method::{Method, MethodId};
 
 #[derive(Deserialize)]
 pub struct RawMethodGroup {

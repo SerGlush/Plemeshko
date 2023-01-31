@@ -9,10 +9,10 @@ use fluent::FluentArgs;
 use crate::{
     sim::{
         config::{
-            method::SelectedMethod, method_group::MethodGroup, resource::Resource,
-            transport::TransportId, transport_group::TransportGroupId,
+            method_group::MethodGroup, production_method::SelectedMethod, resource::Resource,
+            transport_group::TransportGroupId, transport_method::TransportId,
         },
-        erection::Erection,
+        production::Production,
     },
     state::{components::SharedComponents, AppState},
     util::cor::Cor,
@@ -20,20 +20,20 @@ use crate::{
 
 use util::*;
 
-pub struct ErectionBuilder {
+pub struct ProductionBuilder {
     window_is_open: bool,
 
-    erection_name: String,
-    erection_transport: HashMap<TransportGroupId, (TransportId, bool)>,
-    erection_methods: Vec<SelectedMethod>,
+    production_name: String,
+    production_transport: HashMap<TransportGroupId, (TransportId, bool)>,
+    production_methods: Vec<SelectedMethod>,
 }
 
-impl ErectionBuilder {
-    pub fn new() -> ErectionBuilder {
-        ErectionBuilder {
-            erection_name: "input name".to_string(),
-            erection_transport: HashMap::<TransportGroupId, (TransportId, bool)>::new(),
-            erection_methods: Vec::<SelectedMethod>::new(),
+impl ProductionBuilder {
+    pub fn new() -> ProductionBuilder {
+        ProductionBuilder {
+            production_name: "input name".to_string(),
+            production_transport: HashMap::<TransportGroupId, (TransportId, bool)>::new(),
+            production_methods: Vec::<SelectedMethod>::new(),
             window_is_open: false,
         }
     }
@@ -54,7 +54,7 @@ impl ErectionBuilder {
     ) -> Result<()> {
         let mut window_is_open = self.window_is_open;
         if window_is_open {
-            Window::new(st.text_core("ui_erection-builder_title")?)
+            Window::new(st.text_core("ui_production-builder_title")?)
                 .open(&mut window_is_open)
                 .show(egui_ctx, |ui| {
                     self.add_window_contents(st, shared_comps, ui)
@@ -75,38 +75,40 @@ impl ErectionBuilder {
         ui: &mut Ui,
     ) -> Result<()> {
         ui.horizontal(|ui| {
-            ui.text_edit_singleline(&mut self.erection_name);
+            ui.text_edit_singleline(&mut self.production_name);
 
-            self.erection_transport.values_mut().try_for_each(|value| {
-                let selected_transport = shared_comps.config(value.0)?;
-                value.1 = false;
+            self.production_transport
+                .values_mut()
+                .try_for_each(|value| {
+                    let selected_transport = shared_comps.config(value.0)?;
+                    value.1 = false;
 
-                let selected_transport_name = st.text(&selected_transport.name)?;
-                ComboBox::from_id_source(selected_transport_name.as_ref())
-                    .selected_text(selected_transport_name.as_ref())
-                    .show_ui(ui, |ui| {
-                        let transport_group = shared_comps.config(selected_transport.group)?;
-                        for (transport_id, transport) in
-                            transport_group.transports.configs_with_ids(shared_comps)
-                        {
-                            let transport_name = st.text(&transport.name)?;
+                    let selected_transport_name = st.text(&selected_transport.name)?;
+                    ComboBox::from_id_source(selected_transport_name.as_ref())
+                        .selected_text(selected_transport_name.as_ref())
+                        .show_ui(ui, |ui| {
+                            let transport_group = shared_comps.config(selected_transport.group)?;
+                            for (transport_id, transport) in
+                                transport_group.transports.configs_with_ids(shared_comps)
+                            {
+                                let transport_name = st.text(&transport.name)?;
 
-                            if ui.selectable_label(false, transport_name).clicked() {
-                                value.0 = transport_id;
+                                if ui.selectable_label(false, transport_name).clicked() {
+                                    value.0 = transport_id;
+                                }
                             }
-                        }
 
-                        Ok(())
-                    });
+                            Ok(())
+                        });
 
-                Ok(())
-            })?;
+                    Ok(())
+                })?;
 
-            for selected_method in &self.erection_methods {
+            for selected_method in &self.production_methods {
                 for setting in selected_method.settings.configs(shared_comps) {
                     let mut check_resource_group = |resource: &Resource| {
                         let mut new_group_check: bool = true;
-                        for (key, value) in self.erection_transport.iter_mut() {
+                        for (key, value) in self.production_transport.iter_mut() {
                             if *key == resource.transport_group {
                                 value.1 = true;
                                 new_group_check = false;
@@ -123,7 +125,7 @@ impl ErectionBuilder {
                                 })
                                 .unwrap()
                                 .0;
-                            self.erection_transport
+                            self.production_transport
                                 .insert(resource.transport_group, (transport_id, true));
                         }
 
@@ -148,7 +150,7 @@ impl ErectionBuilder {
             Ok(())
         });
 
-        draw_iter_indexed(ui, self.erection_methods.iter_mut(), |ui, method| {
+        draw_iter_indexed(ui, self.production_methods.iter_mut(), |ui, method| {
             ui.horizontal(|ui| {
                 let method_name = st.text(&shared_comps.config(method.id)?.name)?;
                 ui.label(method_name.as_ref());
@@ -177,7 +179,7 @@ impl ErectionBuilder {
             .inner
         })?;
 
-        ui.menu_button(st.text_core("ui_erection-builder_add-method")?, |ui| {
+        ui.menu_button(st.text_core("ui_production-builder_add-method")?, |ui| {
             for method_group in shared_comps.iter_configs::<MethodGroup>() {
                 let method_group = method_group?.1;
                 ui.menu_button(st.text(&method_group.name)?, |ui| {
@@ -186,7 +188,7 @@ impl ErectionBuilder {
                         if ui.button(st.text(&method.name)?).clicked() {
                             let selected_method =
                                 SelectedMethod::new(shared_comps, method_id, None)?;
-                            self.erection_methods.push(selected_method.clone());
+                            self.production_methods.push(selected_method.clone());
                         }
                     }
                     Ok(())
@@ -196,17 +198,17 @@ impl ErectionBuilder {
         });
 
         if ui
-            .button(st.text_core("ui_erection-builder_create-erection")?)
+            .button(st.text_core("ui_production-builder_create-production")?)
             .clicked()
         {
             let mut sim_guard = st.shared.sim.lock().unwrap();
             let sim = sim_guard.as_mut().unwrap();
 
-            sim.erections.push(Erection::new(
+            sim.productions.push(Production::new(
                 shared_comps,
-                self.erection_name.clone(),
-                self.erection_methods.clone(),
-                self.erection_transport
+                self.production_name.clone(),
+                self.production_methods.clone(),
+                self.production_transport
                     .iter()
                     .map(|(&key, &(value, _))| (key, value))
                     .collect(),
@@ -220,18 +222,18 @@ pub struct App {
     current_panel: i64,
     spawn_resource_name: String,
     spawn_resource_value: String,
-    erection_builder: ErectionBuilder,
+    production_builder: ProductionBuilder,
 }
 
-pub fn draw_erection(
+pub fn draw_production(
     st: &AppState,
     shared_comps: &SharedComponents,
     ui: &mut Ui,
-    erection: &Erection,
+    production: &Production,
 ) -> anyhow::Result<()> {
     ui.horizontal(|ui| {
-        ui.label(format!("{}:", erection.name()));
-        for transport in erection.transport().values().configs(shared_comps) {
+        ui.label(format!("{}:", production.name()));
+        for transport in production.transport().values().configs(shared_comps) {
             let transport_group = shared_comps.config(transport.group)?;
             ui.label(st.text(&transport.name)?).on_hover_text(format!(
                 "Transport Group: {}\nTransport Capacity: {}",
@@ -242,7 +244,7 @@ pub fn draw_erection(
         Ok(())
     })
     .inner?;
-    for selected_method in erection.methods() {
+    for selected_method in production.methods() {
         let method = shared_comps.config(selected_method.id)?;
         ui.horizontal(|ui| {
             ui.label(st.text(&method.name)?);
@@ -262,7 +264,7 @@ impl App {
             current_panel: 0,
             spawn_resource_name: "human".to_string(),
             spawn_resource_value: "10".to_string(),
-            erection_builder: ErectionBuilder::new(),
+            production_builder: ProductionBuilder::new(),
         }
     }
 
@@ -280,7 +282,7 @@ impl App {
                     if ui.button(st.text_core("ui_main")?).clicked() {
                         self.current_panel = 0;
                     }
-                    if ui.button(st.text_core("ui_erections")?).clicked() {
+                    if ui.button(st.text_core("ui_productions")?).clicked() {
                         self.current_panel = 1;
                     }
                     if ui.button(st.text_core("ui_debug")?).clicked() {
@@ -311,11 +313,11 @@ impl App {
                         }
                     }
                     1 => {
-                        if ui.button(st.text_core("ui_erections_create")?).clicked() {
-                            self.erection_builder.open();
+                        if ui.button(st.text_core("ui_productions_create")?).clicked() {
+                            self.production_builder.open();
                         }
-                        for erection in sim.erections.iter() {
-                            draw_erection(st, &shared_comps, ui, erection)?;
+                        for production in sim.productions.iter() {
+                            draw_production(st, &shared_comps, ui, production)?;
                         }
                     }
                     2 => {
@@ -342,7 +344,7 @@ impl App {
             })
             .inner?;
 
-        self.erection_builder.draw(st, &shared_comps, egui_ctx)?;
+        self.production_builder.draw(st, &shared_comps, egui_ctx)?;
 
         Ok(())
     }

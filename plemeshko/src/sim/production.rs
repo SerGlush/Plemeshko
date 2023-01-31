@@ -21,16 +21,16 @@ use std::{
 
 use super::{
     config::{
-        method::{RawSelectedMethod, SelectedMethod},
+        production_method::{RawSelectedMethod, SelectedMethod},
         resource::{RawResourceMap, ResourceId, ResourceIo, ResourceMap},
-        transport::{Transport, TransportId},
         transport_group::{TransportGroup, TransportGroupId},
+        transport_method::{Transport, TransportId},
     },
     units::ResourceWeight,
 };
 
 #[derive(Serialize, Deserialize)]
-pub struct RawErectionSnapshot {
+pub struct RawProductionSnapshot {
     name: String,
     selected_methods: Vec<RawSelectedMethod>,
     transport: HashMap<FatConfigLabel<TransportGroup>, FatConfigLabel<Transport>>,
@@ -41,7 +41,7 @@ pub struct RawErectionSnapshot {
 }
 
 #[derive(Clone)]
-pub struct ErectionSnapshot {
+pub struct ProductionSnapshot {
     name: String,
     selected_methods: Vec<SelectedMethod>,
     transport: HashMap<TransportGroupId, TransportId>,
@@ -51,14 +51,14 @@ pub struct ErectionSnapshot {
     reserve_export_threshold: u32,
 }
 
-pub struct Erection {
-    state: ErectionSnapshot,
+pub struct Production {
+    state: ProductionSnapshot,
     single_io: ResourceIo,
 }
 
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
 
-impl Erection {
+impl Production {
     pub fn new(
         shared_comps: &SharedComponents,
         name: String,
@@ -67,7 +67,7 @@ impl Erection {
     ) -> anyhow::Result<Self> {
         Self::restore(
             shared_comps,
-            ErectionSnapshot {
+            ProductionSnapshot {
                 name,
                 selected_methods,
                 transport,
@@ -81,7 +81,7 @@ impl Erection {
 
     pub fn restore(
         shared_comps: &SharedComponents,
-        snapshot: ErectionSnapshot,
+        snapshot: ProductionSnapshot,
     ) -> anyhow::Result<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
@@ -103,7 +103,7 @@ impl Erection {
             }
         }
 
-        Ok(Erection {
+        Ok(Production {
             state: snapshot,
             single_io: ResourceIo {
                 output: single_output,
@@ -112,7 +112,7 @@ impl Erection {
         })
     }
 
-    pub fn snapshot(&self) -> ErectionSnapshot {
+    pub fn snapshot(&self) -> ProductionSnapshot {
         self.state.clone()
     }
 
@@ -332,11 +332,11 @@ impl Erection {
     }
 }
 
-impl Serializable for ErectionSnapshot {
-    type Raw = RawErectionSnapshot;
+impl Serializable for ProductionSnapshot {
+    type Raw = RawProductionSnapshot;
 
     fn from_serializable(raw: Self::Raw, ctx: ComponentsRef<'_>) -> Result<Self> {
-        Ok(ErectionSnapshot {
+        Ok(ProductionSnapshot {
             name: raw.name,
             selected_methods: Serializable::from_serializable(raw.selected_methods, ctx)?,
             transport: Serializable::from_serializable(raw.transport, ctx)?,
@@ -348,7 +348,7 @@ impl Serializable for ErectionSnapshot {
     }
 
     fn into_serializable(self, ctx: ComponentsRef<'_>) -> Result<Self::Raw> {
-        Ok(RawErectionSnapshot {
+        Ok(RawProductionSnapshot {
             name: self.name,
             selected_methods: self.selected_methods.into_serializable(ctx)?,
             transport: self.transport.into_serializable(ctx)?,

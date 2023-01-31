@@ -1,5 +1,5 @@
 pub mod config;
-pub mod erection;
+pub mod production;
 pub mod units;
 
 use std::time::Duration;
@@ -15,23 +15,23 @@ use crate::state::{
 
 use self::{
     config::resource::{RawResourceMap, ResourceMap},
-    erection::{Erection, ErectionSnapshot, RawErectionSnapshot},
+    production::{Production, ProductionSnapshot, RawProductionSnapshot},
 };
 
 #[derive(Serialize, Deserialize)]
 pub struct RawSimSnapshot {
     depot: RawResourceMap,
-    erections: Vec<RawErectionSnapshot>,
+    productions: Vec<RawProductionSnapshot>,
 }
 
 pub struct SimSnapshot {
     depot: ResourceMap,
-    erections: Vec<ErectionSnapshot>,
+    productions: Vec<ProductionSnapshot>,
 }
 
 pub struct Sim {
     pub depot: ResourceMap,
-    pub erections: Vec<Erection>,
+    pub productions: Vec<Production>,
     exited: bool,
 }
 
@@ -40,12 +40,12 @@ impl Sim {
     pub const TICK_THRESHOLD: Duration = Duration::from_millis(1);
 
     pub fn restore(shared_comps: &SharedComponents, snapshot: SimSnapshot) -> anyhow::Result<Self> {
-        let SimSnapshot { depot, erections } = snapshot;
+        let SimSnapshot { depot, productions } = snapshot;
         Ok(Sim {
             depot,
-            erections: erections
+            productions: productions
                 .into_iter()
-                .map(|s| Erection::restore(shared_comps, s))
+                .map(|s| Production::restore(shared_comps, s))
                 .try_collect()?,
             exited: false,
         })
@@ -54,14 +54,14 @@ impl Sim {
     pub fn snapshot(&self) -> SimSnapshot {
         SimSnapshot {
             depot: self.depot.clone(),
-            erections: self.erections.iter().map(Erection::snapshot).collect(),
+            productions: self.productions.iter().map(Production::snapshot).collect(),
         }
     }
 
     pub fn new() -> Self {
         Sim {
             depot: ResourceMap::new(),
-            erections: Vec::new(),
+            productions: Vec::new(),
             exited: false,
         }
     }
@@ -79,8 +79,8 @@ impl Sim {
         if self.exited {
             panic!("Sim is in exiting state when step was called");
         }
-        for i in 0..self.erections.len() {
-            self.erections[i].step(env, &mut self.depot)?;
+        for i in 0..self.productions.len() {
+            self.productions[i].step(env, &mut self.depot)?;
         }
         Ok(())
     }
@@ -92,14 +92,14 @@ impl Serializable for SimSnapshot {
     fn from_serializable(raw: Self::Raw, ctx: ComponentsRef<'_>) -> Result<Self> {
         Ok(SimSnapshot {
             depot: Serializable::from_serializable(raw.depot, ctx)?,
-            erections: Serializable::from_serializable(raw.erections, ctx)?,
+            productions: Serializable::from_serializable(raw.productions, ctx)?,
         })
     }
 
     fn into_serializable(self, ctx: ComponentsRef<'_>) -> Result<Self::Raw> {
         Ok(RawSimSnapshot {
             depot: self.depot.into_serializable(ctx)?,
-            erections: self.erections.into_serializable(ctx)?,
+            productions: self.productions.into_serializable(ctx)?,
         })
     }
 }
