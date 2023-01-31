@@ -52,27 +52,26 @@ impl Config for TransportGroup {
         // for all components - find all settings and push to respective groups
         let component_slot_ids = indexer.indices();
         for component_slot_id in component_slot_ids {
-            let component_transport_ids =
-                match shared_comps.get_component_slot(component_slot_id)? {
-                    Some(component) => component
-                        .configs
-                        .get_indexer::<Transport>()?
-                        .indices::<Transport>(),
-                    None => continue,
-                };
+            let component_transport_ids = match shared_comps.component_slot(component_slot_id)? {
+                Some(component) => component
+                    .configs
+                    .indexer::<Transport>()?
+                    .indices::<Transport>(),
+                None => continue,
+            };
             let component_id = component_slot_id.assume_occupied();
             for component_transport_id in component_transport_ids {
                 let transport_group_id = shared_comps
-                    .get_component_slot(component_slot_id)
+                    .component_slot(component_slot_id)
                     .unwrap()
                     .as_ref()
                     .unwrap()
                     .configs
-                    .get_storage::<Transport>()?
+                    .storage::<Transport>()?
                     .get(component_transport_id)?
                     .group;
                 shared_comps
-                    .get_config_mut(transport_group_id)?
+                    .config_mut(transport_group_id)?
                     .transports
                     .push(FatConfigId(component_id, component_transport_id));
             }

@@ -36,7 +36,7 @@ impl<Label: Hash + Eq, Id: Copy> RawIndexer<Label, Id> {
         }
     }
 
-    pub fn get_or_create_id<L: ?Sized + ToOwned<Owned = Label> + Hash + Eq>(
+    pub fn declare_id<L: ?Sized + ToOwned<Owned = Label> + Hash + Eq>(
         &mut self,
         label: Cow<'_, L>,
     ) -> Id
@@ -56,7 +56,7 @@ impl<Label: Hash + Eq, Id: Copy> RawIndexer<Label, Id> {
         }
     }
 
-    pub fn get_id<L: ?Sized + Hash + Eq + Display>(&self, label: &L) -> Result<Id>
+    pub fn id<L: ?Sized + Hash + Eq + Display>(&self, label: &L) -> Result<Id>
     where
         Label: Borrow<L>,
     {
@@ -66,7 +66,7 @@ impl<Label: Hash + Eq, Id: Copy> RawIndexer<Label, Id> {
         }
     }
 
-    pub fn get_label(&self, id: Id) -> Result<&Label>
+    pub fn label(&self, id: Id) -> Result<&Label>
     where
         Id: TryInto<usize, Error: Debug>,
     {

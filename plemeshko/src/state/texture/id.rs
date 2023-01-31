@@ -47,7 +47,7 @@ impl FatTexturePartId {
         egui_ctx: &egui::Context,
         size: impl Into<egui::Vec2>,
     ) -> Result<egui::Image> {
-        let texture = app_st.get_texture(self.texture)?;
+        let texture = app_st.texture(self.texture)?;
         let egui_texture_id = texture.texture_id(egui_ctx);
         let widget = egui::Image::new(egui_texture_id, size);
         Ok(match self.uv {
@@ -65,7 +65,7 @@ impl Prepare for TextureLabel {
         ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
         _tif: &mut crate::state::text::TextIdFactory,
     ) -> Result<Self::Prepared> {
-        ctx.this_component.textures.get_id(&self)
+        ctx.this_component.textures.id(&self)
     }
 }
 
@@ -79,17 +79,17 @@ impl Prepare for FatTextureLabel {
     ) -> Result<Self::Prepared> {
         Ok(match &self.0 .0 {
             Some(comp_label) => {
-                let comp_id = ctx.other_components.indexer.get_id(comp_label)?;
+                let comp_id = ctx.other_components.indexer.id(comp_label)?;
                 let tex_id = ctx
                     .other_components
                     .app
-                    .get_component(comp_id)?
+                    .component(comp_id)?
                     .textures
-                    .get_id_from_raw(&self.0 .1)?;
+                    .id_from_raw(&self.0 .1)?;
                 FatTextureId(comp_id, tex_id)
             }
             None => {
-                let tex_id = ctx.this_component.textures.get_id_from_raw(&self.0 .1)?;
+                let tex_id = ctx.this_component.textures.id_from_raw(&self.0 .1)?;
                 FatTextureId(ctx.this_component.id(), tex_id)
             }
         })

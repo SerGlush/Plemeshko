@@ -44,7 +44,7 @@ impl SelectedMethod {
         id: MethodId,
         index: Option<usize>,
     ) -> Result<SelectedMethod> {
-        let method = shared_comps.get_config(id)?;
+        let method = shared_comps.config(id)?;
         let index = index.unwrap_or(0);
         Ok(SelectedMethod {
             id,
@@ -52,7 +52,7 @@ impl SelectedMethod {
                 .setting_groups
                 .iter()
                 .map(|&setting_group| {
-                    match shared_comps.get_config(setting_group)?.settings.get(index) {
+                    match shared_comps.config(setting_group)?.settings.get(index) {
                         Some(setting_id) => Ok(*setting_id),
                         None => Err(anyhow!("When creating `SelectedMethod`: Setting index in group out of range: {index}")),
                     }

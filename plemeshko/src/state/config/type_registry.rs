@@ -107,7 +107,7 @@ fn label_map_to_id_map<C: Config>(
     for (label, raw_config) in label_to_cfg.into_iter() {
         let mut tif = create_config_text_id_factory(&label);
         let prepared_config = raw_config.prepare(ctx, &mut tif)?;
-        let id = ctx.st.get_or_create_id(Cow::Borrowed(&label))?;
+        let id = ctx.st.declare_id(Cow::Borrowed(&label))?;
         let index: usize = id.0.try_into().unwrap();
         let stored_config = configs
             .get_mut(index)

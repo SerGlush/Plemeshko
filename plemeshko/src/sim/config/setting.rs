@@ -35,7 +35,7 @@ pub type SettingId = FatConfigId<Setting>;
 
 impl Setting {
     pub fn group<'a>(&self, shared_comps: &'a SharedComponents) -> Result<&'a SettingGroup> {
-        shared_comps.get_config(self.group)
+        shared_comps.config(self.group)
     }
 }
 

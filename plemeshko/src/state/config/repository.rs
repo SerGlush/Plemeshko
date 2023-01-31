@@ -47,7 +47,7 @@ impl ConfigRepository {
         builder.build(cfg_ty_reg, comps, pre_cfg)
     }
 
-    pub fn get_indexer<C: Config>(&self) -> Result<&ConfigIndexer> {
+    pub fn indexer<C: Config>(&self) -> Result<&ConfigIndexer> {
         Ok(&self
             .configs
             .get(&TypeId::of::<C>())
@@ -55,15 +55,15 @@ impl ConfigRepository {
             .1)
     }
 
-    pub fn get_id_from_raw<C: Config>(&self, label: &str) -> Result<ConfigId<C>> {
-        self.configs.get_id_from_raw(label)
+    pub fn id_from_raw<C: Config>(&self, label: &str) -> Result<ConfigId<C>> {
+        self.configs.id_from_raw(label)
     }
 
-    pub fn get_label<C: Config>(&self, id: ConfigId<C>) -> Result<&ConfigLabel<C>> {
-        self.configs.get_label(id)
+    pub fn label<C: Config>(&self, id: ConfigId<C>) -> Result<&ConfigLabel<C>> {
+        self.configs.label(id)
     }
 
-    pub fn get_storage<C: Config>(&self) -> Result<ConfigStorageRef<'_, C>> {
+    pub fn storage<C: Config>(&self) -> Result<ConfigStorageRef<'_, C>> {
         let any_store = self
             .configs
             .get(&TypeId::of::<C>())
@@ -75,7 +75,7 @@ impl ConfigRepository {
         Ok(ConfigStorageRef(storage, &any_store.1))
     }
 
-    pub fn get_storage_mut<C: Config>(&mut self) -> Result<ConfigStorageRefMut<'_, C>> {
+    pub fn storage_mut<C: Config>(&mut self) -> Result<ConfigStorageRefMut<'_, C>> {
         let any_store = self
             .configs
             .get_mut(&TypeId::of::<C>())

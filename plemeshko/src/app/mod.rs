@@ -9,7 +9,7 @@ use fluent::FluentArgs;
 use crate::{
     sim::{
         config::{
-            method::SelectedMethod, method_group::MethodGroup, resource::ResourceId,
+            method::SelectedMethod, method_group::MethodGroup, resource::Resource,
             transport::TransportId, transport_group::TransportGroupId,
         },
         erection::Erection,
@@ -54,7 +54,7 @@ impl ErectionBuilder {
     ) -> Result<()> {
         let mut window_is_open = self.window_is_open;
         if window_is_open {
-            Window::new(st.get_text_core("ui_erection-builder_title")?)
+            Window::new(st.text_core("ui_erection-builder_title")?)
                 .open(&mut window_is_open)
                 .show(egui_ctx, |ui| {
                     self.add_window_contents(st, shared_comps, ui)
@@ -78,20 +78,21 @@ impl ErectionBuilder {
             ui.text_edit_singleline(&mut self.erection_name);
 
             self.erection_transport.values_mut().try_for_each(|value| {
-                let selected_transport = shared_comps.get_config(value.0)?;
+                let selected_transport = shared_comps.config(value.0)?;
                 value.1 = false;
 
-                let selected_transport_name = st.get_text(&selected_transport.name)?;
+                let selected_transport_name = st.text(&selected_transport.name)?;
                 ComboBox::from_id_source(selected_transport_name.as_ref())
                     .selected_text(selected_transport_name.as_ref())
                     .show_ui(ui, |ui| {
-                        let transport_group = shared_comps.get_config(selected_transport.group)?;
-                        for transport_id in &transport_group.transports {
-                            let transport = shared_comps.get_config(*transport_id)?;
-                            let transport_name = st.get_text(&transport.name)?;
+                        let transport_group = shared_comps.config(selected_transport.group)?;
+                        for (transport_id, transport) in
+                            transport_group.transports.configs_with_ids(shared_comps)
+                        {
+                            let transport_name = st.text(&transport.name)?;
 
                             if ui.selectable_label(false, transport_name).clicked() {
-                                value.0 = *transport_id;
+                                value.0 = transport_id;
                             }
                         }
 
@@ -102,11 +103,8 @@ impl ErectionBuilder {
             })?;
 
             for selected_method in &self.erection_methods {
-                for &setting_id in &selected_method.settings {
-                    let setting = shared_comps.get_config(setting_id)?;
-                    let mut check_resource_group = |resource_id: &ResourceId| {
-                        let resource = shared_comps.get_config(*resource_id)?;
-
+                for setting in selected_method.settings.configs(shared_comps) {
+                    let mut check_resource_group = |resource: &Resource| {
                         let mut new_group_check: bool = true;
                         for (key, value) in self.erection_transport.iter_mut() {
                             if *key == resource.transport_group {
@@ -116,19 +114,17 @@ impl ErectionBuilder {
                         }
 
                         if new_group_check {
-                            let transport_ids = &shared_comps
-                                .get_config(resource.transport_group)?
-                                .transports;
-                            let transport_id = transport_ids
-                                .iter()
-                                .try_find(|&&id| {
-                                    let transport = shared_comps.get_config(id)?;
-                                    Ok(transport.group == resource.transport_group
-                                        && transport.ui_priority == 0)
-                                })?
-                                .unwrap();
+                            let transport_id = shared_comps
+                                .config(resource.transport_group)?
+                                .transports
+                                .configs_with_ids(shared_comps)
+                                .find(|(_, tr)| {
+                                    tr.ui_priority == 0 && tr.group == resource.transport_group
+                                })
+                                .unwrap()
+                                .0;
                             self.erection_transport
-                                .insert(resource.transport_group, (*transport_id, true));
+                                .insert(resource.transport_group, (transport_id, true));
                         }
 
                         Ok(())
@@ -138,11 +134,13 @@ impl ErectionBuilder {
                         .resource_io
                         .input
                         .keys()
+                        .configs(shared_comps)
                         .try_for_each(&mut check_resource_group)?;
                     setting
                         .resource_io
                         .output
                         .keys()
+                        .configs(shared_comps)
                         .try_for_each(&mut check_resource_group)?;
                 }
             }
@@ -152,22 +150,20 @@ impl ErectionBuilder {
 
         draw_iter_indexed(ui, self.erection_methods.iter_mut(), |ui, method| {
             ui.horizontal(|ui| {
-                let method_name = st.get_text(&shared_comps.get_config(method.id)?.name)?;
+                let method_name = st.text(&shared_comps.config(method.id)?.name)?;
                 ui.label(method_name.as_ref());
                 for selected_setting_id in &mut method.settings {
-                    let selected_setting = shared_comps.get_config(*selected_setting_id)?;
-                    let setting_group = shared_comps.get_config(selected_setting.group)?;
-                    let selected_setting_name = st.get_text(&selected_setting.name)?;
+                    let selected_setting = shared_comps.config(*selected_setting_id)?;
+                    let setting_group = shared_comps.config(selected_setting.group)?;
+                    let selected_setting_name = st.text(&selected_setting.name)?;
                     ComboBox::from_id_source(&selected_setting_name)
                         .width(200.0)
                         .selected_text(selected_setting_name)
                         .show_ui(ui, |ui| {
-                            for &setting_id in &setting_group.settings {
-                                let setting = shared_comps.get_config(setting_id)?;
-                                if ui
-                                    .selectable_label(false, st.get_text(&setting.name)?)
-                                    .clicked()
-                                {
+                            for (setting_id, setting) in
+                                setting_group.settings.configs_with_ids(shared_comps)
+                            {
+                                if ui.button(st.text(&setting.name)?).clicked() {
                                     *selected_setting_id = setting_id;
                                 }
                             }
@@ -181,13 +177,13 @@ impl ErectionBuilder {
             .inner
         })?;
 
-        ui.menu_button(st.get_text_core("ui_erection-builder_add-method")?, |ui| {
+        ui.menu_button(st.text_core("ui_erection-builder_add-method")?, |ui| {
             for method_group in shared_comps.iter_configs::<MethodGroup>() {
                 let method_group = method_group?.1;
-                ui.menu_button(st.get_text(&method_group.name)?, |ui| {
-                    for &method_id in &method_group.variants {
-                        let method = shared_comps.get_config(method_id)?;
-                        if ui.button(st.get_text(&method.name)?).clicked() {
+                ui.menu_button(st.text(&method_group.name)?, |ui| {
+                    for (method_id, method) in method_group.variants.configs_with_ids(shared_comps)
+                    {
+                        if ui.button(st.text(&method.name)?).clicked() {
                             let selected_method =
                                 SelectedMethod::new(shared_comps, method_id, None)?;
                             self.erection_methods.push(selected_method.clone());
@@ -200,7 +196,7 @@ impl ErectionBuilder {
         });
 
         if ui
-            .button(st.get_text_core("ui_erection-builder_create-erection")?)
+            .button(st.text_core("ui_erection-builder_create-erection")?)
             .clicked()
         {
             let mut sim_guard = st.shared.sim.lock().unwrap();
@@ -235,26 +231,23 @@ pub fn draw_erection(
 ) -> anyhow::Result<()> {
     ui.horizontal(|ui| {
         ui.label(format!("{}:", erection.name()));
-        for &transport_id in erection.transport().values() {
-            let transport = shared_comps.get_config(transport_id)?;
-            let transport_group = shared_comps.get_config(transport.group)?;
-            ui.label(st.get_text(&transport.name)?)
-                .on_hover_text(format!(
-                    "Transport Group: {}\nTransport Capacity: {}",
-                    st.get_text(&transport_group.name)?,
-                    transport.capacity
-                ));
+        for transport in erection.transport().values().configs(shared_comps) {
+            let transport_group = shared_comps.config(transport.group)?;
+            ui.label(st.text(&transport.name)?).on_hover_text(format!(
+                "Transport Group: {}\nTransport Capacity: {}",
+                st.text(&transport_group.name)?,
+                transport.capacity
+            ));
         }
         Ok(())
     })
     .inner?;
     for selected_method in erection.methods() {
-        let method = shared_comps.get_config(selected_method.id)?;
+        let method = shared_comps.config(selected_method.id)?;
         ui.horizontal(|ui| {
-            ui.label(st.get_text(&method.name)?);
-            for &setting_id in &selected_method.settings {
-                let setting = shared_comps.get_config(setting_id)?;
-                ui.label(st.get_text(&setting.name)?);
+            ui.label(st.text(&method.name)?);
+            for setting in selected_method.settings.configs(shared_comps) {
+                ui.label(st.text(&setting.name)?);
             }
             Ok(())
         })
@@ -282,15 +275,15 @@ impl App {
         CentralPanel::default()
             .show(egui_ctx, |ui| {
                 ui.horizontal(|ui| {
-                    st.get_texture_core("test")?
+                    st.texture_core("test")?
                         .show_size(ui, Vec2::new(24.0, 24.0));
-                    if ui.button(st.get_text_core("ui_main")?).clicked() {
+                    if ui.button(st.text_core("ui_main")?).clicked() {
                         self.current_panel = 0;
                     }
-                    if ui.button(st.get_text_core("ui_erections")?).clicked() {
+                    if ui.button(st.text_core("ui_erections")?).clicked() {
                         self.current_panel = 1;
                     }
-                    if ui.button(st.get_text_core("ui_debug")?).clicked() {
+                    if ui.button(st.text_core("ui_debug")?).clicked() {
                         self.current_panel = 2;
                     }
                     Ok(())
@@ -309,19 +302,16 @@ impl App {
                                 .unwrap_or_default()
                                 .to_string(),
                         );
-                        ui.label(st.fmt_text_core("ui_main_population", &args)?);
+                        ui.label(st.text_core_fmt("ui_main_population", &args)?);
                         for (&id, value) in sim.depot.iter() {
                             if id != st.shared.human_id {
-                                let res = shared_comps.get_config(id)?;
-                                ui.label(format!("{} : {value}", st.get_text(&res.name)?));
+                                let res = shared_comps.config(id)?;
+                                ui.label(format!("{} : {value}", st.text(&res.name)?));
                             }
                         }
                     }
                     1 => {
-                        if ui
-                            .button(st.get_text_core("ui_erections_create")?)
-                            .clicked()
-                        {
+                        if ui.button(st.text_core("ui_erections_create")?).clicked() {
                             self.erection_builder.open();
                         }
                         for erection in sim.erections.iter() {
@@ -332,14 +322,14 @@ impl App {
                         ui.text_edit_singleline(&mut self.spawn_resource_name);
                         ui.text_edit_singleline(&mut self.spawn_resource_value);
                         if ui
-                            .button(st.get_text_core("ui_debug_spawn-resources")?)
+                            .button(st.text_core("ui_debug_spawn-resources")?)
                             .clicked()
                         {
                             sim.depot.cor_put(
                                 &shared_comps
-                                    .get_core()?
+                                    .core()?
                                     .configs
-                                    .get_id_from_raw(self.spawn_resource_name.as_str())
+                                    .id_from_raw(self.spawn_resource_name.as_str())
                                     .unwrap()
                                     .in_core(),
                                 self.spawn_resource_value.parse().unwrap(),

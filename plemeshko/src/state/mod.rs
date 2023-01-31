@@ -97,9 +97,9 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
     component_loader.finalize(components_changed, &mut shared_comps)?;
 
     let human_id = shared_comps
-        .get_core()?
+        .core()?
         .configs
-        .get_id_from_raw(RESOURCE_LABEL_HUMAN)?;
+        .id_from_raw(RESOURCE_LABEL_HUMAN)?;
 
     let sim = {
         let comps = ComponentsRef {
@@ -129,45 +129,43 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
 // todo: return TextId prefixed with ComponentLabel When text is not found
 impl AppState {
     /// Retrieve text entry.
-    pub fn get_text<'a>(&'a self, id: &FatTextId) -> Result<Cow<'a, str>> {
-        self.components
-            .get_component(id.0)?
-            .get_text(id.1.borrow(), None)
+    pub fn text<'a>(&'a self, id: &FatTextId) -> Result<Cow<'a, str>> {
+        self.components.component(id.0)?.text(id.1.borrow(), None)
     }
 
     /// Retrieve text entry from the core component.
-    pub fn get_text_core<'a>(&'a self, id: &str) -> Result<Cow<'a, str>> {
+    pub fn text_core<'a>(&'a self, id: &str) -> Result<Cow<'a, str>> {
         self.components
-            .get_component(ComponentId::core())?
-            .get_text(TextIdRef::from_str(id), None)
+            .component(ComponentId::core())?
+            .text(TextIdRef::from_str(id), None)
     }
 
     /// Format text entry using specified arguments.
-    pub fn fmt_text<'a>(&'a self, id: FatTextId, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
+    pub fn text_fmt<'a>(&'a self, id: FatTextId, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
         self.components
-            .get_component(id.0)?
-            .get_text(id.1.borrow(), Some(args))
+            .component(id.0)?
+            .text(id.1.borrow(), Some(args))
     }
 
     /// Format text entry from the core component using specified arguments.
-    pub fn fmt_text_core<'a>(&'a self, id: &str, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
+    pub fn text_core_fmt<'a>(&'a self, id: &str, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
         self.components
-            .get_component(ComponentId::core())?
-            .get_text(TextIdRef::from_str(id), Some(args))
+            .component(ComponentId::core())?
+            .text(TextIdRef::from_str(id), Some(args))
     }
 
-    pub fn get_texture(&self, id: FatTextureId) -> Result<&RetainedImage> {
+    pub fn texture(&self, id: FatTextureId) -> Result<&RetainedImage> {
         Ok(self
             .components
-            .get_component(id.0)?
+            .component(id.0)?
             .textures
             .get(id.1)
             .unwrap_or(&self.fallback_texture))
     }
 
-    pub fn get_texture_core(&self, label: &str) -> Result<&RetainedImage> {
-        let core_textures = &self.components.get_component(ComponentId::core())?.textures;
-        let id = match core_textures.get_id_from_raw(label) {
+    pub fn texture_core(&self, label: &str) -> Result<&RetainedImage> {
+        let core_textures = &self.components.component(ComponentId::core())?.textures;
+        let id = match core_textures.id_from_raw(label) {
             Ok(id) => id,
             Err(e) => {
                 log::warn!("Core texture retrieval failed: {e}");

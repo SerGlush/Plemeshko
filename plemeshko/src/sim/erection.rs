@@ -87,7 +87,7 @@ impl Erection {
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
         for selected_method in snapshot.selected_methods.iter() {
             for &setting_id in selected_method.settings.iter() {
-                let setting = shared_comps.get_config(setting_id)?;
+                let setting = shared_comps.config(setting_id)?;
                 for (resource_id, delta) in setting.resource_io.output.iter() {
                     single_output
                         .entry(resource_id.to_owned())
@@ -158,7 +158,7 @@ impl Erection {
         let mut requested_resources = Vec::with_capacity(self.single_io.input.len());
         for (res_id, &single_input) in self.single_io.input.iter() {
             let req_input = single_input * self.active() as i64;
-            let res = shared_comps.get_config(*res_id)?;
+            let res = shared_comps.config(*res_id)?;
             let already_stored = self
                 .state
                 .storage
@@ -177,7 +177,7 @@ impl Erection {
                 .from_key(&res.transport_group)
             {
                 let tr_id = *self.state.transport.get(&res.transport_group).unwrap();
-                let tr = shared_comps.get_config(tr_id)?;
+                let tr = shared_comps.config(tr_id)?;
                 vacant.insert(res.transport_group, (tr, ResourceWeight(0)));
             }
         }
@@ -271,14 +271,14 @@ impl Erection {
                     }
                 }
             }
-            let res = shared_comps.get_config(res_id)?;
+            let res = shared_comps.config(res_id)?;
             let (tr, transported_weight_already) = match transport_state
                 .raw_entry_mut()
                 .from_key(&res.transport_group)
             {
                 RawEntryMut::Vacant(vacant) => {
                     let tr_id = *self.state.transport.get(&res.transport_group).unwrap();
-                    let tr = shared_comps.get_config(tr_id)?;
+                    let tr = shared_comps.config(tr_id)?;
                     vacant
                         .insert(res.transport_group, (tr, ResourceWeight(0)))
                         .1

@@ -34,7 +34,7 @@ impl RawFatLabel {
                 self.1
             )
         })?;
-        comps.indexer.get_id(comp_label)
+        comps.indexer.id(comp_label)
     }
 }
 

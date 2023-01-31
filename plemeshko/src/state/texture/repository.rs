@@ -30,12 +30,12 @@ impl TextureRepository {
         self.textures.get(index)
     }
 
-    pub fn get_id(&self, label: &TextureLabel) -> Result<TextureId> {
-        self.indexer.get_id(&label.0).map(TextureId)
+    pub fn id(&self, label: &TextureLabel) -> Result<TextureId> {
+        self.indexer.id(&label.0).map(TextureId)
     }
 
-    pub fn get_id_from_raw(&self, label: &str) -> Result<TextureId> {
-        self.indexer.get_id(label).map(TextureId)
+    pub fn id_from_raw(&self, label: &str) -> Result<TextureId> {
+        self.indexer.id(label).map(TextureId)
     }
 
     fn load_directory<P: AsRef<Path>>(

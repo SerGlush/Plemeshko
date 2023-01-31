@@ -95,7 +95,7 @@ impl<C: Config> Prepare for ConfigLabel<C> {
         ctx: &mut ConfigsLoadingContext<'_>,
         _tif: &mut TextIdFactory,
     ) -> anyhow::Result<ConfigId<C>> {
-        ctx.st.get_or_create_id(Cow::Owned(self))
+        ctx.st.declare_id(Cow::Owned(self))
     }
 }
 
@@ -109,18 +109,18 @@ impl<C: Config> Prepare for FatConfigLabel<C> {
     ) -> Result<FatConfigId<C>> {
         Ok(match &self.0 .0 {
             Some(comp_label) => {
-                let comp_id = ctx.other_components.indexer.get_id(comp_label)?;
+                let comp_id = ctx.other_components.indexer.id(comp_label)?;
                 let cfg_id = ctx
                     .other_components
                     .shared
-                    .get_component(comp_id)?
+                    .component(comp_id)?
                     .configs
-                    .get_indexer::<C>()?
-                    .get_id(self.config())?;
+                    .indexer::<C>()?
+                    .id(self.config())?;
                 FatConfigId(comp_id, cfg_id)
             }
             None => {
-                let cfg_id = ctx.st.get_or_create_id(Cow::Owned(self.into_config()))?;
+                let cfg_id = ctx.st.declare_id(Cow::Owned(self.into_config()))?;
                 FatConfigId(ctx.this_component.id(), cfg_id)
             }
         })
@@ -134,20 +134,16 @@ impl<C: Config> Serializable for FatConfigId<C> {
         let comp_id = raw.0.deserialize_component_id(comps)?;
         let cfg_id = comps
             .shared
-            .get_component(comp_id)?
+            .component(comp_id)?
             .configs
-            .get_indexer::<C>()?
-            .get_id(raw.config())?;
+            .indexer::<C>()?
+            .id(raw.config())?;
         Ok(FatConfigId(comp_id, cfg_id))
     }
 
     fn into_serializable(self, comps: ComponentsRef<'_>) -> Result<Self::Raw> {
-        let comp_label = comps.indexer.get_label(self.0)?;
-        let cfg_label = comps
-            .shared
-            .get_component(self.0)?
-            .configs
-            .get_label(self.1)?;
+        let comp_label = comps.indexer.label(self.0)?;
+        let cfg_label = comps.shared.component(self.0)?.configs.label(self.1)?;
         Ok(FatConfigLabel(
             RawFatLabel(Some(comp_label.clone()), cfg_label.0.clone()),
             PhantomData,

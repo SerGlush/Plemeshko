@@ -13,7 +13,7 @@ pub struct SharedComponent {
 pub struct SharedComponents(pub(super) Vec<Option<SharedComponent>>);
 
 impl SharedComponents {
-    pub fn get_component_mut(&mut self, id: ComponentId) -> Result<&mut SharedComponent> {
+    pub fn component_mut(&mut self, id: ComponentId) -> Result<&mut SharedComponent> {
         self.0
             .get_mut(id.0 as usize)
             .ok_or_else(|| anyhow!("Component id out of range: {}", id.0))?
@@ -26,7 +26,7 @@ impl SharedComponents {
             })
     }
 
-    pub fn get_component(&self, id: ComponentId) -> Result<&SharedComponent> {
+    pub fn component(&self, id: ComponentId) -> Result<&SharedComponent> {
         self.0
             .get(id.0 as usize)
             .ok_or_else(|| anyhow!("Component id out of range: {}", id.0))?
@@ -39,13 +39,13 @@ impl SharedComponents {
             })
     }
 
-    pub fn get_component_slot(&self, id: ComponentSlotId) -> Result<&Option<SharedComponent>> {
+    pub fn component_slot(&self, id: ComponentSlotId) -> Result<&Option<SharedComponent>> {
         self.0
             .get(id.0)
             .ok_or_else(|| anyhow!("Component id out of range: {}", id.0))
     }
 
-    pub fn get_component_slot_mut(
+    pub fn component_slot_mut(
         &mut self,
         id: ComponentSlotId,
     ) -> Result<&mut Option<SharedComponent>> {
@@ -54,8 +54,8 @@ impl SharedComponents {
             .ok_or_else(|| anyhow!("Component id out of range: {}", id.0))
     }
 
-    pub fn get_core(&self) -> Result<&SharedComponent> {
-        self.get_component(ComponentId::core())
+    pub fn core(&self) -> Result<&SharedComponent> {
+        self.component(ComponentId::core())
     }
 
     pub fn iter_components(&self) -> impl Iterator<Item = (ComponentId, &SharedComponent)> {
@@ -74,21 +74,21 @@ impl SharedComponents {
         })
     }
 
-    pub fn get_config<C: Config>(&self, id: FatConfigId<C>) -> Result<&C> {
-        self.get_component(id.0)?.configs.get_storage()?.get(id.1)
+    pub fn config<C: Config>(&self, id: FatConfigId<C>) -> Result<&C> {
+        self.component(id.0)?.configs.storage()?.get(id.1)
     }
 
-    pub fn get_config_mut<C: Config>(&mut self, id: FatConfigId<C>) -> Result<&mut C> {
-        self.get_component_mut(id.0)?
+    pub fn config_mut<C: Config>(&mut self, id: FatConfigId<C>) -> Result<&mut C> {
+        self.component_mut(id.0)?
             .configs
-            .get_storage_mut()?
+            .storage_mut()?
             .into_mut(id.1)
     }
 
     pub fn iter_configs<C: Config>(&self) -> impl Iterator<Item = Result<(FatConfigId<C>, &C)>> {
         self.iter_components()
             .flat_map(
-                |(component_id, component)| match component.configs.get_storage() {
+                |(component_id, component)| match component.configs.storage() {
                     Ok(storage) => Either::Right(
                         storage
                             .iter()
@@ -104,7 +104,7 @@ impl SharedComponents {
     ) -> impl Iterator<Item = Result<(FatConfigId<C>, &mut C)>> {
         self.iter_components_mut()
             .flat_map(
-                |(component_id, component)| match component.configs.get_storage_mut() {
+                |(component_id, component)| match component.configs.storage_mut() {
                     Ok(storage) => Either::Right(
                         storage
                             .into_iter()

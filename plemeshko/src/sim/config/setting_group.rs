@@ -47,26 +47,23 @@ impl Config for SettingGroup {
         // for all components - find all settings and push to respective groups
         let component_slot_ids = indexer.indices();
         for component_slot_id in component_slot_ids {
-            let component_setting_ids = match shared_comps.get_component_slot(component_slot_id)? {
-                Some(component) => component
-                    .configs
-                    .get_indexer::<Setting>()?
-                    .indices::<Setting>(),
+            let component_setting_ids = match shared_comps.component_slot(component_slot_id)? {
+                Some(component) => component.configs.indexer::<Setting>()?.indices::<Setting>(),
                 None => continue,
             };
             let component_id = component_slot_id.assume_occupied();
             for component_setting_id in component_setting_ids {
                 let setting_group_id = shared_comps
-                    .get_component_slot(component_slot_id)
+                    .component_slot(component_slot_id)
                     .unwrap()
                     .as_ref()
                     .unwrap()
                     .configs
-                    .get_storage::<Setting>()?
+                    .storage::<Setting>()?
                     .get(component_setting_id)?
                     .group;
                 shared_comps
-                    .get_config_mut(setting_group_id)?
+                    .config_mut(setting_group_id)?
                     .settings
                     .push(FatConfigId(component_id, component_setting_id));
             }

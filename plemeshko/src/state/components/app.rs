@@ -19,7 +19,7 @@ pub struct AppComponent {
 pub struct AppComponents(pub(super) Vec<Option<AppComponent>>);
 
 impl AppComponent {
-    pub fn get_text<'a>(
+    pub fn text<'a>(
         &'a self,
         text_id: &TextIdRef,
         args: Option<&'a FluentArgs<'_>>,
@@ -35,7 +35,7 @@ impl AppComponent {
 }
 
 impl AppComponents {
-    pub fn get_component(&self, id: ComponentId) -> Result<&AppComponent> {
+    pub fn component(&self, id: ComponentId) -> Result<&AppComponent> {
         self.0
             .get(id.0 as usize)
             .ok_or_else(|| anyhow!("Component id out of range: {}", id.0))?
