@@ -7,17 +7,21 @@
 #![feature(new_uninit)]
 #![feature(map_many_mut)]
 #![feature(try_find)]
+#![feature(min_specialization)]
+#![feature(trait_alias)]
 #![deny(elided_lifetimes_in_paths)]
+#![deny(clippy::undocumented_unsafe_blocks)]
 #![allow(clippy::mut_mutex_lock)] // false positives
 #![allow(dead_code)]
 
 use std::time::Instant;
 
-use anyhow::{bail, Context, Result};
-use colored::Colorize;
+use anyhow::{Context, Result};
 use sim::Sim;
 use state::initialize_state;
 
+#[macro_use]
+mod log;
 #[macro_use]
 mod util;
 #[macro_use]
@@ -27,7 +31,7 @@ mod framework;
 mod sim;
 
 fn main() -> Result<()> {
-    initialize_log().context("Initializing log")?;
+    crate::log::initialize_log().context("Initializing log")?;
     let (shared_st, app_st) = initialize_state().context("Initializing state")?;
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
@@ -67,62 +71,4 @@ fn main() -> Result<()> {
 
         framework::run(app_st);
     })
-}
-
-fn initialize_log() -> Result<()> {
-    const ENV_LOG_TARGET: &str = "PLEMESHKO_LOG";
-    let Ok(target) = std::env::var(ENV_LOG_TARGET) else {
-        return Ok(());
-    };
-
-    let time_format =
-        time::format_description::parse("[hour]:[minute]:[second].[subsecond digits:3]")?;
-
-    if &target == "stdout" || &target == "stderr" {
-        let fern_colors = fern::colors::ColoredLevelConfig::new()
-            .info(fern::colors::Color::Cyan)
-            .warn(fern::colors::Color::Yellow)
-            .error(fern::colors::Color::Red);
-        let fern_dispatch = fern::Dispatch::new().level(log::LevelFilter::Info).format(
-            move |out, message, record| {
-                let time = time::OffsetDateTime::from(std::time::SystemTime::now());
-                out.finish(format_args!(
-                    "{}[{}][{}] {}",
-                    time.format(&time_format).unwrap(),
-                    if record.target().starts_with(env!("CARGO_PKG_NAME")) {
-                        record.target().green()
-                    } else {
-                        record.target().normal()
-                    },
-                    fern_colors.color(record.level()),
-                    message
-                ))
-            },
-        );
-        match target.as_str() {
-            "stdout" => fern_dispatch.chain(std::io::stdout()),
-            "stderr" => fern_dispatch.chain(std::io::stderr()),
-            _ => panic!(),
-        }
-        .apply()?;
-        return Ok(());
-    }
-    if target.len() < 2 || target.starts_with('/') {
-        bail!("Can't parse env: {ENV_LOG_TARGET}");
-    }
-    fern::Dispatch::new()
-        .level(log::LevelFilter::Debug)
-        .format(move |out, message, record| {
-            let time = time::OffsetDateTime::from(std::time::SystemTime::now());
-            out.finish(format_args!(
-                "{}[{}][{}] {}",
-                time.format(&time_format).unwrap(),
-                record.target(),
-                record.level(),
-                message
-            ))
-        })
-        .chain(fern::log_file(target.chars().skip(1).collect::<String>())?)
-        .apply()?;
-    Ok(())
 }

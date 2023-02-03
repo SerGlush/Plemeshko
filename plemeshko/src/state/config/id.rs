@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::Result;
+use bytemuck::TransparentWrapper;
 use educe::Educe;
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +22,10 @@ use super::{prepare::Prepare, Config, ConfigIndexerMap, ConfigsLoadingContext};
 #[serde(transparent)]
 #[repr(transparent)]
 pub struct ConfigLabel<C>(pub(super) String, pub(super) PhantomData<C>);
+
+// SAFETY:
+// Has `#[repr(transparent)]` and the only ZST type is trivially constructible.
+unsafe impl<C> TransparentWrapper<String> for ConfigLabel<C> {}
 
 #[derive(Educe, Serialize, Deserialize)]
 #[educe(Hash, PartialEq, Eq, Debug, Clone)]
@@ -47,7 +52,7 @@ impl<C> ConfigLabel<C> {
 
 impl<C> FatConfigLabel<C> {
     pub fn config(&self) -> &ConfigLabel<C> {
-        unsafe { std::mem::transmute(&self.0 .1) }
+        ConfigLabel::wrap_ref(&self.0 .1)
     }
 
     pub fn into_config(self) -> ConfigLabel<C> {

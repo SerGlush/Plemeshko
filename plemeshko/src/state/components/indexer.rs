@@ -1,4 +1,5 @@
 use anyhow::Result;
+use bytemuck::TransparentWrapper;
 
 use crate::state::raw_indexer::RawIndexer;
 
@@ -13,7 +14,7 @@ impl ComponentIndexer {
     }
 
     pub fn label(&self, id: ComponentId) -> Result<&ComponentLabel> {
-        unsafe { std::mem::transmute(self.0.label(id.0)) }
+        self.0.label(id.0).map(ComponentLabel::wrap_ref)
     }
 
     pub fn indices(&self) -> impl Iterator<Item = ComponentSlotId> {

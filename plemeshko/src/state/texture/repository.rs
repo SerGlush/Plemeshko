@@ -79,10 +79,12 @@ impl TextureRepository {
         let mut file = std::fs::File::open(file)?;
         let meta = file.metadata()?;
         let mut buffer =
+            // SAFETY:
+            // Bit-pattern 0 is a valid value for `u8`.
             unsafe { Box::new_zeroed_slice(meta.len().try_into().unwrap()).assume_init() };
         file.read_exact(buffer.as_mut())?;
         self.textures.push(
-            RetainedImage::from_image_bytes(label, buffer.as_mut()).map_err(anyhow::Error::msg)?,
+            RetainedImage::from_image_bytes(label, buffer.as_ref()).map_err(anyhow::Error::msg)?,
         );
         Ok(())
     }

@@ -3,19 +3,16 @@ pub mod config;
 #[macro_use]
 pub mod serializable;
 pub mod components;
+pub mod has;
 pub mod label_factory;
 pub mod raw_indexer;
 pub mod text;
 pub mod texture;
 
-use std::{
-    borrow::{Borrow, Cow},
-    sync::{Mutex, RwLock},
-};
+use std::sync::{Mutex, RwLock};
 
 use anyhow::{anyhow, Context, Result};
 use egui_extras::RetainedImage;
-use fluent::FluentArgs;
 
 use crate::sim::{config::resource::ResourceId, RawSimSnapshot, Sim};
 
@@ -26,7 +23,6 @@ use self::{
     },
     config::FatConfigId,
     serializable::Serializable,
-    text::{FatTextId, TextIdRef},
     texture::FatTextureId,
 };
 
@@ -126,34 +122,7 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
     Ok((shared_st, app_st))
 }
 
-// todo: return TextId prefixed with ComponentLabel When text is not found
 impl AppState {
-    /// Retrieve text entry.
-    pub fn text<'a>(&'a self, id: &FatTextId) -> Result<Cow<'a, str>> {
-        self.components.component(id.0)?.text(id.1.borrow(), None)
-    }
-
-    /// Retrieve text entry from the core component.
-    pub fn text_core<'a>(&'a self, id: &str) -> Result<Cow<'a, str>> {
-        self.components
-            .component(ComponentId::core())?
-            .text(TextIdRef::from_str(id), None)
-    }
-
-    /// Format text entry using specified arguments.
-    pub fn text_fmt<'a>(&'a self, id: FatTextId, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
-        self.components
-            .component(id.0)?
-            .text(id.1.borrow(), Some(args))
-    }
-
-    /// Format text entry from the core component using specified arguments.
-    pub fn text_core_fmt<'a>(&'a self, id: &str, args: &'a FluentArgs<'_>) -> Result<Cow<'a, str>> {
-        self.components
-            .component(ComponentId::core())?
-            .text(TextIdRef::from_str(id), Some(args))
-    }
-
     pub fn texture(&self, id: FatTextureId) -> Result<&RetainedImage> {
         Ok(self
             .components

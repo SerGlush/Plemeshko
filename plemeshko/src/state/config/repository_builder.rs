@@ -94,8 +94,9 @@ impl ConfigRepositoryBuilder {
         // todo: when some cfg param enabled, vaidate that all ids point to existing configs
         // consider (on the same flag or another one) disabling cfg existence checks when retrieving by id
 
-        // should be safe because all `Raw` configs are prepared, and thus impl `Config` and `Send + Sync`
         Ok(ConfigRepository {
+            // SAFETY:
+            // Should be safe because all `Raw` configs are prepared, and thus impl `Config` and `Send + Sync`
             configs: unsafe {
                 std::mem::transmute::<
                     HashMap<TypeId, (Box<dyn Any>, _)>,

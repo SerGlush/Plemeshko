@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use anyhow::{anyhow, Result};
+use colored::Colorize;
 use fluent::FluentArgs;
 
 use crate::state::{
@@ -18,6 +19,8 @@ pub struct AppComponent {
 #[derive(Default)]
 pub struct AppComponents(pub(super) Vec<Option<AppComponent>>);
 
+// todo: return TextId prefixed with ComponentLabel When text is not found
+// (block: `text` method is in components, which don't know their names)
 impl AppComponent {
     pub fn text<'a>(
         &'a self,
@@ -26,7 +29,10 @@ impl AppComponent {
     ) -> Result<Cow<'a, str>> {
         self.texts.get(text_id, args).or_else(|e| match e {
             TextRetrievalError::NotFound(id) => {
-                log::warn!("Text retrieval failed for: {id}");
+                log::warn!(
+                    "Text retrieval failed for:\n{}",
+                    crate::log::colorize(&id, Colorize::magenta)
+                );
                 Ok(Cow::Owned(id))
             }
             e => Err(e.into()),

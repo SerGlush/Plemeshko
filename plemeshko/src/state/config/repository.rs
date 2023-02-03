@@ -120,6 +120,8 @@ impl<'a, C> Iterator for ConfigStorageIterMut<'a, C> {
         }
         let idx = self.1;
         self.1 += 1;
+        // SAFETY:
+        // Index grows monotonically, so each returned reference is different from previous.
         let cfg = unsafe { &mut *((&mut self.0 .0[idx]) as *mut _) };
         Some((ConfigId::new(idx.try_into().unwrap()), cfg))
     }

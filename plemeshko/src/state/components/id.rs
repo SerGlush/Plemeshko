@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use bytemuck::TransparentWrapper;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::ComponentsRef;
@@ -6,6 +7,10 @@ use super::ComponentsRef;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct ComponentLabel(pub(super) String);
+
+// SAFETY:
+// Has `#[repr(transparent)]` and only 1 field.
+unsafe impl TransparentWrapper<String> for ComponentLabel {}
 
 #[derive(Hash, PartialEq, Eq, Debug, Clone)]
 pub struct RawFatLabel(

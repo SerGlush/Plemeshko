@@ -64,7 +64,7 @@ pub fn run(mut app_st: AppState) -> ! {
         }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
-                if let Err(e) = gui.run(&window, |egui_ctx| app.gui(&mut app_st, egui_ctx)) {
+                if let Err(e) = gui.run(&window, |egui_ctx| app.ui(&mut app_st, egui_ctx)) {
                     *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
                     println!("App update error: {e:#}");
                     return;

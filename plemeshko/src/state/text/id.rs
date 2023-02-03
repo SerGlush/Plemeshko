@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 
+use bytemuck::TransparentWrapper;
 use serde::Deserialize;
 
 use crate::state::{components::ComponentId, label_factory::LabelFactory};
@@ -10,12 +11,20 @@ pub struct TextId(pub(super) String);
 #[repr(transparent)]
 pub struct TextIdRef(pub(super) str);
 
+// SAFETY:
+// Has `#[repr(transparent)]` and only 1 field.
+unsafe impl TransparentWrapper<str> for TextIdRef {}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FatTextId(pub ComponentId, pub TextId);
 
 #[derive(Default)]
 #[repr(transparent)]
 pub struct TextIdFactory(LabelFactory);
+
+// SAFETY:
+// Has `#[repr(transparent)]` and only 1 field.
+unsafe impl TransparentWrapper<LabelFactory> for TextIdFactory {}
 
 impl TextId {
     pub fn in_component(self, component_id: ComponentId) -> FatTextId {
@@ -28,8 +37,8 @@ impl TextIdRef {
         self.0.to_owned()
     }
 
-    pub(in crate::state) fn from_str(value: &str) -> &Self {
-        unsafe { std::mem::transmute(value) }
+    pub fn from_str(value: &str) -> &Self {
+        TextIdRef::wrap_ref(value)
     }
 }
 
@@ -44,7 +53,7 @@ impl TextIdFactory {
 
     /// See [`LabelFactory::with_lock`].
     pub fn with_lock<R>(&mut self, f: impl FnOnce(&mut TextIdFactory) -> R) -> R {
-        self.0.with_lock(|lf| unsafe { f(std::mem::transmute(lf)) })
+        self.0.with_lock(|lf| f(TextIdFactory::wrap_mut(lf)))
     }
 
     /// See [`LabelFactory::branch`].
@@ -55,7 +64,7 @@ impl TextIdFactory {
     /// See [`LabelFactory::with_branch`].
     pub fn with_branch<R>(&mut self, name: &str, f: impl FnOnce(&mut TextIdFactory) -> R) -> R {
         self.0
-            .with_branch(name, |lf| unsafe { f(std::mem::transmute(lf)) })
+            .with_branch(name, |lf| f(TextIdFactory::wrap_mut(lf)))
     }
 
     /// See [`LabelFactory::create`].
@@ -66,6 +75,6 @@ impl TextIdFactory {
 
 impl Borrow<TextIdRef> for TextId {
     fn borrow(&self) -> &TextIdRef {
-        unsafe { std::mem::transmute(self.0.as_str()) }
+        TextIdRef::from_str(self.0.as_str())
     }
 }

@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use bytemuck::TransparentWrapper;
 use educe::Educe;
 
 use crate::state::raw_indexer::RawIndexer;
@@ -38,9 +39,7 @@ impl ConfigIndexer {
     }
 
     pub fn label<C: Config>(&self, id: ConfigId<C>) -> Result<&ConfigLabel<C>> {
-        self.0
-            .label(id.0)
-            .map(|label| unsafe { std::mem::transmute(label) })
+        self.0.label(id.0).map(ConfigLabel::wrap_ref)
     }
 
     pub fn indices<C: Config>(&self) -> impl Iterator<Item = ConfigId<C>> {
