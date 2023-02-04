@@ -36,6 +36,17 @@ impl<Label: Hash + Eq, Id: Copy> RawIndexer<Label, Id> {
         }
     }
 
+    pub fn pop(&mut self) -> Option<(Label, Id)>
+    where
+        Label: Display,
+    {
+        let label = self.id_to_label.pop()?;
+        match self.label_to_id.remove(&label) {
+            Some(id) => Some((label, id)),
+            None => panic!("Label doesn't have corresponding id: {label}"),
+        }
+    }
+
     pub fn declare_id<L: ?Sized + ToOwned<Owned = Label> + Hash + Eq>(
         &mut self,
         label: Cow<'_, L>,

@@ -74,19 +74,23 @@ impl TextureRepository {
         Ok(())
     }
 
-    fn load_file<P: AsRef<Path>>(
-        &mut self,
-        buffer: &mut Vec<u8>,
-        label: String,
-        file: P,
-    ) -> Result<()> {
+    fn load_file(&mut self, buffer: &mut Vec<u8>, label: String, file: &Path) -> Result<()> {
         let index: usize = self.indexer.create_id(label.clone())?.try_into().unwrap();
-        assert_eq!(index, self.textures.len());
+        assert!(
+            index == self.textures.len(),
+            "Indexer created index corresponds to the next element in the storage."
+        );
         buffer.clear();
         std::fs::File::open(file)?.read_to_end(buffer)?;
-        self.textures.push(
-            RetainedImage::from_image_bytes(label, buffer.as_mut()).map_err(anyhow::Error::msg)?,
-        );
+        match RetainedImage::from_image_bytes(label, buffer.as_mut()) {
+            Ok(texture) => self.textures.push(texture),
+            Err(e) => {
+                log::warn!("Texture file '{}' loading failed: {e}", file.display());
+                self.indexer
+                    .pop()
+                    .expect("Indexer was empty when trying to remove entry which wasn't fulfilled");
+            }
+        }
         Ok(())
     }
 }
