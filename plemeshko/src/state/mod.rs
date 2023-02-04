@@ -82,12 +82,12 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
             )?);
         }
         Ok(false) => {
-            println!(
+            log::warn!(
                 "Skipping loading other components: Directory not found: {COMPONENTS_OTHER_DIR}"
             );
         }
         Err(e) => {
-            println!("Skipping loading other components: Error checking directory: {e}");
+            log::warn!("Skipping loading other components: Error checking directory: {e}");
         }
     }
     component_loader.finalize(components_changed, &mut shared_comps)?;

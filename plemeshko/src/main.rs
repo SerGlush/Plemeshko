@@ -41,7 +41,7 @@ fn main() -> Result<()> {
                 {
                     let mut sim = shared_st.sim.lock().unwrap();
                     let Some(sim) = sim.as_mut() else {
-                        println!("Sim is None");
+                        log::error!("Can't continue simulation: is `None`");
                         break;
                     };
                     if sim.exited() {
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
                     match step_result {
                         Ok(_) => (),
                         Err(e) => {
-                            println!("Sim error: {e:#}");
+                            log::error!("Simulation error: {e:#}");
                             // todo: signal to the ui when step fails
                             break;
                         }

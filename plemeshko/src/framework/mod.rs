@@ -56,7 +56,7 @@ pub fn run(mut app_st: AppState) -> ! {
                 Ok(_) => (),
                 Err(e) => {
                     *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
-                    println!("App update error: {e}");
+                    log::error!("App update error: {e}");
                     return;
                 }
             }
@@ -66,7 +66,7 @@ pub fn run(mut app_st: AppState) -> ! {
             if window_id == window.id() {
                 if let Err(e) = gui.run(&window, |egui_ctx| app.ui(&mut app_st, egui_ctx)) {
                     *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
-                    println!("App update error: {e:#}");
+                    log::error!("App ui error: {e:#}");
                     return;
                 }
                 match graphics.new_frame() {
