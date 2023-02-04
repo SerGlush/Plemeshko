@@ -21,7 +21,7 @@ impl TextureRepository {
     pub fn from_directory<P: AsRef<Path>>(directory: P) -> Result<Self> {
         let mut repo = Self::new();
         let mut lf = LabelFactory::new();
-        repo.load_directory(&mut lf, directory)?;
+        repo.load_directory(&mut Vec::new(), &mut lf, directory)?;
         Ok(repo)
     }
 
@@ -40,6 +40,7 @@ impl TextureRepository {
 
     fn load_directory<P: AsRef<Path>>(
         &mut self,
+        buffer: &mut Vec<u8>,
         lf: &mut LabelFactory,
         directory: P,
     ) -> Result<()> {
@@ -63,28 +64,28 @@ impl TextureRepository {
                 .to_string_lossy();
             if dir_entry_path.is_dir() {
                 lf.with_branch(&dir_entry_name, |lf| {
-                    self.load_directory(lf, &dir_entry_path)
+                    self.load_directory(buffer, lf, &dir_entry_path)
                 })?;
             } else if dir_entry_path.is_file() {
                 let label = lf.create(&dir_entry_name);
-                self.load_file(label, &dir_entry_path)?;
+                self.load_file(buffer, label, &dir_entry_path)?;
             }
         }
         Ok(())
     }
 
-    fn load_file<P: AsRef<Path>>(&mut self, label: String, file: P) -> Result<()> {
+    fn load_file<P: AsRef<Path>>(
+        &mut self,
+        buffer: &mut Vec<u8>,
+        label: String,
+        file: P,
+    ) -> Result<()> {
         let index: usize = self.indexer.create_id(label.clone())?.try_into().unwrap();
         assert_eq!(index, self.textures.len());
-        let mut file = std::fs::File::open(file)?;
-        let meta = file.metadata()?;
-        let mut buffer =
-            // SAFETY:
-            // Bit-pattern 0 is a valid value for `u8`.
-            unsafe { Box::new_zeroed_slice(meta.len().try_into().unwrap()).assume_init() };
-        file.read_exact(buffer.as_mut())?;
+        buffer.clear();
+        std::fs::File::open(file)?.read_to_end(buffer)?;
         self.textures.push(
-            RetainedImage::from_image_bytes(label, buffer.as_ref()).map_err(anyhow::Error::msg)?,
+            RetainedImage::from_image_bytes(label, buffer.as_mut()).map_err(anyhow::Error::msg)?,
         );
         Ok(())
     }
