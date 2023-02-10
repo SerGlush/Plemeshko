@@ -22,5 +22,6 @@
             "active": 4,
             "reserve_export_threshold": 1
         }
-    ]
+    ],
+    "nutrition": 100
 }

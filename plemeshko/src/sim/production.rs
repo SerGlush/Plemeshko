@@ -128,6 +128,7 @@ impl Production {
         &self.state.transport
     }
 
+    /// production building size
     pub fn count(&self) -> u32 {
         self.state.count
     }
@@ -144,7 +145,6 @@ impl Production {
     }
 
     pub fn set_active(&mut self, active: u32) {
-        // let delta = active - self.active;
         self.state.active = active;
     }
 
