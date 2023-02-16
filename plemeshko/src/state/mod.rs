@@ -29,6 +29,7 @@ use self::{
 const COMPONENTS_OTHER_DIR: &str = "mods";
 const COMPONENT_CORE_DIR: &str = "core";
 const RESOURCE_LABEL_HUMAN: &str = "human";
+const RESOURCE_LABEL_FOOD: &str = "food";
 
 /// State shared between threads (ui/simulation).
 /// Resides behind an immutable reference.
@@ -38,6 +39,7 @@ pub struct SharedState {
     pub components: RwLock<SharedComponents>,
     pub sim: Mutex<Option<Sim>>,
     pub human_id: ResourceId,
+    pub food_id: ResourceId,
 }
 
 pub struct AppState {
@@ -96,6 +98,11 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
         .core()?
         .configs
         .id_from_raw(RESOURCE_LABEL_HUMAN)?;
+        
+    let food_id = shared_comps
+        .core()?
+        .configs
+        .id_from_raw(RESOURCE_LABEL_FOOD)?;
 
     let sim = {
         let comps = ComponentsRef {
@@ -105,10 +112,12 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
         };
         load_sim(comps).with_context(|| "Error reading Sim snapshot")?
     };
+
     let shared_st: &SharedState = Box::leak(Box::new(SharedState {
         components: RwLock::new(shared_comps),
         sim: Mutex::new(Some(sim)),
         human_id: FatConfigId::new_core(human_id),
+        food_id: FatConfigId::new_core(food_id),
     }));
     let app_st = AppState {
         shared: shared_st,

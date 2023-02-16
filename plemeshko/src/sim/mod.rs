@@ -2,34 +2,38 @@ pub mod config;
 pub mod production;
 pub mod units;
 
-use std::{time::Duration, ops::Deref};
+use std::{cmp::Ordering, ops::Deref, time::Duration};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tap::{Conv, TryConv};
 
-use crate::state::{
-    components::{ComponentsRef, SharedComponents},
-    serializable::Serializable,
-    SharedState,
+use crate::{
+    state::{
+        components::{ComponentsRef, SharedComponents},
+        serializable::Serializable,
+        SharedState,
+    },
+    util::cor::Cor,
 };
 
 use self::{
     config::resource::{RawResourceMap, ResourceMap},
-    production::{Production, ProductionSnapshot, RawProductionSnapshot},
+    production::{Production, ProductionSnapshot, RawProductionSnapshot}, units::ResourceAmount,
 };
 
 #[derive(Serialize, Deserialize)]
 pub struct RawSimSnapshot {
     depot: RawResourceMap,
     productions: Vec<RawProductionSnapshot>,
-    nutrition: i32,
+    nutrition: i16,
 }
 
 pub struct SimSnapshot {
     depot: ResourceMap,
     productions: Vec<ProductionSnapshot>,
 
-    nutrition: i32,
+    nutrition: i16,
 }
 
 pub struct Sim {
@@ -37,7 +41,7 @@ pub struct Sim {
     pub productions: Vec<Production>,
     exited: bool,
 
-    pub nutrition: i32,
+    pub nutrition: i16,
 }
 
 impl Sim {
@@ -45,7 +49,11 @@ impl Sim {
     pub const TICK_THRESHOLD: Duration = Duration::from_millis(1);
 
     pub fn restore(shared_comps: &SharedComponents, snapshot: SimSnapshot) -> anyhow::Result<Self> {
-        let SimSnapshot { depot, productions, nutrition } = snapshot;
+        let SimSnapshot {
+            depot,
+            productions,
+            nutrition,
+        } = snapshot;
         Ok(Sim {
             depot,
             productions: productions
@@ -88,7 +96,39 @@ impl Sim {
             panic!("Sim is in exiting state when step was called");
         }
 
+        self.nutrition -= 10;
+
         let population = self.depot.get(&env.human_id).copied().unwrap_or_default();
+        let mut depot_food = self.depot.get(&env.food_id).copied().unwrap_or_default();
+
+        // (100 - 90) * 8 / 10 = 8;
+        // 8 * 100 = 800
+        // 400
+        // 400 * 10 / 800 = 5;
+
+        let food_need_value = (100 - self.nutrition) * 8 / 10;
+        let mut food_needed = food_need_value.conv::<i64>() * population.0;
+        let food_eaten = match depot_food.0.cmp(&food_needed) {
+            Ordering::Less => {
+                let nutr_eaten = depot_food.0;
+                depot_food.0 = 0;
+                nutr_eaten
+            }
+            Ordering::Equal => {
+                depot_food.0 = 0;
+                food_needed
+            }
+            Ordering::Greater => {
+                depot_food.0 -= food_needed;
+                food_needed
+            }
+        };
+
+        self.nutrition += (food_eaten * 10 / food_needed).try_conv::<i16>().unwrap();
+        self.depot.cor_put(
+            &env.human_id,
+            ResourceAmount((population.0 as f64 * ((self.nutrition - 50) as f64 / 10000.0)) as i64)
+        );
 
         for i in 0..self.productions.len() {
             self.productions[i].step(env, &mut self.depot)?;
