@@ -39,6 +39,7 @@ impl Widget for MainScreenInfoTab {
                     .to_string(),
             );
             ui.label(app_st.text_core_fmt("ui_main_info_population", &args)?);
+            ui.label(sim.nutrition.to_string());
         }
         for (&id, value) in sim.depot.iter() {
             if id != app_st.shared.human_id {

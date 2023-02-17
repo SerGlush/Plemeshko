@@ -1,7 +1,7 @@
 {
     "depot": {
-        "/human": 100,
-        "/food": 10000
+        "/human": 80,
+        "/food": 0
     },
     "productions": [
         {
@@ -18,10 +18,11 @@
                 "/solid": "/manual"
             },
             "storage": {},
-            "count": 4,
-            "active": 4,
+            "count": 10,
+            "active": 10,
             "reserve_export_threshold": 1
         }
     ],
-    "nutrition": 100
+    "nutrition": 100,
+    "pop_growth_stack": 0
 }
