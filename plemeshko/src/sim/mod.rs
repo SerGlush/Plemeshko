@@ -119,7 +119,7 @@ impl Sim {
         let population = self.depot.get(&env.human_id).copied().unwrap_or_default();
         let mut depot_food = self.depot.get(&env.food_id).copied().unwrap_or_default();
         let food_need_value = (100 - self.nutrition) * 8 / 10;
-        let food_needed = food_need_value.conv::<i64>() * population.0;
+        let food_needed = food_need_value * population.0;
         let food_eaten = match depot_food.0.cmp(&food_needed) {
             Ordering::Less => {
                 let nutr_eaten = depot_food.0;
@@ -136,7 +136,7 @@ impl Sim {
             }
         };
 
-        let mut nutrition_increase = (10 * food_eaten) as f64 / food_needed as f64;
+        let mut nutrition_increase = (10 * food_eaten) as f64 / (8.0 * population.0 as f64);
         self.nutrition += nutrition_increase.floor() as i64;
         nutrition_increase -= nutrition_increase.floor();
         if random::<f64>() < nutrition_increase {

@@ -23,6 +23,6 @@
             "reserve_export_threshold": 1
         }
     ],
-    "nutrition": 100,
+    "nutrition": 80,
     "pop_growth_stack": 0
 }
