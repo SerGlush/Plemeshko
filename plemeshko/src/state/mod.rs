@@ -98,7 +98,7 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
         .core()?
         .configs
         .id_from_raw(RESOURCE_LABEL_HUMAN)?;
-        
+
     let food_id = shared_comps
         .core()?
         .configs
