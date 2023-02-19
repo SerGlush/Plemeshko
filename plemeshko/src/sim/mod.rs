@@ -42,9 +42,11 @@ pub struct SimSnapshot {
 }
 
 pub struct Sim {
+    exited: bool,
+    state_changed: bool,
+
     pub depot: ResourceMap,
     pub productions: Vec<Production>,
-    exited: bool,
 
     pub nutrition: i64,
     pub pop_growth_stack: f64,
@@ -62,12 +64,13 @@ impl Sim {
             pop_growth_stack,
         } = snapshot;
         Ok(Sim {
+            exited: false,
+            state_changed: false,
             depot,
             productions: productions
                 .into_iter()
                 .map(|s| Production::restore(shared_comps, s))
                 .try_collect()?,
-            exited: false,
             nutrition,
             pop_growth_stack,
         })
@@ -84,9 +87,10 @@ impl Sim {
 
     pub fn new() -> Self {
         Sim {
+            state_changed: false,
+            exited: false,
             depot: ResourceMap::new(),
             productions: Vec::new(),
-            exited: false,
             nutrition: 100,
             pop_growth_stack: 0.0,
         }
@@ -99,6 +103,10 @@ impl Sim {
     pub fn exit(&mut self) {
         self.exited = true;
         // todo: finalization code, mb dropping resources / saving state
+    }
+
+    pub fn handle_state_changed(&mut self) -> bool {
+        std::mem::take(&mut self.state_changed)
     }
 
     pub fn step(&mut self, env: &SharedState) -> anyhow::Result<()> {
@@ -160,6 +168,7 @@ impl Sim {
 
         self.pop_growth_stack -= self.pop_growth_stack.ceil();
 
+        self.state_changed = true;
         Ok(())
     }
 }

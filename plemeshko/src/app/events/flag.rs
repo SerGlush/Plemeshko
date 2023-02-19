@@ -19,4 +19,8 @@ impl FlagEvent {
     pub fn get(&self) -> bool {
         self.0.get()
     }
+
+    pub fn take(&self) -> bool {
+        self.0.take()
+    }
 }
