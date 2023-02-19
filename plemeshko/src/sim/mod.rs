@@ -2,12 +2,12 @@ pub mod config;
 pub mod production;
 pub mod units;
 
-use std::{cmp::Ordering, ops::Deref, time::Duration};
+use std::{cmp::Ordering, time::Duration};
 
 use anyhow::Result;
 use rand::random;
+use rodio::Source;
 use serde::{Deserialize, Serialize};
-use tap::{Conv, TryConv};
 
 use crate::{
     state::{
@@ -77,8 +77,8 @@ impl Sim {
         SimSnapshot {
             depot: self.depot.clone(),
             productions: self.productions.iter().map(Production::snapshot).collect(),
-            nutrition: self.nutrition.clone(),
-            pop_growth_stack: self.pop_growth_stack.clone(),
+            nutrition: self.nutrition,
+            pop_growth_stack: self.pop_growth_stack,
         }
     }
 
@@ -102,6 +102,12 @@ impl Sim {
     }
 
     pub fn step(&mut self, env: &SharedState) -> anyhow::Result<()> {
+        env.play_sfx(
+            rodio::source::SineWave::new(440.0)
+                .take_duration(std::time::Duration::from_millis(300))
+                .amplify(0.2),
+        );
+
         if self.exited {
             panic!("Sim is in exiting state when step was called");
         }
@@ -143,7 +149,6 @@ impl Sim {
             self.nutrition += 1;
         }
 
-        println!("{}, {}", food_eaten, food_needed);
         self.pop_growth_stack += population.0 as f64 * ((self.nutrition - 50) as f64 / 10000.0);
 
         self.depot.cor_put(

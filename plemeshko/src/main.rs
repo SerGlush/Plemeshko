@@ -32,7 +32,7 @@ mod sim;
 
 fn main() -> Result<()> {
     crate::log::initialize_log().context("Initializing log")?;
-    let (shared_st, app_st) = initialize_state().context("Initializing state")?;
+    let (_audio_stream, shared_st, app_st) = initialize_state().context("Initializing state")?;
     std::thread::scope(|thread_scope| {
         thread_scope.spawn(|| {
             let mut tick_delay = Sim::TICK_DELAY;

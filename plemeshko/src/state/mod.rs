@@ -6,6 +6,7 @@ pub mod components;
 pub mod has;
 pub mod label_factory;
 pub mod raw_indexer;
+pub mod sound;
 pub mod text;
 pub mod texture;
 
@@ -38,6 +39,7 @@ const RESOURCE_LABEL_FOOD: &str = "food";
 pub struct SharedState {
     pub components: RwLock<SharedComponents>,
     pub sim: Mutex<Option<Sim>>,
+    pub audio: Option<Audio>,
     pub human_id: ResourceId,
     pub food_id: ResourceId,
 }
@@ -47,6 +49,11 @@ pub struct AppState {
     pub components: AppComponents,
     pub component_loader: ComponentLoader,
     fallback_texture: RetainedImage,
+}
+
+pub struct Audio {
+    stream_handle: rodio::OutputStreamHandle,
+    sink_sfx: rodio::Sink,
 }
 
 fn load_sim(comps: ComponentsRef<'_>) -> anyhow::Result<Sim> {
@@ -65,7 +72,7 @@ fn load_sim(comps: ComponentsRef<'_>) -> anyhow::Result<Sim> {
 }
 
 /// Create environments and load core component
-pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
+pub fn initialize_state() -> Result<(Option<rodio::OutputStream>, &'static SharedState, AppState)> {
     let mut shared_comps = SharedComponents::default();
     let mut app_comps = AppComponents::default();
     let mut component_loader = ComponentLoader::new()?;
@@ -113,9 +120,12 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
         load_sim(comps).with_context(|| "Error reading Sim snapshot")?
     };
 
+    let (audio_stream, audio_handle) = Audio::new();
+
     let shared_st: &SharedState = Box::leak(Box::new(SharedState {
         components: RwLock::new(shared_comps),
         sim: Mutex::new(Some(sim)),
+        audio: audio_handle,
         human_id: FatConfigId::new_core(human_id),
         food_id: FatConfigId::new_core(food_id),
     }));
@@ -128,7 +138,7 @@ pub fn initialize_state() -> Result<(&'static SharedState, AppState)> {
             egui::ColorImage::example(),
         ),
     };
-    Ok((shared_st, app_st))
+    Ok((audio_stream, shared_st, app_st))
 }
 
 impl AppState {
@@ -153,5 +163,53 @@ impl AppState {
         core_textures
             .get(id)
             .ok_or_else(|| anyhow!("Invalid associated label's id: {label}"))
+    }
+}
+
+impl SharedState {
+    pub fn play_sfx<S>(&self, source: S)
+    where
+        S: rodio::Source + Send + 'static,
+        f32: rodio::cpal::FromSample<S::Item>,
+        S::Item: rodio::Sample + Send,
+    {
+        if let Some(audio) = &self.audio {
+            audio.play_sfx(source);
+        }
+    }
+}
+
+impl Audio {
+    pub fn new() -> (Option<rodio::OutputStream>, Option<Self>) {
+        let (stream, stream_handle) = match rodio::OutputStream::try_default() {
+            Ok(stream) => stream,
+            Err(e) => {
+                log::warn!("Couldn't initialize audio output stream: {e}");
+                return (None, None);
+            }
+        };
+        let sink_sfx = match rodio::Sink::try_new(&stream_handle) {
+            Ok(sink) => sink,
+            Err(e) => {
+                log::warn!("Couldn't initialize audio sfx sink: {e}");
+                return (None, None);
+            }
+        };
+        (
+            Some(stream),
+            Some(Audio {
+                stream_handle,
+                sink_sfx,
+            }),
+        )
+    }
+
+    pub fn play_sfx<S>(&self, source: S)
+    where
+        S: rodio::Source + Send + 'static,
+        f32: rodio::cpal::FromSample<S::Item>,
+        S::Item: rodio::Sample + Send,
+    {
+        self.sink_sfx.append(source);
     }
 }

@@ -17,6 +17,7 @@ unic-langid = { version = "0.9", features = ["macros"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 image = { version = "0.24", default-features = false, features = ["jpeg", "png", "webp"] }
+rodio = "0.17"
 log = "0.4"
 fern = { version = "0.6", features = ["colored"] }
 colored = "2.0"
