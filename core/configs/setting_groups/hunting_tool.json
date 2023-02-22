@@ -15,7 +15,7 @@
     },
     {
         "tag": "setting",
-        "label": "stone-instruments",
+        "label": "stone-spears",
         "payload": {
             "group": "hunting-tool",
             "input": {

@@ -1,0 +1,23 @@
+[
+    {
+        "tag": "setting",
+        "label": "stone-instruments",
+        "payload": {
+            "group": "instrument-material",
+            "input": {
+                "human": 8,
+                "stone": 20,
+                "wood": 4
+            },
+            "output": {
+                "human": 8,
+                "stone-instrument": 10
+            }
+        }
+    },
+    {
+        "tag": "setting-group",
+        "label": "instrument-material",
+        "payload": {}
+    }
+]

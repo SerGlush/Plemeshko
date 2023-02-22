@@ -1,14 +1,17 @@
 {
     "depot": {
         "/human": 80,
-        "/food": 0
+        "/food": 0,
+        "/wood-log": 0,
+        "/stone": 0,
+        "/stone-instruments": 0
     },
     "productions": [
         {
             "name": "Hunting House",
             "selected_methods": [
                 {
-                    "label": "/hunt-animals",
+                    "label": "/hunting-animals",
                     "settings": [
                         "/sticks-and-rocks"
                     ]

@@ -17,6 +17,22 @@
     },
     {
         "tag": "resource",
+        "label": "wood-log",
+        "payload": {
+            "transport_group": "solid",
+            "transport_weight": 20
+        }
+    },
+    {
+        "tag": "resource",
+        "label": "stone",
+        "payload": {
+            "transport_group": "solid",
+            "transport_weight": 2
+        }
+    },
+    {
+        "tag": "resource",
         "label": "stone-instrument",
         "payload": {
             "transport_group": "solid",

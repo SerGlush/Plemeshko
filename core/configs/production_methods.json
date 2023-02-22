@@ -1,10 +1,28 @@
 [
     {
         "tag": "production-method",
-        "label": "hunt-animals",
+        "label": "hunting-animals",
         "payload": {
             "setting_groups": [
                 "hunting-tool"
+            ]
+        }
+    },
+    {
+        "tag": "production-method",
+        "label": "handicraft-production",
+        "payload": {
+            "setting_groups": [
+                "instrument-material"
+            ]
+        }
+    },
+    {
+        "tag": "production-method",
+        "label": "nature-gathering",
+        "payload": {
+            "setting_groups": [
+                "resource_focus"
             ]
         }
     }

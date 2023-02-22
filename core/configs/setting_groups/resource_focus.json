@@ -1,0 +1,23 @@
+[
+    {
+        "tag": "setting",
+        "label": "basic-materials",
+        "payload": {
+            "group": "resource-focus",
+            "input": {
+                "human": 8
+            },
+            "output": {
+                "human": 8,
+                "wood-log": 12,
+                "stone": 32,
+                "food": 48
+            }
+        }
+    },
+    {
+        "tag": "setting-group",
+        "label": "resource-focus",
+        "payload": {}
+    }
+]

@@ -4,7 +4,25 @@
         "label": "food-production",
         "payload": {
             "variants": [
-                "hunt-animals"
+                "hunting-animals"
+            ]
+        }
+    },
+    {
+        "tag": "production-method-group",
+        "label": "tool-production",
+        "payload": {
+            "variants": [
+                "handicraft-production"
+            ]
+        }
+    },
+    {
+        "tag": "production-method-group",
+        "label": "resource-gathering",
+        "payload": {
+            "variants": [
+                "nature-gathering"
             ]
         }
     }
