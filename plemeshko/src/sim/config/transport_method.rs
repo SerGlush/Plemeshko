@@ -21,6 +21,7 @@ pub struct RawTransportMethod {
     pub ui_priority: u32,
 }
 
+#[derive(Debug)]
 pub struct TransportMethod {
     pub name: FatTextId,
     pub group: TransportGroupId,

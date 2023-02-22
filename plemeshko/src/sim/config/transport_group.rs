@@ -11,6 +11,7 @@ use super::transport_method::{TransportMethod, TransportMethodId};
 #[derive(Deserialize)]
 pub struct RawTransportGroup {}
 
+#[derive(Debug)]
 pub struct TransportGroup {
     pub name: FatTextId,
     pub transports: Vec<TransportMethodId>,

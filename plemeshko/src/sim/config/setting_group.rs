@@ -12,6 +12,7 @@ use super::setting::{Setting, SettingId};
 #[derive(Deserialize)]
 pub struct RawSettingGroup {}
 
+#[derive(Debug)]
 pub struct SettingGroup {
     pub settings: Vec<SettingId>,
 }

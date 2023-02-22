@@ -40,7 +40,7 @@ impl ConfigTypeRegistry {
         ConfigTypeRegistry::default()
     }
 
-    pub fn register<C: Config>(&mut self) -> Result<()> {
+    pub fn register<C: Config + std::fmt::Debug>(&mut self) -> Result<()> {
         let type_id = TypeId::of::<C>();
         self.type_map
             .try_insert(
@@ -94,7 +94,7 @@ fn parse_adding_to_any_store<C: Config>(
         })
 }
 
-fn label_map_to_id_map<C: Config>(
+fn label_map_to_id_map<C: Config + std::fmt::Debug>(
     ctx: &mut ConfigsLoadingContext<'_>,
     label_map: Box<dyn Any>,
 ) -> Result<Box<AnySendSync>> {
@@ -109,6 +109,7 @@ fn label_map_to_id_map<C: Config>(
         let prepared_config = raw_config.prepare(ctx, &mut tif)?;
         let id = ctx.st.declare_id(Cow::Borrowed(&label))?;
         let index: usize = id.0.try_into().unwrap();
+        println!("{} ALLAH {configs:?}\n", type_name::<C>());
         let stored_config = configs
             .get_mut(index)
             .ok_or_else(|| anyhow!("Config not found: {}", label.0))?;

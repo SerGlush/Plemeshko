@@ -13,6 +13,7 @@ pub struct RawProductionMethodGroup {
     pub variants: Vec<FatConfigLabel<ProductionMethod>>,
 }
 
+#[derive(Debug)]
 pub struct ProductionMethodGroup {
     pub name: FatTextId,
     pub variants: Vec<ProductionMethodId>,

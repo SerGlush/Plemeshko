@@ -4,7 +4,7 @@
         "/food": 0,
         "/wood-log": 0,
         "/stone": 0,
-        "/stone-instruments": 0
+        "/stone-instrument": 0
     },
     "productions": [
         {

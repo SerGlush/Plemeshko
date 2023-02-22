@@ -24,6 +24,7 @@ pub struct RawSetting {
     pub time_to_complete: Ticks,
 }
 
+#[derive(Debug)]
 pub struct Setting {
     pub name: FatTextId,
     pub group: SettingGroupId,

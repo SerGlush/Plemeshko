@@ -18,6 +18,7 @@ pub struct RawProductionMethod {
     pub setting_groups: Vec<FatConfigLabel<SettingGroup>>,
 }
 
+#[derive(Debug)]
 pub struct ProductionMethod {
     pub name: FatTextId,
     pub setting_groups: Vec<SettingGroupId>,
