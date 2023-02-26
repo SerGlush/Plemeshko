@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::{
     components::{ComponentId, ComponentsRef, RawFatLabel},
+    raw_indexer::IndexerClosedError,
     serializable::Serializable,
     text::TextIdFactory,
 };
@@ -125,7 +126,10 @@ impl<C: Config> Prepare for FatConfigLabel<C> {
                 FatConfigId(comp_id, cfg_id)
             }
             None => {
-                let cfg_id = ctx.st.declare_id(Cow::Owned(self.into_config()))?;
+                let cfg_id = ctx.st.declare_id(Cow::Owned(self.into_config())).map_err(|e| match e.downcast_ref::<IndexerClosedError>() {
+                    Some(IndexerClosedError(label)) => anyhow::anyhow!("Reference to config found *after* all component's configs were loaded: {label}"),
+                    None => e,
+                })?;
                 FatConfigId(ctx.this_component.id(), cfg_id)
             }
         })

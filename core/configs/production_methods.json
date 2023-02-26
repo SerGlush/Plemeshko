@@ -22,7 +22,7 @@
         "label": "nature-gathering",
         "payload": {
             "setting_groups": [
-                "resource_focus"
+                "resource-focus"
             ]
         }
     }

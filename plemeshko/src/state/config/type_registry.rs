@@ -1,6 +1,7 @@
 use std::{
     any::{type_name, Any, TypeId},
     borrow::Cow,
+    cmp::Ordering,
     collections::HashMap,
 };
 
@@ -109,18 +110,37 @@ fn label_map_to_id_map<C: Config + std::fmt::Debug>(
         let prepared_config = raw_config.prepare(ctx, &mut tif)?;
         let id = ctx.st.declare_id(Cow::Borrowed(&label))?;
         let index: usize = id.0.try_into().unwrap();
-        println!("{} ALLAH {configs:?}\n", type_name::<C>());
-        let stored_config = configs
-            .get_mut(index)
-            .ok_or_else(|| anyhow!("Config not found: {}", label.0))?;
-        if stored_config.is_some() {
-            bail!("Config at id initilized twice: {}", index);
+        match index.cmp(&configs.len()) {
+            Ordering::Less => {
+                let stored_config = configs
+                    .get_mut(index)
+                    .ok_or_else(|| anyhow!("Config not found: {}", label.0))?;
+                if stored_config.is_some() {
+                    bail!("Config at id initilized twice: {}", index);
+                }
+                *stored_config = Some(prepared_config);
+            }
+            Ordering::Equal => configs.push(Some(prepared_config)),
+            Ordering::Greater => panic!("Config indexer produced invalid ID."),
         }
-        *stored_config = Some(prepared_config);
     }
-    let configs = configs
-        .into_iter()
-        .try_collect::<Vec<C>>()
-        .ok_or_else(|| anyhow!("Config storage not fully initialized: {}", type_name::<C>()))?; // todo: index reporting
+    let indexer = &mut ctx.st.get_mut(&TypeId::of::<C>()).unwrap().1;
+    indexer.close();
+    let mut uninit_labels = String::new();
+    for (index, config) in configs.iter().enumerate() {
+        if config.is_some() {
+            continue;
+        }
+        if !uninit_labels.is_empty() {
+            uninit_labels += ", ";
+        }
+        uninit_labels += indexer
+            .label(super::ConfigId::<C>::new(index as super::RawConfigId))
+            .map_or("<???>", |x| &x.0);
+    }
+    if !uninit_labels.is_empty() {
+        bail!("Configs referenced but not loaded: {uninit_labels}");
+    }
+    let configs = configs.into_iter().try_collect::<Vec<C>>().unwrap();
     Ok(Box::new(ConfigArray(configs)))
 }

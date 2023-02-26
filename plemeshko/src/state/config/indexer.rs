@@ -31,11 +31,11 @@ impl ConfigIndexer {
         Ok(ConfigId::new(self.0.id(label)?))
     }
 
-    pub fn declare_id<C: Config>(&mut self, label: Cow<'_, ConfigLabel<C>>) -> ConfigId<C> {
-        ConfigId::new(self.0.declare_id(match label {
+    pub fn declare_id<C: Config>(&mut self, label: Cow<'_, ConfigLabel<C>>) -> Result<ConfigId<C>> {
+        Ok(ConfigId::new(self.0.declare_id(match label {
             Cow::Borrowed(label) => Cow::Borrowed(&label.0),
             Cow::Owned(label) => Cow::Owned(label.0),
-        }))
+        })?))
     }
 
     pub fn label<C: Config>(&self, id: ConfigId<C>) -> Result<&ConfigLabel<C>> {
@@ -44,6 +44,14 @@ impl ConfigIndexer {
 
     pub fn indices<C: Config>(&self) -> impl Iterator<Item = ConfigId<C>> {
         (0..self.0.id_to_label.len()).map(|i| ConfigId::new(i.try_into().unwrap()))
+    }
+
+    pub(super) fn close(&mut self) {
+        self.0.closed = true;
+    }
+
+    pub(super) fn open(&mut self) {
+        self.0.closed = false;
     }
 
     pub(super) fn report_id<C: Config>(&self, id: ConfigId<C>) -> String {
@@ -59,11 +67,10 @@ pub trait ConfigIndexerMap {
 
 impl<T> ConfigIndexerMap for HashMap<TypeId, (T, ConfigIndexer)> {
     fn declare_id<C: Config>(&mut self, label: Cow<'_, ConfigLabel<C>>) -> Result<ConfigId<C>> {
-        Ok(self
-            .get_mut(&TypeId::of::<C>())
+        self.get_mut(&TypeId::of::<C>())
             .ok_or_else(|| anyhow!("Storage not found for config type: {}", type_name::<C>()))?
             .1
-            .declare_id(label))
+            .declare_id(label)
     }
 
     fn id_from_raw<C: Config>(&self, label: &str) -> Result<ConfigId<C>> {
