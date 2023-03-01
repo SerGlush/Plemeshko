@@ -23,6 +23,10 @@ impl ConfigIndexer {
         ConfigIndexer::default()
     }
 
+    pub fn len(&self) -> usize {
+        self.0.id_to_label.len()
+    }
+
     pub fn id<C: Config>(&self, label: &ConfigLabel<C>) -> Result<ConfigId<C>> {
         self.id_from_raw(&label.0)
     }
@@ -44,14 +48,6 @@ impl ConfigIndexer {
 
     pub fn indices<C: Config>(&self) -> impl Iterator<Item = ConfigId<C>> {
         (0..self.0.id_to_label.len()).map(|i| ConfigId::new(i.try_into().unwrap()))
-    }
-
-    pub(super) fn close(&mut self) {
-        self.0.closed = true;
-    }
-
-    pub(super) fn open(&mut self) {
-        self.0.closed = false;
     }
 
     pub(super) fn report_id<C: Config>(&self, id: ConfigId<C>) -> String {

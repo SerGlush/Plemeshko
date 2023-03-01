@@ -1,7 +1,6 @@
 use std::{
     any::{type_name, Any, TypeId},
     borrow::Cow,
-    cmp::Ordering,
     collections::HashMap,
 };
 
@@ -110,22 +109,15 @@ fn label_map_to_id_map<C: Config + std::fmt::Debug>(
         let prepared_config = raw_config.prepare(ctx, &mut tif)?;
         let id = ctx.st.declare_id(Cow::Borrowed(&label))?;
         let index: usize = id.0.try_into().unwrap();
-        match index.cmp(&configs.len()) {
-            Ordering::Less => {
-                let stored_config = configs
-                    .get_mut(index)
-                    .ok_or_else(|| anyhow!("Config not found: {}", label.0))?;
-                if stored_config.is_some() {
-                    bail!("Config at id initilized twice: {}", index);
-                }
-                *stored_config = Some(prepared_config);
-            }
-            Ordering::Equal => configs.push(Some(prepared_config)),
-            Ordering::Greater => panic!("Config indexer produced invalid ID."),
+        while index >= configs.len() {
+            configs.push(None);
         }
+        configs[index] = Some(prepared_config);
     }
-    let indexer = &mut ctx.st.get_mut(&TypeId::of::<C>()).unwrap().1;
-    indexer.close();
+    let indexer = &ctx.st.get(&TypeId::of::<C>()).unwrap().1;
+    while configs.len() < indexer.len() {
+        configs.push(None);
+    }
     let mut uninit_labels = String::new();
     for (index, config) in configs.iter().enumerate() {
         if config.is_some() {

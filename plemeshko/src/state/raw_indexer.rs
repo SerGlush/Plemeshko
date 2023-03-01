@@ -11,13 +11,9 @@ use educe::Educe;
 #[derive(Educe)]
 #[educe(Default)]
 pub struct RawIndexer<Label, Id> {
-    pub closed: bool,
     pub label_to_id: HashMap<Label, Id>,
     pub id_to_label: Vec<Label>,
 }
-
-#[derive(Debug)]
-pub struct IndexerClosedError(pub String);
 
 impl<Label: Hash + Eq + Into<String>, Id: Copy> RawIndexer<Label, Id> {
     pub fn new() -> Self {
@@ -29,9 +25,6 @@ impl<Label: Hash + Eq + Into<String>, Id: Copy> RawIndexer<Label, Id> {
         Id: TryFrom<usize, Error: Debug>,
         Label: Display + Clone,
     {
-        if self.closed {
-            return Err(anyhow::Error::new(IndexerClosedError(label.into())));
-        }
         match self.label_to_id.raw_entry_mut().from_key(&label) {
             RawEntryMut::Occupied(_) => Err(anyhow!("Label already registered: {}", label)),
             RawEntryMut::Vacant(vacant) => {
@@ -65,11 +58,6 @@ impl<Label: Hash + Eq + Into<String>, Id: Copy> RawIndexer<Label, Id> {
         match self.label_to_id.raw_entry_mut().from_key(label.as_ref()) {
             RawEntryMut::Occupied(occupied) => Ok(*occupied.get()),
             RawEntryMut::Vacant(vacant) => {
-                if self.closed {
-                    return Err(anyhow::Error::new(IndexerClosedError(
-                        label.into_owned().into(),
-                    )));
-                }
                 let id = self.id_to_label.len();
                 self.id_to_label.push(label.clone().into_owned());
                 let id = id.try_into().unwrap();
@@ -112,15 +100,3 @@ impl<Id> RawIndexer<String, Id> {
         }
     }
 }
-
-impl Display for IndexerClosedError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Tried to extend closed indexer with new label: {}",
-            self.0
-        )
-    }
-}
-
-impl std::error::Error for IndexerClosedError {}

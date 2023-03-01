@@ -1,6 +1,6 @@
 use std::{
     any::{Any, TypeId},
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
     io,
     path::Path,
@@ -44,6 +44,8 @@ pub struct ConfigsLoadingContext<'a> {
 
     // todo: encapsulate
     pub st: &'a mut HashMap<TypeId, (Box<dyn Any>, ConfigIndexer)>,
+
+    loaded: &'a HashSet<TypeId>,
 }
 
 impl<'a> ComponentPreConfigsRef<'a> {
@@ -75,6 +77,7 @@ impl ConfigRepositoryBuilder {
         components: ComponentsRef<'a>,
         pre_cfg: ComponentPreConfigsRef<'a>,
     ) -> Result<ConfigRepository> {
+        let mut loaded_cfg_tys = HashSet::with_capacity(cfg_ty_reg.type_map.len());
         for (type_id, (_, labelmap_to_idmap, _, _)) in cfg_ty_reg.type_map.iter() {
             let Some(label_to_raw) = self.0.get_mut(type_id) else {
                 continue;
@@ -85,9 +88,13 @@ impl ConfigRepositoryBuilder {
                     other_components: components,
                     this_component: pre_cfg,
                     st: &mut self.0,
+                    loaded: &loaded_cfg_tys,
                 },
                 label_to_raw,
             )?;
+            if !loaded_cfg_tys.insert(*type_id) {
+                panic!("Config type loaded multiple times");
+            }
             self.0.get_mut(type_id).unwrap().0 = config_storage;
         }
 
@@ -145,5 +152,11 @@ impl ConfigRepositoryBuilder {
             }
         }
         Ok(())
+    }
+}
+
+impl<'a> ConfigsLoadingContext<'a> {
+    pub fn is_loaded<C: 'static>(&self) -> bool {
+        self.loaded.contains(&TypeId::of::<C>())
     }
 }
