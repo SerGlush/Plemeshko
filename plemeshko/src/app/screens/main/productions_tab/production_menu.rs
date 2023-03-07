@@ -23,7 +23,7 @@ use crate::{
     },
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ProductionBuilder {
     name: String,
     transport_methods: HashMap<TransportGroupId, (TransportMethodId, bool)>,
@@ -193,6 +193,7 @@ impl Widget for ProductionBuilder {
             sim.productions.push(self.finish(shared_comps)?);
             env.get::<WindowCloseEvent<ProductionBuilder>>()
                 .map(WindowCloseEvent::emit);
+            *self = Default::default();
         }
         Ok(())
     }

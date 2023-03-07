@@ -35,41 +35,59 @@ fn ui_production(
     app_st: &AppState,
     shared_comps: &SharedComponents,
     ui: &mut egui::Ui,
-    production: &mut Production,
+    production_index: usize,
+    productions: &mut Vec<Production>,
 ) -> Result<()> {
-    ui.horizontal(|ui| {
-        ui.label(format!("{}:", production.name()));
-        if ui
-            .add(Button::new("+").min_size(vec2(16.0, 16.0)))
-            .clicked()
-        {
-            if production.count() == production.active() {
-                production.set_count(production.count() + 1);
-                production.set_active(production.active() + 1);
-            } else {
-                production.set_active(production.active() + 1);
+    let removed = ui
+        .horizontal(|ui| {
+            let production = &mut productions[production_index];
+
+            ui.label(format!("{}:", production.name()));
+            if ui
+                .add(Button::new("+").min_size(vec2(16.0, 16.0)))
+                .clicked()
+            {
+                if production.count() == production.active() {
+                    production.set_count(production.count() + 1);
+                    production.set_active(production.active() + 1);
+                } else {
+                    production.set_active(production.active() + 1);
+                }
             }
-        }
-        ui.label(format!("{}/{}", production.active(), production.count()));
-        if ui
-            .add(Button::new("-").min_size(vec2(16.0, 16.0)))
-            .clicked()
-        {
-            production.set_active(production.active() - 1);
-        }
-        for transport in production.transport().values().configs(shared_comps) {
-            let transport_group = shared_comps.config(transport.group)?;
-            ui.label(app_st.text(&transport.name)?)
-                .on_hover_text(format!(
-                    "Transport Group: {}\nTransport Capacity: {}",
-                    app_st.text(&transport_group.name)?,
-                    transport.capacity
-                ));
-        }
-        Ok(())
-    })
-    .inner?;
-    for selected_method in production.methods() {
+            ui.label(format!("{}/{}", production.active(), production.count()));
+            
+            if ui
+                .add(Button::new("-").min_size(vec2(16.0, 16.0)))
+                .clicked() && production.active() != 0
+            {
+                production.set_active(production.active() - 1);
+            }
+
+            if ui.button("Delete").clicked() {
+                productions.remove(production_index);
+                return Ok(true);
+            }
+
+            let production = &mut productions[production_index];
+
+            for transport in production.transport().values().configs(shared_comps) {
+                let transport_group = shared_comps.config(transport.group)?;
+                ui.label(app_st.text(&transport.name)?)
+                    .on_hover_text(format!(
+                        "Transport Group: {}\nTransport Capacity: {}",
+                        app_st.text(&transport_group.name)?,
+                        transport.capacity
+                    ));
+            }
+            Ok(false)
+        })
+        .inner?;
+
+    if removed {
+        return Ok(());
+    }
+
+    for selected_method in productions[production_index].methods() {
         let method = shared_comps.config(selected_method.id)?;
         ui.horizontal(|ui| {
             ui.label(app_st.text(&method.name)?);
@@ -101,8 +119,14 @@ impl Widget for MainScreenProductionsTab {
         let shared_comps = env.shared_components();
         let mut sim_guard = app_st.lock_sim();
         let sim = sim_guard.as_mut().unwrap();
-        for production in &mut sim.productions {
-            ui_production(app_st, shared_comps, ui, production)?;
+        for production_index in 0..sim.productions.len() {
+            ui_production(
+                app_st,
+                shared_comps,
+                ui,
+                production_index,
+                &mut sim.productions,
+            )?;
         }
         Ok(())
     }
