@@ -69,3 +69,43 @@ impl<'a, C: Config> ConfigIteratorExt<'a, Vec<()>, C> for &'a Vec<FatConfigId<C>
         self.iter().configs_with_ids(shared_comps)
     }
 }
+
+#[derive(Clone, Copy)]
+pub enum Modifier {
+    None,
+    Command,
+    Shift,
+}
+
+impl Modifier {
+    pub fn elim<R>(self, on_none: R, on_shift: R, on_cmd: R) -> R {
+        match self {
+            Modifier::None => on_none,
+            Modifier::Command => on_cmd,
+            Modifier::Shift => on_shift,
+        }
+    }
+}
+
+pub fn using_modifiers<R>(response: &egui::Response, f: impl FnOnce(Modifier) -> R) -> R {
+    let mods = &response.ctx.input().modifiers;
+    if mods.shift_only() {
+        f(Modifier::Shift)
+    } else if mods.command_only() {
+        f(Modifier::Command)
+    } else {
+        f(Modifier::None)
+    }
+}
+
+pub fn on_using_modifiers<R>(
+    response: &egui::Response,
+    on: impl FnOnce(&egui::Response) -> bool,
+    f: impl FnOnce(Modifier) -> R,
+) -> Option<R> {
+    if on(response) {
+        Some(using_modifiers(response, f))
+    } else {
+        None
+    }
+}

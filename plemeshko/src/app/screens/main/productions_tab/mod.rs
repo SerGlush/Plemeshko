@@ -4,7 +4,7 @@ use egui::{vec2, Button};
 use crate::{
     app::{
         env::Env,
-        util::ConfigIteratorExt,
+        util::{on_using_modifiers, ConfigIteratorExt},
         widgets::{PersistentWindow, Tab, Widget},
     },
     sim::production::Production,
@@ -43,25 +43,33 @@ fn ui_production(
             let production = &mut productions[production_index];
 
             ui.label(format!("{}:", production.name()));
-            if ui
-                .add(Button::new("+").min_size(vec2(16.0, 16.0)))
-                .clicked()
-            {
-                if production.count() == production.active() {
-                    production.set_count(production.count() + 1);
-                    production.set_active(production.active() + 1);
-                } else {
-                    production.set_active(production.active() + 1);
-                }
-            }
+            on_using_modifiers(
+                &ui.add(Button::new("+").min_size(vec2(16.0, 16.0))),
+                egui::Response::clicked,
+                |m| {
+                    let delta = m.elim(1, 10, 100);
+                    let new_active = production.active() + delta;
+                    if new_active > production.count() {
+                        production.set_count(new_active);
+                    }
+                    production.set_active(new_active);
+                },
+            );
             ui.label(format!("{}/{}", production.active(), production.count()));
-            
-            if ui
-                .add(Button::new("-").min_size(vec2(16.0, 16.0)))
-                .clicked() && production.active() != 0
-            {
-                production.set_active(production.active() - 1);
-            }
+
+            on_using_modifiers(
+                &ui.add(Button::new("-").min_size(vec2(16.0, 16.0))),
+                egui::Response::clicked,
+                |m| {
+                    let delta = m.elim(1, 10, 100);
+                    let new_active = if production.active() > delta {
+                        production.active() - delta
+                    } else {
+                        0
+                    };
+                    production.set_active(new_active);
+                },
+            );
 
             if ui.button("Delete").clicked() {
                 productions.remove(production_index);
