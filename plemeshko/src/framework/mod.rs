@@ -64,10 +64,14 @@ pub fn run(mut app_st: AppState) -> ! {
         }
         Event::RedrawRequested(window_id) => {
             if window_id == window.id() {
-                if let Err(e) = gui.run(&window, |egui_ctx| app.ui(&mut app_st, egui_ctx)) {
-                    *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
-                    log::error!("App ui error: {e:#}");
-                    return;
+                match gui.run(&window, |egui_ctx| app.ui(&mut app_st, egui_ctx)) {
+                    Ok(true) => *control_flow = winit::event_loop::ControlFlow::Exit,
+                    Ok(false) => (),
+                    Err(e) => {
+                        *control_flow = winit::event_loop::ControlFlow::ExitWithCode(1);
+                        log::error!("App ui error: {e:#}");
+                        return;
+                    }
                 }
                 match graphics.new_frame() {
                     Ok(mut frame) => {

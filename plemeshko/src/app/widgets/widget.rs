@@ -11,6 +11,14 @@ pub trait Widget {
     fn ui(&mut self, env: &mut Env<'_>, ui: &mut Ui) -> Result<Self::Response>;
 }
 
+impl Widget for () {
+    type Response = ();
+
+    fn ui(&mut self, _env: &mut Env<'_>, _ui: &mut Ui) -> Result<Self::Response> {
+        Ok(())
+    }
+}
+
 pub trait WidgetExt: Widget {
     fn map<R, F: FnMut(Self::Response) -> Result<R>>(self, f: F) -> WidgetMap<Self, R, F>
     where

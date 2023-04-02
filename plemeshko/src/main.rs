@@ -40,22 +40,20 @@ fn main() -> Result<()> {
                 let instant = Instant::now();
                 {
                     let mut sim = shared_st.sim.lock().unwrap();
-                    let Some(sim) = sim.as_mut() else {
-                        log::error!("Can't continue simulation: is `None`");
-                        break;
-                    };
-                    if sim.exited() {
-                        break;
-                    }
-                    let step_result = sim.step(shared_st);
-                    match step_result {
-                        Ok(_) => (),
-                        Err(e) => {
-                            log::error!("Simulation error: {e:#}");
-                            // todo: signal to the ui when step fails
+                    if let Some(sim) = sim.as_mut() {
+                        if sim.exited() {
                             break;
                         }
-                    }
+                        let step_result = sim.step(shared_st);
+                        match step_result {
+                            Ok(_) => (),
+                            Err(e) => {
+                                log::error!("Simulation error: {e:#}");
+                                // todo: signal to the ui when step fails
+                                break;
+                            }
+                        }
+                    };
                 }
                 tick_delay -= Sim::TICK_DELAY;
                 // note: `instant.elapsed()` before and after "sleep" aren't equal

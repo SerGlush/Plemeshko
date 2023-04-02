@@ -37,8 +37,6 @@ impl<E, Id> ScreenTransitionEvent<E, Id> {
         to self.0 {
             pub fn emit(&self, value: E);
             pub fn emit_idem(&self, value: E) -> Option<E>;
-            pub fn get(&self) -> Option<E> where E: Copy;
-            pub fn get_mut(&mut self) -> Option<&mut E>;
         }
     }
 

@@ -23,6 +23,13 @@ impl<T> SetEvent<T> {
         self.0.get()
     }
 
+    pub fn take(&self) -> Option<T>
+    where
+        T: Copy,
+    {
+        self.0.take()
+    }
+
     pub fn get_mut(&mut self) -> Option<&mut T> {
         self.0.get_mut().as_mut()
     }

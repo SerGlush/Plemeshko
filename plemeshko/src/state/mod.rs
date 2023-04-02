@@ -6,24 +6,23 @@ pub mod components;
 pub mod has;
 pub mod label_factory;
 pub mod raw_indexer;
+pub mod save;
 pub mod sound;
 pub mod text;
 pub mod texture;
 
 use std::sync::{Mutex, RwLock};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use egui_extras::RetainedImage;
 
-use crate::sim::{config::resource::ResourceId, RawSimSnapshot, Sim};
+use crate::sim::{config::resource::ResourceId, Sim};
 
 use self::{
     components::{
-        AppComponents, ComponentId, ComponentLoader, ComponentsRef, SharedComponents,
-        COMPONENT_CORE_LABEL,
+        AppComponents, ComponentId, ComponentLoader, SharedComponents, COMPONENT_CORE_LABEL,
     },
     config::FatConfigId,
-    serializable::Serializable,
     texture::FatTextureId,
 };
 
@@ -54,21 +53,6 @@ pub struct AppState {
 pub struct Audio {
     stream_handle: rodio::OutputStreamHandle,
     sink_sfx: rodio::Sink,
-}
-
-fn load_sim(comps: ComponentsRef<'_>) -> anyhow::Result<Sim> {
-    let mut cli_args_iter = std::env::args();
-    cli_args_iter.next(); // exe
-    Ok(match cli_args_iter.next() {
-        Some(snapshot_path) => {
-            let file = std::fs::File::open(snapshot_path)?;
-            let reader = std::io::BufReader::new(file);
-            let snapshot = serde_json::from_reader::<_, RawSimSnapshot>(reader)?;
-            let snapshot = Serializable::from_serializable(snapshot, comps)?;
-            Sim::restore(comps.shared, snapshot)?
-        }
-        None => Sim::new(),
-    })
 }
 
 /// Create environments and load core component
@@ -111,20 +95,11 @@ pub fn initialize_state() -> Result<(Option<rodio::OutputStream>, &'static Share
         .configs
         .id_from_raw(RESOURCE_LABEL_FOOD)?;
 
-    let sim = {
-        let comps = ComponentsRef {
-            indexer: component_loader.indexer(),
-            app: &app_comps,
-            shared: &shared_comps,
-        };
-        load_sim(comps).with_context(|| "Error reading Sim snapshot")?
-    };
-
     let (audio_stream, audio_handle) = Audio::new();
 
     let shared_st: &SharedState = Box::leak(Box::new(SharedState {
         components: RwLock::new(shared_comps),
-        sim: Mutex::new(Some(sim)),
+        sim: Mutex::new(None),
         audio: audio_handle,
         human_id: FatConfigId::new_core(human_id),
         food_id: FatConfigId::new_core(food_id),
