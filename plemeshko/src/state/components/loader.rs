@@ -2,12 +2,12 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 
-use crate::state::{
+use crate::{state::{
     components::{app::AppComponent, shared::SharedComponent, ComponentId},
     config::{ComponentPreConfigsRef, ConfigRepositoryBuilder, ConfigTypeRegistry},
     text::TextRepository,
     texture::TextureRepository,
-};
+}, params::{COMPONENT_TEXTS_DIR, COMPONENT_TEXTURES_DIR, COMPONENT_CONFIGS_DIR}};
 
 use super::{app::AppComponents, shared::SharedComponents, ComponentIndexer, ComponentsRef};
 
@@ -15,10 +15,6 @@ pub struct ComponentLoader {
     indexer: ComponentIndexer,
     config_type_registry: ConfigTypeRegistry,
 }
-
-const COMPONENT_DIR_CONFIGS: &str = "configs";
-const COMPONENT_DIR_TEXTS: &str = "texts";
-const COMPONENT_DIR_TEXTURES: &str = "textures";
 
 #[must_use]
 pub struct ComponentsChangedToken(());
@@ -66,7 +62,7 @@ impl ComponentLoader {
         // todo: reclaim unloaded component slots (or not? misusing unloaded's ids with replacement's ones may be confusing)
         let component_id = ComponentId(self.indexer.0.create_id(label)?);
 
-        dir.push(COMPONENT_DIR_TEXTS);
+        dir.push(COMPONENT_TEXTS_DIR);
         let texts = if std::fs::try_exists(&dir)
             .with_context(|| "Checking existence of component's texts directory.")?
         {
@@ -76,7 +72,7 @@ impl ComponentLoader {
         };
         assert!(dir.pop());
 
-        dir.push(COMPONENT_DIR_TEXTURES);
+        dir.push(COMPONENT_TEXTURES_DIR);
         let textures = if std::fs::try_exists(&dir)
             .with_context(|| "Checking existence of component's textures directory.")?
         {
@@ -86,7 +82,7 @@ impl ComponentLoader {
         };
         assert!(dir.pop());
 
-        dir.push(COMPONENT_DIR_CONFIGS);
+        dir.push(COMPONENT_CONFIGS_DIR);
         let configs = {
             let mut builder = ConfigRepositoryBuilder::new(&self.config_type_registry)?;
             if std::fs::try_exists(&dir)

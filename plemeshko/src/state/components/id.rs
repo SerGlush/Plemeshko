@@ -2,6 +2,8 @@ use anyhow::{anyhow, Result};
 use bytemuck::TransparentWrapper;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::params::LABEL_SEPARATOR;
+
 use super::ComponentsRef;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -27,9 +29,6 @@ pub struct ComponentId(pub(super) RawComponentId);
 
 #[derive(Clone, Copy)]
 pub struct ComponentSlotId(pub(super) usize);
-
-pub const COMPONENT_CORE_LABEL: &str = "";
-pub const COMPONENT_LABEL_SEPARATOR: char = '/';
 
 impl RawFatLabel {
     pub fn deserialize_component_id(&self, comps: ComponentsRef<'_>) -> Result<ComponentId> {
@@ -66,7 +65,7 @@ fn split_label<'de, D: Deserializer<'de>>(
 ) -> Result<(Option<ComponentLabel>, &str), D::Error> {
     if raw
         .chars()
-        .filter(|c| COMPONENT_LABEL_SEPARATOR == *c)
+        .filter(|c| LABEL_SEPARATOR == *c)
         .count()
         > 1
     {
@@ -74,7 +73,7 @@ fn split_label<'de, D: Deserializer<'de>>(
             "Multiple namespace separators in a label: {raw}"
         )));
     }
-    Ok(match raw.split_once(COMPONENT_LABEL_SEPARATOR) {
+    Ok(match raw.split_once(LABEL_SEPARATOR) {
         Some((comp, postfix)) => (Some(ComponentLabel(comp.to_owned())), postfix),
         None => (None, raw),
     })
@@ -83,7 +82,7 @@ fn split_label<'de, D: Deserializer<'de>>(
 fn concat_label(comp: Option<ComponentLabel>, postfix: &str) -> String {
     match comp {
         Some(mut comp) => {
-            comp.0.push(COMPONENT_LABEL_SEPARATOR);
+            comp.0.push(LABEL_SEPARATOR);
             comp.0 + postfix
         }
         None => postfix.to_owned(),

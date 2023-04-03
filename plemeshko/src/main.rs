@@ -28,6 +28,7 @@ mod util;
 mod state;
 mod app;
 mod framework;
+mod params;
 mod sim;
 
 fn main() -> Result<()> {

@@ -1,11 +1,11 @@
 use anyhow::{Ok, Result};
 use egui::vec2;
 
-use crate::app::{
+use crate::{app::{
     env::Env,
     events::FlagEvent,
     widgets::{Menu, ScaledMenuItemBlank, ScaledMenuItemButton, Widget},
-};
+}, params::{MENU_ITEM_SIZE_2, MENU_FONT_SIZE_BASE, MENU_FONT_SCALE, MENU_ITEM_SIZE_1, MENU_ITEM_MARGIN}};
 
 use super::{AppLoadEvent, AppScreen, AppScreenTransitionEvent};
 
@@ -17,12 +17,6 @@ pub struct LoadScreen {
 }
 
 struct LoadScreenRefresh(FlagEvent);
-
-const MENU_BUTTON_HEIGHT: f32 = 0.1;
-const MENU_FONT_SIZE_BASE: f32 = 10.;
-const MENU_FONT_SCALE: f32 = 0.02;
-const MENU_ITEM_MARGIN: f32 = 0.02;
-const MENU_WIDTH: f32 = 0.2;
 
 impl LoadScreen {
     pub fn new() -> Self {
@@ -52,7 +46,7 @@ impl Widget for LoadScreen {
                 self.menu
                     .items
                     .push(Box::new(ScaledMenuItemButton::<_, _, LoadScreenId>::new(
-                        vec2(MENU_WIDTH, 1.5 * MENU_BUTTON_HEIGHT),
+                        vec2(MENU_ITEM_SIZE_2, 1.5 * MENU_ITEM_SIZE_1),
                         Menu::<LoadScreenId>::simple_scaled_text(
                             format!(
                                 "Load \"{name}\"\n{}\ntime played: {}",
@@ -74,14 +68,14 @@ impl Widget for LoadScreen {
                 self.menu
                     .items
                     .push(Box::new(ScaledMenuItemBlank::<LoadScreenId>::new(vec2(
-                        MENU_WIDTH,
+                        MENU_ITEM_SIZE_2,
                         MENU_ITEM_MARGIN,
                     ))));
             }
             self.menu
                 .items
                 .push(Box::new(ScaledMenuItemButton::<_, _, LoadScreenId>::new(
-                    vec2(MENU_WIDTH, MENU_BUTTON_HEIGHT),
+                    vec2(MENU_ITEM_SIZE_2, MENU_ITEM_SIZE_1),
                     Menu::<LoadScreenId>::simple_scaled_text(
                         "Return",
                         MENU_FONT_SIZE_BASE,

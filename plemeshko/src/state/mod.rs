@@ -16,20 +16,15 @@ use std::sync::{Mutex, RwLock};
 use anyhow::{anyhow, Result};
 use egui_extras::RetainedImage;
 
-use crate::sim::{config::resource::ResourceId, Sim};
+use crate::{sim::{config::resource::ResourceId, Sim}, params::{CORE_LABEL, CORE_DIR, MODS_DIR, CORE_RESOURCE_HUMAN, CORE_RESOURCE_FOOD}};
 
 use self::{
     components::{
-        AppComponents, ComponentId, ComponentLoader, SharedComponents, COMPONENT_CORE_LABEL,
+        AppComponents, ComponentId, ComponentLoader, SharedComponents,
     },
     config::FatConfigId,
     texture::FatTextureId,
 };
-
-const COMPONENTS_OTHER_DIR: &str = "mods";
-const COMPONENT_CORE_DIR: &str = "core";
-const RESOURCE_LABEL_HUMAN: &str = "human";
-const RESOURCE_LABEL_FOOD: &str = "food";
 
 /// State shared between threads (ui/simulation).
 /// Resides behind an immutable reference.
@@ -63,20 +58,20 @@ pub fn initialize_state() -> Result<(Option<rodio::OutputStream>, &'static Share
     let components_changed = component_loader.load_single(
         &mut shared_comps,
         &mut app_comps,
-        COMPONENT_CORE_LABEL.to_owned(),
-        COMPONENT_CORE_DIR.into(),
+        CORE_LABEL.to_owned(),
+        CORE_DIR.into(),
     )?;
-    match std::fs::try_exists(COMPONENTS_OTHER_DIR) {
+    match std::fs::try_exists(MODS_DIR) {
         Ok(true) => {
             components_changed.consume(component_loader.load_each(
                 &mut shared_comps,
                 &mut app_comps,
-                std::path::Path::new(COMPONENTS_OTHER_DIR),
+                std::path::Path::new(MODS_DIR),
             )?);
         }
         Ok(false) => {
             log::warn!(
-                "Skipping loading other components: Directory not found: {COMPONENTS_OTHER_DIR}"
+                "Skipping loading other components: Directory not found: {MODS_DIR}"
             );
         }
         Err(e) => {
@@ -88,12 +83,12 @@ pub fn initialize_state() -> Result<(Option<rodio::OutputStream>, &'static Share
     let human_id = shared_comps
         .core()?
         .configs
-        .id_from_raw(RESOURCE_LABEL_HUMAN)?;
+        .id_from_raw(CORE_RESOURCE_HUMAN)?;
 
     let food_id = shared_comps
         .core()?
         .configs
-        .id_from_raw(RESOURCE_LABEL_FOOD)?;
+        .id_from_raw(CORE_RESOURCE_FOOD)?;
 
     let (audio_stream, audio_handle) = Audio::new();
 

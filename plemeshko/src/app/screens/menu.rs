@@ -6,7 +6,7 @@ use crate::{
         env::Env,
         widgets::{Menu, ScaledMenuItemBlank, ScaledMenuItemButton, Widget},
     },
-    state::AppState,
+    state::AppState, params::{MENU_ITEM_SIZE_1, MENU_ITEM_SIZE_2, MENU_FONT_SIZE_BASE, MENU_FONT_SCALE, MENU_ITEM_MARGIN},
 };
 
 use super::{AppExitEvent, AppScreenTransitionEvent};
@@ -15,19 +15,13 @@ struct MenuScreenId;
 
 pub struct MenuScreen(Menu<MenuScreenId>);
 
-const MENU_BUTTON_HEIGHT: f32 = 0.1;
-const MENU_FONT_SIZE_BASE: f32 = 10.;
-const MENU_FONT_SCALE: f32 = 0.02;
-const MENU_ITEM_MARGIN: f32 = 0.02;
-const MENU_WIDTH: f32 = 0.2;
-
 impl MenuScreen {
     pub fn new() -> Self {
         MenuScreen(Menu::new(
             egui::Layout::top_down(egui::Align::Center),
             vec![
                 Box::new(ScaledMenuItemButton::<_, _, MenuScreenId>::new(
-                    vec2(MENU_WIDTH, MENU_BUTTON_HEIGHT),
+                    vec2(MENU_ITEM_SIZE_2, MENU_ITEM_SIZE_1),
                     Menu::<MenuScreenId>::simple_scaled_text(
                         "New Game",
                         MENU_FONT_SIZE_BASE,
@@ -44,11 +38,11 @@ impl MenuScreen {
                     },
                 )),
                 Box::new(ScaledMenuItemBlank::<MenuScreenId>::new(vec2(
-                    MENU_WIDTH,
+                    MENU_ITEM_SIZE_2,
                     MENU_ITEM_MARGIN,
                 ))),
                 Box::new(ScaledMenuItemButton::<_, _, MenuScreenId>::new(
-                    vec2(MENU_WIDTH, MENU_BUTTON_HEIGHT),
+                    vec2(MENU_ITEM_SIZE_2, MENU_ITEM_SIZE_1),
                     Menu::<MenuScreenId>::simple_scaled_text(
                         "Continue",
                         MENU_FONT_SIZE_BASE,
@@ -62,11 +56,11 @@ impl MenuScreen {
                     },
                 )),
                 Box::new(ScaledMenuItemBlank::<MenuScreenId>::new(vec2(
-                    MENU_WIDTH,
+                    MENU_ITEM_SIZE_2,
                     MENU_ITEM_MARGIN,
                 ))),
                 Box::new(ScaledMenuItemButton::<_, _, MenuScreenId>::new(
-                    vec2(MENU_WIDTH, MENU_BUTTON_HEIGHT),
+                    vec2(MENU_ITEM_SIZE_2, MENU_ITEM_SIZE_1),
                     Menu::<MenuScreenId>::simple_scaled_text(
                         "Exit",
                         MENU_FONT_SIZE_BASE,

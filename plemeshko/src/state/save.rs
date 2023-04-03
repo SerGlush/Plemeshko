@@ -6,11 +6,9 @@ use serde_json::Value;
 use serde_with::serde_as;
 use time::OffsetDateTime;
 
-use crate::sim::{RawSimSnapshot, Sim, SimSnapshot};
+use crate::{sim::{RawSimSnapshot, Sim, SimSnapshot}, params::SAVES_DIR};
 
 use super::{components::ComponentsRef, serializable::Serializable, AppState};
-
-const SAVES_DIR: &str = "saves";
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
