@@ -6,7 +6,10 @@ use serde_json::Value;
 use serde_with::serde_as;
 use time::OffsetDateTime;
 
-use crate::{sim::{RawSimSnapshot, Sim, SimSnapshot}, params::SAVES_DIR};
+use crate::{
+    params::SAVES_DIR,
+    sim::{RawSimSnapshot, Sim, SimSnapshot},
+};
 
 use super::{components::ComponentsRef, serializable::Serializable, AppState};
 
@@ -47,7 +50,10 @@ fn save_path_from_name(name: &str) -> PathBuf {
     path
 }
 
-pub fn save(name: &str, app_st: &AppState) -> Result<()> {
+pub fn save(app_st: &AppState) -> Result<()> {
+    let Some(name) = app_st.session.as_ref() else {
+        bail!("Current session name unknown");
+    };
     let metadata = SaveMetadata {
         saved_date: time::OffsetDateTime::now_utc(),
         play_time: Duration::ZERO,
@@ -83,7 +89,7 @@ pub fn save(name: &str, app_st: &AppState) -> Result<()> {
 pub fn load(name: &str, app_st: &mut AppState) -> Result<()> {
     std::fs::create_dir_all(SAVES_DIR)?;
     let path = save_path_from_name(name);
-    let file = std::fs::File::open(&path)?;
+    let file = std::fs::File::open(path)?;
     let reader = std::io::BufReader::new(file);
     let sim: RawSimSnapshot = serde_json::de::from_reader(reader)?;
     let sim: SimSnapshot = Serializable::from_serializable(

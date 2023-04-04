@@ -63,12 +63,7 @@ impl ComponentSlotId {
 fn split_label<'de, D: Deserializer<'de>>(
     raw: &str,
 ) -> Result<(Option<ComponentLabel>, &str), D::Error> {
-    if raw
-        .chars()
-        .filter(|c| LABEL_SEPARATOR == *c)
-        .count()
-        > 1
-    {
+    if raw.chars().filter(|c| LABEL_SEPARATOR == *c).count() > 1 {
         return Err(serde::de::Error::custom(format!(
             "Multiple namespace separators in a label: {raw}"
         )));

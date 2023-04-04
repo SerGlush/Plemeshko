@@ -2,12 +2,15 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 
-use crate::{state::{
-    components::{app::AppComponent, shared::SharedComponent, ComponentId},
-    config::{ComponentPreConfigsRef, ConfigRepositoryBuilder, ConfigTypeRegistry},
-    text::TextRepository,
-    texture::TextureRepository,
-}, params::{COMPONENT_TEXTS_DIR, COMPONENT_TEXTURES_DIR, COMPONENT_CONFIGS_DIR}};
+use crate::{
+    params::{COMPONENT_CONFIGS_DIR, COMPONENT_TEXTS_DIR, COMPONENT_TEXTURES_DIR},
+    state::{
+        components::{app::AppComponent, shared::SharedComponent, ComponentId},
+        config::{ComponentPreConfigsRef, ConfigRepositoryBuilder, ConfigTypeRegistry},
+        text::TextRepository,
+        texture::TextureRepository,
+    },
+};
 
 use super::{app::AppComponents, shared::SharedComponents, ComponentIndexer, ComponentsRef};
 

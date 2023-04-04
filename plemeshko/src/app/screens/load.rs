@@ -1,11 +1,16 @@
 use anyhow::{Ok, Result};
 use egui::vec2;
 
-use crate::{app::{
-    env::Env,
-    events::FlagEvent,
-    widgets::{Menu, ScaledMenuItemBlank, ScaledMenuItemButton, Widget},
-}, params::{MENU_ITEM_SIZE_2, MENU_FONT_SIZE_BASE, MENU_FONT_SCALE, MENU_ITEM_SIZE_1, MENU_ITEM_MARGIN}};
+use crate::{
+    app::{
+        env::Env,
+        events::FlagEvent,
+        widgets::{Menu, ScaledMenuItemBlank, ScaledMenuItemButton, Widget},
+    },
+    params::{
+        MENU_FONT_SCALE, MENU_FONT_SIZE_BASE, MENU_ITEM_MARGIN, MENU_ITEM_SIZE_1, MENU_ITEM_SIZE_2,
+    },
+};
 
 use super::{AppLoadEvent, AppScreen, AppScreenTransitionEvent};
 

@@ -16,12 +16,13 @@ use std::sync::{Mutex, RwLock};
 use anyhow::{anyhow, Result};
 use egui_extras::RetainedImage;
 
-use crate::{sim::{config::resource::ResourceId, Sim}, params::{CORE_LABEL, CORE_DIR, MODS_DIR, CORE_RESOURCE_HUMAN, CORE_RESOURCE_FOOD}};
+use crate::{
+    params::{CORE_DIR, CORE_LABEL, CORE_RESOURCE_FOOD, CORE_RESOURCE_HUMAN, MODS_DIR},
+    sim::{config::resource::ResourceId, Sim},
+};
 
 use self::{
-    components::{
-        AppComponents, ComponentId, ComponentLoader, SharedComponents,
-    },
+    components::{AppComponents, ComponentId, ComponentLoader, SharedComponents},
     config::FatConfigId,
     texture::FatTextureId,
 };
@@ -42,6 +43,7 @@ pub struct AppState {
     pub shared: &'static SharedState,
     pub components: AppComponents,
     pub component_loader: ComponentLoader,
+    pub session: Option<String>,
     fallback_texture: RetainedImage,
 }
 
@@ -70,9 +72,7 @@ pub fn initialize_state() -> Result<(Option<rodio::OutputStream>, &'static Share
             )?);
         }
         Ok(false) => {
-            log::warn!(
-                "Skipping loading other components: Directory not found: {MODS_DIR}"
-            );
+            log::warn!("Skipping loading other components: Directory not found: {MODS_DIR}");
         }
         Err(e) => {
             log::warn!("Skipping loading other components: Error checking directory: {e}");
@@ -103,6 +103,7 @@ pub fn initialize_state() -> Result<(Option<rodio::OutputStream>, &'static Share
         shared: shared_st,
         components: app_comps,
         component_loader,
+        session: None,
         fallback_texture: RetainedImage::from_color_image(
             "<fallback>",
             egui::ColorImage::example(),

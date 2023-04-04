@@ -6,7 +6,9 @@ use crate::{
         env::Env,
         widgets::{Menu, ScaledMenuItemBlank, ScaledMenuItemButton, Widget},
     },
-    state::AppState, params::{MENU_ITEM_SIZE_1, MENU_ITEM_SIZE_2, MENU_FONT_SIZE_BASE, MENU_FONT_SCALE, MENU_ITEM_MARGIN},
+    params::{
+        MENU_FONT_SCALE, MENU_FONT_SIZE_BASE, MENU_ITEM_MARGIN, MENU_ITEM_SIZE_1, MENU_ITEM_SIZE_2,
+    },
 };
 
 use super::{AppExitEvent, AppScreenTransitionEvent};
@@ -28,12 +30,9 @@ impl MenuScreen {
                         MENU_FONT_SCALE,
                     ),
                     |env: &mut Env<'_>| {
-                        let mut sim_guard =
-                            env.get::<AppState>().unwrap().shared.sim.lock().unwrap();
-                        *sim_guard = Some(crate::sim::Sim::new());
                         env.get::<AppScreenTransitionEvent>()
                             .unwrap()
-                            .emit(super::AppScreen::Main);
+                            .emit(super::AppScreen::NewGame);
                         Ok(())
                     },
                 )),

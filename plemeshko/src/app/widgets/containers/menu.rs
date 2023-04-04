@@ -167,3 +167,44 @@ impl<T: FnMut(&mut Env<'_>) -> WidgetText, F: FnMut(&mut Env<'_>) -> Result<()>,
         self.scale
     }
 }
+
+pub struct ScaledMenuItemTextEdit<Id> {
+    pub scale: Vec2,
+    pub text: String,
+    pub multiline: bool,
+    pub hint: RichText,
+    phantom: PhantomData<Id>,
+}
+
+impl<Id: 'static> ScaledMenuItemTextEdit<Id> {
+    pub fn new(scale: Vec2) -> Self {
+        ScaledMenuItemTextEdit {
+            scale,
+            text: String::new(),
+            multiline: false,
+            hint: RichText::new(String::new()),
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<Id: 'static> Widget for ScaledMenuItemTextEdit<Id> {
+    type Response = ();
+
+    fn ui(&mut self, _env: &mut Env<'_>, ui: &mut Ui) -> Result<Self::Response> {
+        let te = if self.multiline {
+            egui::TextEdit::multiline(&mut self.text)
+        } else {
+            egui::TextEdit::singleline(&mut self.text)
+        };
+        let te = te.hint_text(self.hint.clone());
+        ui.add_sized(self.scale, te);
+        Ok(())
+    }
+}
+
+impl<Id: 'static> MenuItem for ScaledMenuItemTextEdit<Id> {
+    fn scale(&self) -> Vec2 {
+        self.scale
+    }
+}

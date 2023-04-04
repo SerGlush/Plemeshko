@@ -9,6 +9,7 @@ use fluent::FluentArgs;
 use crate::{
     app::{
         env::Env,
+        screens::AppSaveEvent,
         widgets::{Tab, Widget},
     },
     sim::{config::resource::ResourceId, units::ResourceAmount},
@@ -38,6 +39,9 @@ impl Widget for MainScreenInfoTab {
     fn ui(&mut self, env: &mut Env<'_>, ui: &mut egui::Ui) -> Result<Self::Response> {
         let app_st = env.app_state();
         let shared_comps = env.shared_components();
+        if ui.button("Save").clicked() {
+            env.get::<AppSaveEvent>().unwrap().emit();
+        }
         let mut sim_guard = app_st.lock_sim();
         let sim = sim_guard.as_mut().unwrap();
         {
