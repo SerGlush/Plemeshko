@@ -1,0 +1,27 @@
+[
+    {
+        "tag": "setting",
+        "label": "freshwater-fishing",
+        "payload": {
+            "group": "fishing-location",
+            "output": {
+                "food": 50
+            }
+        }
+    },
+    {
+        "tag": "setting",
+        "label": "seashore-fishing",
+        "payload": {
+            "group": "fishing-location",
+            "output": {
+                "food": 60
+            }
+        }
+    },
+    {
+        "tag": "setting-group",
+        "label": "fishing-location",
+        "payload": {}
+    }
+]

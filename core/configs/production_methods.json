@@ -10,6 +10,16 @@
     },
     {
         "tag": "production-method",
+        "label": "fishing-fish",
+        "payload": {
+            "setting_groups": [
+                "fishing-location",
+                "fishing-tool"
+            ]
+        }
+    },
+    {
+        "tag": "production-method",
         "label": "handicraft-production",
         "payload": {
             "setting_groups": [

@@ -1,0 +1,36 @@
+[
+    {
+        "tag": "setting",
+        "label": "sticks-and-rocks-fishing",
+        "payload": {
+            "group": "fishing-tool",
+            "input": {
+                "human": 8
+            },
+            "output": {
+                "human": 8
+            }
+        }
+    },
+    {
+        "tag": "setting",
+        "label": "stone-spears-fishing",
+        "payload": {
+            "group": "fishing-tool",
+            "input": {
+                "human": 8,
+                "stone-instrument": 8
+            },
+            "output": {
+                "human": 8,
+                "food": 20,
+                "stone-instrument": 6
+            }
+        }
+    },
+    {
+        "tag": "setting-group",
+        "label": "fishing-tool",
+        "payload": {}
+    }
+]
