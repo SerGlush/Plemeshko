@@ -7,9 +7,8 @@ use crate::{
     sim::units::{ResourceAmount, ResourceWeight},
     state::{
         components::ComponentsRef,
-        config::{Config, FatConfigId, FatConfigLabel, Prepare},
-        serializable::Serializable,
-        text::FatTextId,
+        config::{Config, FatConfigId, FatConfigLabel, Prepare, Info, RawInfo},
+        serializable::Serializable
     },
 };
 
@@ -17,13 +16,15 @@ use super::transport_group::{TransportGroup, TransportGroupId};
 
 #[derive(Deserialize)]
 pub struct RawResource {
+    #[serde(flatten)]
+    pub info: RawInfo,
     pub transport_group: FatConfigLabel<TransportGroup>,
     pub transport_weight: ResourceWeight,
 }
 
 #[derive(Debug)]
 pub struct Resource {
-    pub name: FatTextId,
+    pub info: Info,
     pub transport_group: TransportGroupId,
     pub transport_weight: ResourceWeight,
 }
@@ -55,10 +56,10 @@ impl Prepare for RawResource {
         ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
         tif: &mut crate::state::text::TextIdFactory,
     ) -> anyhow::Result<Self::Prepared> {
-        let name = tif.create("name").in_component(ctx.this_component.id());
+        let info = self.info.prepare(ctx, tif)?;
         tif.with_lock(|tif| {
             Ok(Resource {
-                name,
+                info,
                 transport_group: self.transport_group.prepare(ctx, tif)?,
                 transport_weight: self.transport_weight,
             })

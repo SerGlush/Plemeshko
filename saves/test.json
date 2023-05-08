@@ -28,6 +28,17 @@
             "reserve_export_threshold": 1
         }
     ],
+    "research": {
+        "current": null,
+        "finished": [],
+        "unlocked_production": [
+            "/hunting-animals",
+            "/nature-gathering"
+        ],
+        "unlocked_transport": [
+            "/manual"
+        ]
+    },
     "nutrition": 80,
     "pop_growth_stack": 0
 }

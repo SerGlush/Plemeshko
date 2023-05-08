@@ -4,12 +4,14 @@ use std::{
 };
 
 use anyhow::{Ok, Result};
+use egui::{Color32, vec2};
 use fluent::FluentArgs;
 
 use crate::{
     app::{
         env::Env,
         screens::AppSaveEvent,
+        util::draw_icon_with_tooltip,
         widgets::{Tab, Widget},
     },
     sim::{config::resource::ResourceId, units::ResourceAmount},
@@ -87,20 +89,40 @@ impl Widget for MainScreenInfoTab {
             Ok(())
         })
         .inner?;
+        let ctx = env.get::<egui::Context>().unwrap();
         ui.label("Resources:");
         ui.indent("resources", |ui| {
             for (&id, &value) in sim.depot.iter() {
                 if id != app_st.shared.human_id {
                     let res = shared_comps.config(id)?;
-                    let mut res_info_text = format!("{} : {value}", app_st.text(&res.name)?);
-                    if let Some(change) = self.depot_change.get(&id) {
-                        res_info_text += " (";
-                        if change.0 > 0 {
-                            res_info_text.push('+');
+                    let change = self.depot_change.get(&id);
+                    ui.horizontal(|ui| {
+                        draw_icon_with_tooltip(
+                            app_st,
+                            ctx,
+                            ui,
+                            &res.info,
+                            vec2(20.0, 20.0),
+                            |i| {
+                                i.tint(match change {
+                                    Some(c) if c.0 > 0 => Color32::from_rgb(200, 200, 255),
+                                    Some(c) if c.0 < 0 => Color32::from_rgb(255, 200, 200),
+                                    _ => Color32::WHITE,
+                                })
+                            },
+                            |_| (),
+                        )?;
+                        let mut res_info_text = value.to_string();
+                        if let Some(change) = change {
+                            res_info_text += " (";
+                            if change.0 > 0 {
+                                res_info_text.push('+');
+                            }
+                            write!(res_info_text, "{})", change.0)?;
                         }
-                        write!(res_info_text, "{})", change.0)?;
-                    }
-                    ui.label(res_info_text);
+                        ui.label(res_info_text);
+                        Ok(())
+                    }).inner?;
                 }
             }
             Ok(())

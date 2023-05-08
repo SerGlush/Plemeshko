@@ -1,9 +1,9 @@
 use anyhow::Result;
-use egui::Ui;
+use egui::{ImageButton, Ui, Vec2, Color32, Image};
 
 use crate::state::{
     components::SharedComponents,
-    config::{Config, FatConfigId},
+    config::{Config, FatConfigId, Info}, AppState, has::HasTexts,
 };
 
 /// Consume iterator calling a fallible ui callback on each item.
@@ -108,4 +108,57 @@ pub fn on_using_modifiers<R>(
     } else {
         None
     }
+}
+
+pub fn draw_icon_with_tooltip(
+    app_st: &AppState,
+    ctx: &egui::Context,
+    ui: &mut Ui,
+    info: &Info,
+    siz: Vec2,
+    sty: impl FnOnce(Image) -> Image,
+    ex_ui: impl FnOnce(&mut Ui),
+) -> Result<()> {
+    let mut button =
+        Image::new(app_st.texture(info.icon.texture)?.texture_id(ctx), siz);
+    if let Some(uv) = info.icon.uv {
+        button = button.uv(uv);
+    }
+    let response = ui.add(sty(button));
+    let name = app_st.text(&info.name)?;
+    let description = app_st.text(&info.description)?;
+    response.on_hover_ui_at_pointer(|ui| {
+        ui.label(name);
+        ui.colored_label(Color32::from_rgb(200, 200, 200), description);
+        ex_ui(ui);
+    });
+    Ok(())
+}
+
+pub fn draw_icon_btn_with_tooltip(
+    app_st: &AppState,
+    ctx: &egui::Context,
+    ui: &mut Ui,
+    info: &Info,
+    siz: Vec2,
+    sty: impl FnOnce(ImageButton) -> ImageButton,
+    ex_ui: impl FnOnce(&mut Ui),
+    click: impl FnOnce() -> Result<()>,
+) -> Result<()> {
+    let mut button = ImageButton::new(app_st.texture(info.icon.texture)?.texture_id(ctx), siz);
+    if let Some(uv) = info.icon.uv {
+        button = button.uv(uv);
+    }
+    let response = ui.add(sty(button));
+    let name = app_st.text(&info.name)?;
+    let description = app_st.text(&info.description)?;
+    let response = response.on_hover_ui_at_pointer(|ui| {
+        ui.label(name);
+        ui.colored_label(Color32::from_rgb(200, 200, 200), description);
+        ex_ui(ui);
+    });
+    if response.clicked() {
+        click()?;
+    }
+    Ok(())
 }
