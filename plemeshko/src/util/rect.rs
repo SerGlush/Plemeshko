@@ -1,11 +1,22 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Rect<T> {
     pub left: T,
     pub top: T,
     pub width: T,
     pub height: T,
+}
+
+impl<T> Rect<T> {
+    pub fn new(left: T, top: T, width: T, height: T) -> Self {
+        Rect {
+            left,
+            top,
+            width,
+            height,
+        }
+    }
 }
 
 impl<T: Into<f32>> From<Rect<T>> for egui::Rect {

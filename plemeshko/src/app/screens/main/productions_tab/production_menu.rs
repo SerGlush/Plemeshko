@@ -54,6 +54,8 @@ impl Widget for ProductionBuilder {
     fn ui(&mut self, env: &mut Env<'_>, ui: &mut egui::Ui) -> Result<Self::Response> {
         let app_st = env.app_state();
         let shared_comps = env.shared_components();
+        let mut sim_guard = app_st.lock_sim();
+        let sim = sim_guard.as_mut().unwrap();
         ui.horizontal(|ui| {
             ui.add(
                 egui::TextEdit::singleline(&mut self.name)
@@ -69,8 +71,10 @@ impl Widget for ProductionBuilder {
                     .selected_text(selected_transport_name.as_ref())
                     .show_ui(ui, |ui| {
                         let transport_group = shared_comps.config(selected_transport.group)?;
-                        for (transport_id, transport) in
-                            transport_group.transports.configs_with_ids(shared_comps)
+                        for (transport_id, transport) in transport_group
+                            .transports
+                            .configs_with_ids(shared_comps)
+                            .filter(|(id, _)| sim.research.is_transport_unlocked(*id))
                         {
                             let transport_name = app_st.text(&transport.name)?;
 
@@ -102,6 +106,7 @@ impl Widget for ProductionBuilder {
                                 .transports
                                 .configs_with_ids(shared_comps)
                                 .find(|(_, tr)| {
+                                    // note: `ui_priority` must be 0 only for unlocked transoport methods
                                     tr.ui_priority == 0 && tr.group == resource.transport_group
                                 })
                                 .unwrap()
@@ -169,6 +174,9 @@ impl Widget for ProductionBuilder {
                     let method_group = method_group?.1;
                     ui.menu_button(app_st.text(&method_group.name)?, |ui| {
                         for &method_id in &method_group.variants {
+                            if !sim.research.is_production_unlocked(method_id) {
+                                continue;
+                            }
                             let method = shared_comps.config(method_id)?;
                             if ui.button(app_st.text(&method.name)?).clicked() {
                                 let selected_method =
@@ -187,9 +195,6 @@ impl Widget for ProductionBuilder {
             .button(app_st.text_core("ui_main_productions_builder_finish")?)
             .clicked()
         {
-            let mut sim_guard = app_st.lock_sim();
-            let sim = sim_guard.as_mut().unwrap();
-
             sim.productions.push(self.finish(shared_comps)?);
             env.get::<WindowCloseEvent<ProductionBuilder>>()
                 .map(WindowCloseEvent::emit);

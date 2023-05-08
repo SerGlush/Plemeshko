@@ -16,12 +16,15 @@ use super::{
 #[derive(Deserialize)]
 pub struct RawProductionMethod {
     pub setting_groups: Vec<FatConfigLabel<SettingGroup>>,
+    #[serde(default)]
+    pub initially_unlocked: bool,
 }
 
 #[derive(Debug)]
 pub struct ProductionMethod {
     pub name: FatTextId,
     pub setting_groups: Vec<SettingGroupId>,
+    pub initially_unlocked: bool,
 }
 
 pub type ProductionMethodId = FatConfigId<ProductionMethod>;
@@ -75,6 +78,7 @@ impl Prepare for RawProductionMethod {
             Ok(ProductionMethod {
                 name,
                 setting_groups: self.setting_groups.prepare(ctx, tif)?,
+                initially_unlocked: self.initially_unlocked,
             })
         })
     }

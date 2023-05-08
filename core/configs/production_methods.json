@@ -5,7 +5,8 @@
         "payload": {
             "setting_groups": [
                 "hunting-tool"
-            ]
+            ],
+            "initially_unlocked": true
         }
     },
     {
@@ -33,7 +34,8 @@
         "payload": {
             "setting_groups": [
                 "resource-focus"
-            ]
+            ],
+            "initially_unlocked": true
         }
     }
 ]

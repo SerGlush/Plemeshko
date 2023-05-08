@@ -3,7 +3,7 @@ use std::{
     fmt::Write,
 };
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use fluent::FluentArgs;
 
 use crate::{
@@ -22,6 +22,8 @@ use crate::{
 pub struct MainScreenInfoTab {
     previous_depot: HashMap<ResourceId, ResourceAmount>,
     depot_change: HashMap<ResourceId, ResourceAmount>,
+    previous_nutrition: Option<i64>,
+    nutrition_change: i64,
 }
 
 impl MainScreenInfoTab {
@@ -29,6 +31,8 @@ impl MainScreenInfoTab {
         MainScreenInfoTab {
             previous_depot: HashMap::new(),
             depot_change: HashMap::new(),
+            previous_nutrition: None,
+            nutrition_change: 0,
         }
     }
 }
@@ -39,44 +43,69 @@ impl Widget for MainScreenInfoTab {
     fn ui(&mut self, env: &mut Env<'_>, ui: &mut egui::Ui) -> Result<Self::Response> {
         let app_st = env.app_state();
         let shared_comps = env.shared_components();
-        if ui.button("Save").clicked() {
-            env.get::<AppSaveEvent>().unwrap().emit();
-        }
+        ui.horizontal(|ui| {
+            ui.label(app_st.session.as_ref().unwrap());
+            if ui.button("Save").clicked() {
+                env.get::<AppSaveEvent>().unwrap().emit();
+            }
+        });
         let mut sim_guard = app_st.lock_sim();
         let sim = sim_guard.as_mut().unwrap();
-        {
-            let mut args = FluentArgs::new();
-            let mut population_count_text = sim
-                .depot
-                .get(&app_st.shared.human_id)
-                .map(Clone::clone)
-                .unwrap_or_default()
-                .to_string();
-            if let Some(change) = self.depot_change.get(&app_st.shared.human_id) {
-                population_count_text += " (";
-                if change.0 > 0 {
-                    population_count_text.push('+');
-                }
-                write!(population_count_text, "{})", change.0)?;
-            }
-            args.set("population", population_count_text);
-            ui.label(app_st.text_core_fmt("ui_main_info_population", &args)?);
-            ui.label(sim.nutrition.to_string());
-        }
-        for (&id, &value) in sim.depot.iter() {
-            if id != app_st.shared.human_id {
-                let res = shared_comps.config(id)?;
-                let mut res_info_text = format!("{} : {value}", app_st.text(&res.name)?);
-                if let Some(change) = self.depot_change.get(&id) {
-                    res_info_text += " (";
+        ui.label("Stats:");
+        ui.indent("stats", |ui| {
+            {
+                let mut args = FluentArgs::new();
+                let mut population_count_text = sim
+                    .depot
+                    .get(&app_st.shared.human_id)
+                    .map(Clone::clone)
+                    .unwrap_or_default()
+                    .to_string();
+                if let Some(change) = self.depot_change.get(&app_st.shared.human_id) {
+                    population_count_text += " (";
                     if change.0 > 0 {
-                        res_info_text.push('+');
+                        population_count_text.push('+');
                     }
-                    write!(res_info_text, "{})", change.0)?;
+                    write!(population_count_text, "{})", change.0)?;
                 }
-                ui.label(res_info_text);
+                args.set("population", population_count_text);
+                ui.label(app_st.text_core_fmt("ui_main_info_population", &args)?);
             }
-        }
+            {
+                let mut args = FluentArgs::new();
+                let mut nutrition = sim.nutrition.to_string();
+                if self.nutrition_change != 0 {
+                    nutrition += " (";
+                    if self.nutrition_change > 0 {
+                        nutrition.push('+');
+                    }
+                    write!(nutrition, "{})", self.nutrition_change)?;
+                }
+                args.set("nutrition", nutrition);
+                ui.label(app_st.text_core_fmt("ui_main_info_nutrition", &args)?);
+            }
+            Ok(())
+        })
+        .inner?;
+        ui.label("Resources:");
+        ui.indent("resources", |ui| {
+            for (&id, &value) in sim.depot.iter() {
+                if id != app_st.shared.human_id {
+                    let res = shared_comps.config(id)?;
+                    let mut res_info_text = format!("{} : {value}", app_st.text(&res.name)?);
+                    if let Some(change) = self.depot_change.get(&id) {
+                        res_info_text += " (";
+                        if change.0 > 0 {
+                            res_info_text.push('+');
+                        }
+                        write!(res_info_text, "{})", change.0)?;
+                    }
+                    ui.label(res_info_text);
+                }
+            }
+            Ok(())
+        })
+        .inner?;
         if sim.handle_state_changed() {
             self.depot_change.clear();
             for (&id, &current_value) in &sim.depot {
@@ -98,6 +127,11 @@ impl Widget for MainScreenInfoTab {
                 }
             }
             self.previous_depot.clone_from(&sim.depot);
+
+            if let Some(previous_nutrition) = &mut self.previous_nutrition {
+                self.nutrition_change = sim.nutrition - *previous_nutrition;
+            }
+            self.previous_nutrition = Some(sim.nutrition);
         }
         Ok(())
     }

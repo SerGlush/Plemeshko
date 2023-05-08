@@ -43,7 +43,7 @@ impl RawFatLabel {
 }
 
 impl ComponentId {
-    pub fn core() -> Self {
+    pub const fn core() -> Self {
         ComponentId(0)
     }
 

@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
 
 use anyhow::Result;
 
@@ -48,9 +51,28 @@ impl<T: Serializable> Serializable for Vec<T> {
     }
 }
 
-impl<K: Serializable + std::hash::Hash + Eq, V: Serializable> Serializable for HashMap<K, V>
+impl<K: Serializable + Hash + Eq> Serializable for HashSet<K>
 where
-    K::Raw: std::hash::Hash + Eq,
+    K::Raw: Hash + Eq,
+{
+    type Raw = HashSet<K::Raw>;
+
+    fn from_serializable(raw: Self::Raw, ctx: ComponentsRef<'_>) -> Result<Self> {
+        raw.into_iter()
+            .map(|k| K::from_serializable(k, ctx))
+            .try_collect()
+    }
+
+    fn into_serializable(self, ctx: ComponentsRef<'_>) -> Result<Self::Raw> {
+        self.into_iter()
+            .map(|k| k.into_serializable(ctx))
+            .try_collect()
+    }
+}
+
+impl<K: Serializable + Hash + Eq, V: Serializable> Serializable for HashMap<K, V>
+where
+    K::Raw: Hash + Eq,
 {
     type Raw = HashMap<K::Raw, V::Raw>;
 

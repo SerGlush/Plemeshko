@@ -1,5 +1,6 @@
 mod id;
 mod indexer;
+mod info;
 mod repository;
 mod repository_builder;
 mod type_registry;
@@ -8,6 +9,7 @@ mod prepare;
 
 pub use id::*;
 pub use indexer::*;
+pub use info::*;
 pub use prepare::*;
 pub use repository::*;
 pub use repository_builder::*;

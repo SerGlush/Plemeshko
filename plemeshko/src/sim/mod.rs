@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     state::{
         components::{ComponentsRef, SharedComponents},
+        research::{RawResearch, Research},
         serializable::Serializable,
         SharedState,
     },
@@ -28,7 +29,7 @@ use self::{
 pub struct RawSimSnapshot {
     depot: RawResourceMap,
     productions: Vec<RawProductionSnapshot>,
-
+    research: RawResearch,
     nutrition: i64,
     pop_growth_stack: f64,
 }
@@ -36,7 +37,7 @@ pub struct RawSimSnapshot {
 pub struct SimSnapshot {
     depot: ResourceMap,
     productions: Vec<ProductionSnapshot>,
-
+    research: Research,
     nutrition: i64,
     pop_growth_stack: f64,
 }
@@ -47,7 +48,7 @@ pub struct Sim {
 
     pub depot: ResourceMap,
     pub productions: Vec<Production>,
-
+    pub research: Research,
     pub nutrition: i64,
     pub pop_growth_stack: f64,
 }
@@ -60,6 +61,7 @@ impl Sim {
         let SimSnapshot {
             depot,
             productions,
+            research,
             nutrition,
             pop_growth_stack,
         } = snapshot;
@@ -71,6 +73,7 @@ impl Sim {
                 .into_iter()
                 .map(|s| Production::restore(shared_comps, s))
                 .try_collect()?,
+            research,
             nutrition,
             pop_growth_stack,
         })
@@ -80,20 +83,22 @@ impl Sim {
         SimSnapshot {
             depot: self.depot.clone(),
             productions: self.productions.iter().map(Production::snapshot).collect(),
+            research: self.research.clone(),
             nutrition: self.nutrition,
             pop_growth_stack: self.pop_growth_stack,
         }
     }
 
-    pub fn new() -> Self {
-        Sim {
+    pub fn new(shared_comps: &mut SharedComponents) -> Result<Self> {
+        Ok(Sim {
             state_changed: false,
             exited: false,
             depot: ResourceMap::new(),
             productions: Vec::new(),
+            research: Research::new(shared_comps)?,
             nutrition: 100,
             pop_growth_stack: 0.0,
-        }
+        })
     }
 
     pub fn exited(&self) -> bool {
@@ -123,6 +128,8 @@ impl Sim {
         for i in 0..self.productions.len() {
             self.productions[i].step(env, &mut self.depot)?;
         }
+
+        self.research.step(&env.components)?;
 
         if self.nutrition > 10 {
             self.nutrition -= 10;
@@ -180,6 +187,7 @@ impl Serializable for SimSnapshot {
         Ok(SimSnapshot {
             depot: Serializable::from_serializable(raw.depot, ctx)?,
             productions: Serializable::from_serializable(raw.productions, ctx)?,
+            research: Serializable::from_serializable(raw.research, ctx)?,
             nutrition: raw.nutrition,
             pop_growth_stack: raw.pop_growth_stack,
         })
@@ -189,6 +197,7 @@ impl Serializable for SimSnapshot {
         Ok(RawSimSnapshot {
             depot: self.depot.into_serializable(ctx)?,
             productions: self.productions.into_serializable(ctx)?,
+            research: self.research.into_serializable(ctx)?,
             nutrition: self.nutrition,
             pop_growth_stack: self.pop_growth_stack,
         })

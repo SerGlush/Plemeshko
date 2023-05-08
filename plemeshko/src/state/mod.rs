@@ -6,6 +6,7 @@ pub mod components;
 pub mod has;
 pub mod label_factory;
 pub mod raw_indexer;
+pub mod research;
 pub mod save;
 pub mod sound;
 pub mod text;

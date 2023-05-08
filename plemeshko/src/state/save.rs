@@ -100,9 +100,10 @@ pub fn load(name: &str, app_st: &mut AppState) -> Result<()> {
             shared: &app_st.shared.components.read().unwrap(),
         },
     )?;
-    *app_st.shared.sim.lock().unwrap() = Some(Sim::restore(
-        &app_st.shared.components.read().unwrap(),
-        sim,
-    )?);
+    let mut shared_comps = app_st.shared.components.write().unwrap();
+    let sim = Sim::restore(&shared_comps, sim)?;
+    sim.research
+        .update_technology_satisfaction(&mut shared_comps)?;
+    *app_st.shared.sim.lock().unwrap() = Some(sim);
     Ok(())
 }

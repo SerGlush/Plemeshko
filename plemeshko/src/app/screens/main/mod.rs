@@ -10,23 +10,20 @@ use crate::{
     state::AppState,
 };
 
-use self::{
-    debug_tab::MainScreenDebugTab, info_tab::MainScreenInfoTab,
-    productions_tab::MainScreenProductionsTab,
-};
-
 mod debug_tab;
 mod info_tab;
 mod productions_tab;
+mod research_tab;
 
 pub struct MainScreen(Tabs<()>);
 
 impl MainScreen {
     pub fn new() -> Self {
         let mut tabs = Tabs::new(egui::plot::Orientation::Horizontal);
-        tabs.push(MainScreenInfoTab::new());
-        tabs.push(MainScreenProductionsTab::new());
-        tabs.push(MainScreenDebugTab::new());
+        tabs.push(info_tab::MainScreenInfoTab::new());
+        tabs.push(productions_tab::MainScreenProductionsTab::new());
+        tabs.push(research_tab::MainScreenResearchTab::new());
+        tabs.push(debug_tab::MainScreenDebugTab::new());
         MainScreen(tabs)
     }
 }

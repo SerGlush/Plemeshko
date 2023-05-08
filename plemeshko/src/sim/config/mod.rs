@@ -5,6 +5,7 @@ pub mod production_method_group;
 pub mod resource;
 pub mod setting;
 pub mod setting_group;
+pub mod technology;
 pub mod transport_group;
 pub mod transport_method;
 
@@ -15,6 +16,7 @@ pub fn register() -> anyhow::Result<ConfigTypeRegistry> {
     reg.register::<resource::Resource>()?;
     reg.register::<setting::Setting>()?;
     reg.register::<setting_group::SettingGroup>()?;
+    reg.register::<technology::Technology>()?;
     reg.register::<transport_method::TransportMethod>()?;
     reg.register::<transport_group::TransportGroup>()?;
     Ok(reg)

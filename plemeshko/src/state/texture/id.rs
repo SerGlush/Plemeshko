@@ -35,9 +35,30 @@ pub struct FatTexturePartLabel {
     pub uv: Option<Rect<f32>>,
 }
 
+#[derive(Debug)]
 pub struct FatTexturePartId {
     pub texture: FatTextureId,
     pub uv: Option<Rect<f32>>,
+}
+
+impl FatTextureId {
+    pub const fn new_invalid() -> Self {
+        FatTextureId(ComponentId::core(), TextureId(u32::MAX))
+    }
+
+    pub fn to_part(self) -> FatTexturePartId {
+        FatTexturePartId {
+            texture: self,
+            uv: Some(Rect::new(0.0, 0.0, 1.0, 1.0)),
+        }
+    }
+
+    pub fn with_uv(self, uv: Rect<f32>) -> FatTexturePartId {
+        FatTexturePartId {
+            texture: self,
+            uv: Some(uv),
+        }
+    }
 }
 
 impl FatTexturePartId {

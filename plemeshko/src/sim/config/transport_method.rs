@@ -19,6 +19,8 @@ pub struct RawTransportMethod {
     pub capacity: ResourceWeight,
     pub fuel: RawResourceIo,
     pub ui_priority: u32,
+    #[serde(default)]
+    pub initially_unlocked: bool,
 }
 
 #[derive(Debug)]
@@ -28,6 +30,7 @@ pub struct TransportMethod {
     pub capacity: ResourceWeight,
     pub fuel: ResourceIo,
     pub ui_priority: u32,
+    pub initially_unlocked: bool,
 }
 
 pub type TransportMethodId = FatConfigId<TransportMethod>;
@@ -48,6 +51,7 @@ impl Prepare for RawTransportMethod {
                 capacity: self.capacity,
                 fuel: self.fuel.prepare(ctx, tif)?,
                 ui_priority: self.ui_priority,
+                initially_unlocked: self.initially_unlocked,
             })
         })
     }

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use egui::CentralPanel;
 use enum_map::{enum_map, Enum};
 
@@ -78,7 +78,10 @@ impl App {
         }
         if let Some(game_name) = ev_newgame.0.get_mut() {
             let mut sim_guard = st.shared.sim.lock().unwrap();
-            *sim_guard = Some(crate::sim::Sim::new());
+            *sim_guard = Some(
+                crate::sim::Sim::new(&mut st.shared.components.write().unwrap())
+                    .with_context(|| "Creating new game")?,
+            );
             st.session = Some(game_name.clone());
         }
         Ok(ev_exit.0.get())

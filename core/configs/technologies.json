@@ -1,0 +1,24 @@
+[
+    {
+        "tag": "technology",
+        "label": "tech1",
+        "payload": {
+            "bonuses": [
+                {"unlock_production": "fishing-fish"}
+            ],
+            "prerequisites": [],
+            "cost": 5
+        }
+    },
+    {
+        "tag": "technology",
+        "label": "tech2",
+        "payload": {
+            "bonuses": [
+                {"unlock_production": "handicraft-production"}
+            ],
+            "prerequisites": ["tech1"],
+            "cost": 10
+        }
+    }
+]

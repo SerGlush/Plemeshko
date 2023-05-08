@@ -6,6 +6,7 @@
             "group": "solid",
             "capacity": 400,
             "fuel": {},
+            "initially_unlocked": true,
 
             "ui_priority": 0
         }
