@@ -7,7 +7,14 @@
                 {"unlock_production": "fishing-fish"}
             ],
             "prerequisites": [],
-            "cost": 5
+            "cost": 5,
+            "icon": {
+                "texture": "icons",
+                "left": 0.5,
+                "top": 0.125,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {
@@ -18,7 +25,14 @@
                 {"unlock_production": "handicraft-production"}
             ],
             "prerequisites": ["tech1"],
-            "cost": 10
+            "cost": 10,
+            "icon": {
+                "texture": "icons",
+                "left": 0.625,
+                "top": 0.125,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     }
 ]

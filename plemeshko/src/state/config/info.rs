@@ -10,7 +10,6 @@ use super::Prepare;
 /// Deserialized part of [`Info`]
 #[derive(Deserialize)]
 pub struct RawInfo {
-    #[serde(flatten)]
     pub icon: Option<FatTexturePartLabel>,
 }
 
