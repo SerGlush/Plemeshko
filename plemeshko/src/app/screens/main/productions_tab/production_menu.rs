@@ -1,25 +1,29 @@
 use std::collections::HashMap;
 
 use anyhow::{Ok, Result};
-use egui::ComboBox;
+use egui::{vec2, ComboBox, Ui};
 
 use crate::{
     app::{
         env::Env,
-        util::{draw_iter_indexed, ConfigIteratorExt},
+        util::{draw_icon_btn_with_tooltip, draw_iter_indexed, ConfigIteratorExt},
         widgets::{PersistentWindowContent, Widget, WindowCloseEvent},
     },
     sim::{
         config::{
-            production_method::FixedProductionMethod,
-            production_method_group::ProductionMethodGroup, resource::Resource,
-            transport_group::TransportGroupId, transport_method::TransportMethodId,
+            production_method::{FixedProductionMethod, ProductionMethodId},
+            production_method_group::ProductionMethodGroup,
+            resource::Resource,
+            transport_group::TransportGroupId,
+            transport_method::TransportMethodId,
         },
         production::Production,
+        Sim,
     },
     state::{
         components::SharedComponents,
         has::{HasSimMutex, HasTexts},
+        AppState,
     },
 };
 
@@ -46,6 +50,55 @@ impl ProductionBuilder {
                 .collect(),
         )
     }
+
+    fn draw_method_select(
+        &mut self,
+        app_st: &AppState,
+        shared_comps: &SharedComponents,
+        ctx: &egui::Context,
+        ui: &mut Ui,
+        sim: &Sim,
+        mut variants: impl Iterator<Item = ProductionMethodId>,
+    ) -> Result<()> {
+        loop {
+            let mut reached_end = false;
+            let mut method_row_current = 0;
+            const METHOD_ROW_SIZE: u32 = 8;
+            ui.horizontal(|ui| {
+                while method_row_current < METHOD_ROW_SIZE {
+                    let Some(method_id) = variants.next() else {
+                    reached_end = true;
+                    break;
+                };
+                    if !sim.research.is_production_unlocked(method_id) {
+                        continue;
+                    }
+                    let method = shared_comps.config(method_id)?;
+                    draw_icon_btn_with_tooltip(
+                        app_st,
+                        ctx,
+                        ui,
+                        &method.info,
+                        vec2(24., 24.),
+                        |i| i,
+                        |_| (),
+                        || {
+                            let selected_method =
+                                FixedProductionMethod::new(shared_comps, method_id, None)?;
+                            self.production_methods.push(selected_method.clone());
+                            Ok(())
+                        },
+                    )?;
+                    method_row_current += 1;
+                }
+                Ok(())
+            })
+            .inner?;
+            if reached_end {
+                return Ok(());
+            }
+        }
+    }
 }
 
 impl Widget for ProductionBuilder {
@@ -54,6 +107,7 @@ impl Widget for ProductionBuilder {
     fn ui(&mut self, env: &mut Env<'_>, ui: &mut egui::Ui) -> Result<Self::Response> {
         let app_st = env.app_state();
         let shared_comps = env.shared_components();
+        let ctx = env.get::<egui::Context>().unwrap();
         let mut sim_guard = app_st.lock_sim();
         let sim = sim_guard.as_mut().unwrap();
         ui.horizontal(|ui| {
@@ -173,18 +227,14 @@ impl Widget for ProductionBuilder {
                 for method_group in shared_comps.iter_configs::<ProductionMethodGroup>() {
                     let method_group = method_group?.1;
                     ui.menu_button(app_st.text(&method_group.name)?, |ui| {
-                        for &method_id in &method_group.variants {
-                            if !sim.research.is_production_unlocked(method_id) {
-                                continue;
-                            }
-                            let method = shared_comps.config(method_id)?;
-                            if ui.button(app_st.text(&method.info.name)?).clicked() {
-                                let selected_method =
-                                    FixedProductionMethod::new(shared_comps, method_id, None)?;
-                                self.production_methods.push(selected_method.clone());
-                            }
-                        }
-                        Ok(())
+                        self.draw_method_select(
+                            app_st,
+                            shared_comps,
+                            ctx,
+                            ui,
+                            sim,
+                            method_group.variants.iter().copied(),
+                        )
                     });
                 }
                 Ok(())

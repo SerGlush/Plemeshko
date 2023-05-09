@@ -38,11 +38,12 @@ fn ui_production(
     production_index: usize,
     productions: &mut Vec<Production>,
 ) -> Result<()> {
+    ui.separator();
     let removed = ui
         .horizontal(|ui| {
             let production = &mut productions[production_index];
 
-            ui.label(format!("{}:", production.name()));
+            ui.strong(format!("{}:", production.name()));
             on_using_modifiers(
                 &ui.add(Button::new("+").min_size(vec2(16.0, 16.0))),
                 egui::Response::clicked,

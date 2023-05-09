@@ -102,7 +102,7 @@ impl Widget for MainScreenInfoTab {
                             ctx,
                             ui,
                             &res.info,
-                            vec2(20.0, 20.0),
+                            vec2(32.0, 32.0),
                             |i| {
                                 i.tint(match change {
                                     Some(c) if c.0 > 0 => Color32::from_rgb(200, 200, 255),

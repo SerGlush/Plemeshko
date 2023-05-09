@@ -127,8 +127,7 @@ impl Widget for MainScreenResearchTab {
                 .default_pos(pos)
                 .show(ctx, |ui| {
                     ui.label(app_st.text(&technology.info.name)?);
-                    ui.colored_label(
-                        ui.visuals().weak_text_color(),
+                    ui.weak(
                         app_st.text(&technology.info.description)?,
                     );
                     ui.separator();

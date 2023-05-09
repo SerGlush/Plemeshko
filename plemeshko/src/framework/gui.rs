@@ -19,6 +19,11 @@ impl Gui {
         screen_size: PhysicalSize<u32>,
     ) -> Self {
         let context = egui::Context::default();
+        let mut style = egui::Style::default();
+        for (_, font) in style.text_styles.iter_mut() {
+            font.size *= 1.5;
+        }
+        context.set_style(style);
         let renderer = egui_wgpu::Renderer::new(&gfx.device, gfx.surface_config.format, None, 1);
         let mut state = egui_winit::State::new(event_loop);
         state.set_pixels_per_point(pixels_per_point);
