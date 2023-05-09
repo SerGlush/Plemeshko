@@ -126,8 +126,8 @@ impl Widget for MainScreenResearchTab {
                 .title_bar(false)
                 .default_pos(pos)
                 .show(ctx, |ui| {
-                    ui.label(app_st.text(&technology.info.name)?);
-                    ui.weak(app_st.text(&technology.info.description)?);
+                    ui.strong(app_st.text(&technology.info.name)?);
+                    ui.label(app_st.text(&technology.info.description)?);
                     ui.separator();
                     ui.horizontal(|ui| {
                         for bonus in &technology.bonuses {

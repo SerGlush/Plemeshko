@@ -145,8 +145,8 @@ pub fn draw_icon_with_tooltip(
     let name = app_st.text(&info.name)?;
     let description = app_st.text(&info.description)?;
     response.on_hover_ui_at_pointer(|ui| {
-        ui.label(name);
-        ui.weak(description);
+        ui.strong(name);
+        ui.label(description);
         ex_ui(ui);
     });
     Ok(())
@@ -170,8 +170,8 @@ pub fn draw_icon_btn_with_tooltip(
     let name = app_st.text(&info.name)?;
     let description = app_st.text(&info.description)?;
     let response = response.on_hover_ui_at_pointer(|ui| {
-        ui.label(name);
-        ui.weak(description);
+        ui.strong(name);
+        ui.label(description);
         ex_ui(ui);
     });
     if response.clicked() {
