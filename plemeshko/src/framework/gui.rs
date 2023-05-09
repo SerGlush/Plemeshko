@@ -1,3 +1,5 @@
+use crate::params::GLOBAL_FONT_SIZE_MUL;
+
 use super::graphics::Graphics;
 use egui::{ClippedPrimitive, Context, TexturesDelta};
 use winit::{dpi::PhysicalSize, event::WindowEvent};
@@ -21,7 +23,7 @@ impl Gui {
         let context = egui::Context::default();
         let mut style = egui::Style::default();
         for (_, font) in style.text_styles.iter_mut() {
-            font.size *= 1.5;
+            font.size *= GLOBAL_FONT_SIZE_MUL;
         }
         context.set_style(style);
         let renderer = egui_wgpu::Renderer::new(&gfx.device, gfx.surface_config.format, None, 1);

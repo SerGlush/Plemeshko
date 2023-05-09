@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
+use unic_langid::langid;
 
 use crate::{
     params::{COMPONENT_CONFIGS_DIR, COMPONENT_TEXTS_DIR, COMPONENT_TEXTURES_DIR},
@@ -69,7 +70,7 @@ impl ComponentLoader {
         let texts = if std::fs::try_exists(&dir)
             .with_context(|| "Checking existence of component's texts directory.")?
         {
-            TextRepository::from_directory(&dir)?
+            TextRepository::from_directory(&dir, langid!("en"))?
         } else {
             TextRepository::new()
         };

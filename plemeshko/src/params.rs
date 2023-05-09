@@ -16,8 +16,4 @@ pub const CORE_RESOURCE_FOOD: &str = "food";
 pub const CORE_LABEL: &str = "";
 pub const LABEL_SEPARATOR: char = '/';
 
-pub const MENU_FONT_SCALE: f32 = 0.02;
-pub const MENU_FONT_SIZE_BASE: f32 = 10.;
-pub const MENU_ITEM_MARGIN: f32 = 0.02;
-pub const MENU_ITEM_SIZE_1: f32 = 0.1;
-pub const MENU_ITEM_SIZE_2: f32 = 0.2;
+pub const GLOBAL_FONT_SIZE_MUL: f32 = 1.5;

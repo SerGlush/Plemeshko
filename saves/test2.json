@@ -1,0 +1,44 @@
+{
+    "saved_date": "1989-06-05T12:07:34Z",
+    "play_time": 123456789,
+    "depot": {
+        "/human": 80,
+        "/food": 0,
+        "/wood-log": 0,
+        "/stone": 0,
+        "/stone-instrument": 0
+    },
+    "productions": [
+        {
+            "name": "Hunting House",
+            "selected_methods": [
+                {
+                    "label": "/hunting-animals",
+                    "settings": [
+                        "/sticks-and-rocks"
+                    ]
+                }
+            ],
+            "transport": {
+                "/solid": "/manual"
+            },
+            "storage": {},
+            "count": 10,
+            "active": 10,
+            "reserve_export_threshold": 1
+        }
+    ],
+    "research": {
+        "current": null,
+        "finished": [],
+        "unlocked_production": [
+            "/hunting-animals",
+            "/nature-gathering"
+        ],
+        "unlocked_transport": [
+            "/manual"
+        ]
+    },
+    "nutrition": 80,
+    "pop_growth_stack": 0
+}

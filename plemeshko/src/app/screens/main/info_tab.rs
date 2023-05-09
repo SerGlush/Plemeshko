@@ -47,13 +47,15 @@ impl Widget for MainScreenInfoTab {
         let shared_comps = env.shared_components();
         ui.horizontal(|ui| {
             ui.label(app_st.session.as_ref().unwrap());
-            if ui.button("Save").clicked() {
+            if ui.button(app_st.text_core("ui_main_info_save")?).clicked() {
                 env.get::<AppSaveEvent>().unwrap().emit();
             }
-        });
+            Ok(())
+        })
+        .inner?;
         let mut sim_guard = app_st.lock_sim();
         let sim = sim_guard.as_mut().unwrap();
-        ui.label("Stats:");
+        ui.label(app_st.text_core("ui_main_info_stats")?);
         ui.indent("stats", |ui| {
             {
                 let mut args = FluentArgs::new();
@@ -90,7 +92,7 @@ impl Widget for MainScreenInfoTab {
         })
         .inner?;
         let ctx = env.get::<egui::Context>().unwrap();
-        ui.label("Resources:");
+        ui.label(app_st.text_core("ui_main_info_resources")?);
         ui.indent("resources", |ui| {
             for (&id, &value) in sim.depot.iter() {
                 if id != app_st.shared.human_id {

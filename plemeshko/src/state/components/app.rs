@@ -53,4 +53,13 @@ impl AppComponents {
                 )
             })
     }
+
+    pub fn iter_components_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (ComponentId, &mut AppComponent)> {
+        self.0
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(id, c)| c.as_mut().map(|c| (ComponentId(id as u16), c)))
+    }
 }

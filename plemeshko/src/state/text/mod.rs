@@ -16,7 +16,10 @@ use fluent::*;
 use fluent_syntax::parser::ParserError;
 use unic_langid::{LanguageIdentifier, LanguageIdentifierError};
 
+use crate::params::{COMPONENT_TEXTS_DIR, CORE_DIR};
+
 pub struct TextRepository {
+    directory: PathBuf,
     bundle: FluentBundle<FluentResource>,
 }
 
@@ -102,18 +105,22 @@ fn load_directory(
 impl TextRepository {
     pub fn new() -> Self {
         TextRepository {
+            directory: PathBuf::new(),
             bundle: FluentBundle::new(vec![unic_langid::langid!("en")]),
         }
     }
 
-    pub fn from_directory(path: &Path) -> Result<Self, TextRepositoryCreationError> {
-        let default_langid = unic_langid::langid!("en");
+    pub fn from_directory(
+        path: &Path,
+        langid: LanguageIdentifier,
+    ) -> Result<Self, TextRepositoryCreationError> {
         let mut dir_iter = std::fs::read_dir(path).map_err(TextRepositoryCreationError::Io)?;
         let mut max_similar_path = match dir_iter.next() {
             Some(Ok(dir_entry)) => dir_entry.path(),
             Some(Err(e)) => return Err(TextRepositoryCreationError::Io(e)),
             None => return Err(TextRepositoryCreationError::ZeroTranslationDirectories),
         };
+        let mut max_similar_langid = langid.clone();
         let mut max_similarity = {
             let dir_name = max_similar_path.file_name().unwrap();
             let dir_name = dir_name.to_str().ok_or_else(|| {
@@ -121,7 +128,7 @@ impl TextRepository {
             })?;
             let entry_langid = LanguageIdentifier::from_str(dir_name)
                 .map_err(TextRepositoryCreationError::InvalidTranslationDirectoryName)?;
-            calc_langid_similarity(&default_langid, &entry_langid)
+            calc_langid_similarity(&langid, &entry_langid)
         };
         for dir_entry in dir_iter {
             let dir_entry = dir_entry.map_err(TextRepositoryCreationError::Io)?;
@@ -135,13 +142,19 @@ impl TextRepository {
             })?;
             let entry_langid = LanguageIdentifier::from_str(entry_name)
                 .map_err(TextRepositoryCreationError::InvalidTranslationDirectoryName)?;
-            let entry_similarity = calc_langid_similarity(&default_langid, &entry_langid);
+            let entry_similarity = calc_langid_similarity(&langid, &entry_langid);
             if entry_similarity > max_similarity {
                 max_similarity = entry_similarity;
                 max_similar_path = dir_entry.path();
+                max_similar_langid = entry_langid;
             }
         }
-        let mut bundle = FluentBundle::new(vec![default_langid]);
+        if max_similar_langid != langid {
+            log::warn!(
+                "Loaded unideal translation, requested '{langid}', selected '{max_similar_langid}'"
+            );
+        }
+        let mut bundle = FluentBundle::new(vec![max_similar_langid]);
         load_directory(&mut bundle, max_similar_path).map_err(|e| match e {
             LoadTranslationError::ResourceRegistration(es) => {
                 TextRepositoryCreationError::ResourceRegistration(es)
@@ -149,16 +162,28 @@ impl TextRepository {
             LoadTranslationError::Io(e) => TextRepositoryCreationError::Io(e),
             LoadTranslationError::Parsing(r, es) => TextRepositoryCreationError::Parsing(r, es),
         })?;
-        Ok(TextRepository { bundle })
+        Ok(TextRepository {
+            directory: path.to_owned(),
+            bundle,
+        })
     }
 
-    pub fn switch_translation(
+    pub fn switch_translation_exact(
         &mut self,
         langid: LanguageIdentifier,
         path: PathBuf,
     ) -> Result<(), LoadTranslationError> {
         self.bundle = FluentBundle::new(vec![langid]);
         load_directory(&mut self.bundle, path)
+    }
+
+    pub fn switch_translation(
+        &mut self,
+        langid: LanguageIdentifier,
+    ) -> Result<(), TextRepositoryCreationError> {
+        let switched = Self::from_directory(&self.directory, langid)?;
+        self.bundle = switched.bundle;
+        Ok(())
     }
 
     /// Lists subdirectories' names parsed as language identifiers along with their full paths.
@@ -181,6 +206,12 @@ impl TextRepository {
             translations.push((entry_langid, entry_path));
         }
         Ok(translations)
+    }
+
+    pub fn available_translations_core() -> anyhow::Result<Vec<(LanguageIdentifier, PathBuf)>> {
+        let mut path = Path::new(CORE_DIR).to_path_buf();
+        path.push(Path::new(COMPONENT_TEXTS_DIR));
+        Self::available_translations(&path)
     }
 
     pub fn get<'a>(

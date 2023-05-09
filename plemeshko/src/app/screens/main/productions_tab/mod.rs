@@ -72,7 +72,7 @@ fn ui_production(
                 },
             );
 
-            if ui.button("Delete").clicked() {
+            if ui.button(app_st.text_core("ui_generic_delete")?).clicked() {
                 productions.remove(production_index);
                 return Ok(true);
             }

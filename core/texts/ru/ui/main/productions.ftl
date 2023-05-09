@@ -1,0 +1,6 @@
+ui_main_productions_header = Производства
+ui_main_productions_open-builder = Открыть Конструктор
+ui_main_productions_builder_name = Имя
+ui_main_productions_builder_window-title = Конструктор Производств
+ui_main_productions_builder_add-production-method = Добавить метод производства
+ui_main_productions_builder_finish = Создать

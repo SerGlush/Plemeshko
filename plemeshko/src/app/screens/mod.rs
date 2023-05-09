@@ -1,8 +1,11 @@
+use std::path::PathBuf;
+
 use anyhow::{Context, Result};
 use egui::CentralPanel;
 use enum_map::{enum_map, Enum};
+use unic_langid::LanguageIdentifier;
 
-use crate::state::AppState;
+use crate::state::{components::ComponentId, AppState};
 
 use super::{
     env::Env,
@@ -32,6 +35,7 @@ pub struct AppSaveEvent(FlagEvent);
 pub struct AppLoadEvent(SetEvent<String>);
 pub struct AppExitEvent(FlagEvent);
 pub struct AppNewGameEvent(SetEvent<String>);
+pub struct AppSwitchTranslationEvent(SetEvent<(LanguageIdentifier, PathBuf)>);
 
 impl App {
     pub fn new() -> Self {
@@ -55,15 +59,18 @@ impl App {
         let mut ev_load = AppLoadEvent(SetEvent::new());
         let ev_exit = AppExitEvent(FlagEvent::new());
         let mut ev_newgame = AppNewGameEvent(SetEvent::new());
+        let mut ev_sw_translation = AppSwitchTranslationEvent(SetEvent::new());
         self.1.with(st, |env| {
             env.with(&egui_ctx.clone(), |env| {
                 env.with(&ev_save, |env| {
                     env.with(&ev_load, |env| {
                         env.with(&ev_exit, |env| {
                             env.with(&ev_newgame, |env| {
-                                CentralPanel::default()
-                                    .show(egui_ctx, |ui| self.0.ui(env, ui))
-                                    .inner
+                                env.with(&ev_sw_translation, |env| {
+                                    CentralPanel::default()
+                                        .show(egui_ctx, |ui| self.0.ui(env, ui))
+                                        .inner
+                                })
                             })
                         })
                     })
@@ -83,6 +90,16 @@ impl App {
                     .with_context(|| "Creating new game")?,
             );
             st.session = Some(game_name.clone());
+        }
+        if let Some(tr) = ev_sw_translation.0.get_mut() {
+            for (id, c) in st.components.iter_components_mut() {
+                if id == ComponentId::core() {
+                    c.texts
+                        .switch_translation_exact(tr.0.clone(), tr.1.clone())?;
+                    continue;
+                }
+                c.texts.switch_translation(tr.0.clone())?;
+            }
         }
         Ok(ev_exit.0.get())
     }
@@ -116,6 +133,14 @@ impl AppNewGameEvent {
     delegate::delegate! {
         to self.0 {
             pub fn emit(&self, name: String);
+        }
+    }
+}
+
+impl AppSwitchTranslationEvent {
+    delegate::delegate! {
+        to self.0 {
+            pub fn emit(&self, tr: (LanguageIdentifier, PathBuf));
         }
     }
 }
