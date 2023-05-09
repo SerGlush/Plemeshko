@@ -104,6 +104,7 @@ pub fn load(name: &str, app_st: &mut AppState) -> Result<()> {
     let sim = Sim::restore(&shared_comps, sim)?;
     sim.research
         .update_technology_satisfaction(&mut shared_comps)?;
+    app_st.session = Some(name.to_owned());
     *app_st.shared.sim.lock().unwrap() = Some(sim);
     Ok(())
 }

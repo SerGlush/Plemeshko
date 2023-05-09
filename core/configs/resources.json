@@ -12,7 +12,14 @@
         "label": "food",
         "payload": {
             "transport_group": "solid",
-            "transport_weight": 2
+            "transport_weight": 2,
+            "icon": {
+                "texture": "icons",
+                "left": 0,
+                "top": 0,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {
@@ -20,7 +27,14 @@
         "label": "wood-log",
         "payload": {
             "transport_group": "solid",
-            "transport_weight": 20
+            "transport_weight": 20,
+            "icon": {
+                "texture": "icons",
+                "left": 0.375,
+                "top": 0.125,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {
@@ -28,7 +42,14 @@
         "label": "stone",
         "payload": {
             "transport_group": "solid",
-            "transport_weight": 2
+            "transport_weight": 2,
+            "icon": {
+                "texture": "icons",
+                "left": 0.25,
+                "top": 0.125,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {
@@ -36,7 +57,14 @@
         "label": "stone-instrument",
         "payload": {
             "transport_group": "solid",
-            "transport_weight": 4
+            "transport_weight": 4,
+            "icon": {
+                "texture": "icons",
+                "left": 0.125,
+                "top": 0.125,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     }
 ]
