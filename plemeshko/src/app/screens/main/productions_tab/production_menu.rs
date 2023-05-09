@@ -228,16 +228,13 @@ impl Widget for ProductionBuilder {
             .inner
         })?;
 
-        match unwanted_method {
-            Some(needed_method) => {
-                self.production_methods.remove(
-                    self.production_methods
-                        .iter()
-                        .position(|method| method.id == needed_method.id)
-                        .unwrap(),
-                );
-            }
-            None => (),
+        if let Some(needed_method) = unwanted_method {
+            self.production_methods.remove(
+                self.production_methods
+                    .iter()
+                    .position(|method| method.id == needed_method.id)
+                    .unwrap(),
+            );
         }
 
         ui.menu_button(

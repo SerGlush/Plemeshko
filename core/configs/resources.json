@@ -4,7 +4,14 @@
         "label": "human",
         "payload": {
             "transport_group": "solid",
-            "transport_weight": 0
+            "transport_weight": 0,
+            "icon": {
+                "texture": "icons",
+                "left": 0.125,
+                "top": 0,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {

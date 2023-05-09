@@ -4,7 +4,7 @@ use egui::{vec2, Button};
 use crate::{
     app::{
         env::Env,
-        util::{on_using_modifiers, ConfigIteratorExt},
+        util::{draw_icon_with_tooltip, on_using_modifiers, ConfigIteratorExt},
         widgets::{PersistentWindow, Tab, Widget},
     },
     sim::production::Production,
@@ -34,6 +34,7 @@ impl MainScreenProductionsTab {
 fn ui_production(
     app_st: &AppState,
     shared_comps: &SharedComponents,
+    ctx: &egui::Context,
     ui: &mut egui::Ui,
     production_index: usize,
     productions: &mut Vec<Production>,
@@ -103,35 +104,44 @@ fn ui_production(
         ui.horizontal(|ui| {
             ui.label(app_st.text(&method.info.name)?);
             for setting in selected_method.settings.configs(shared_comps) {
-                ui.label(app_st.text(&setting.name)?).on_hover_text(format!(
-                    "{}:{}\n{}:{}",
-                    app_st.text_core("ui_main_productions_setting_tooltip1")?,
-                    setting
-                        .resource_io
-                        .input
-                        .iter()
-                        .map(|input| {
-                            Ok(format!(
-                                "\n{}: {}",
-                                app_st.text(&shared_comps.config(*input.0)?.info.name)?,
-                                input.1 .0
-                            ))
-                        })
-                        .sum()?,
-                    app_st.text_core("ui_main_productions_setting_tooltip2")?,
-                    setting
-                        .resource_io
-                        .output
-                        .iter()
-                        .map(|output| {
-                            Ok(format!(
-                                "\n{}: {}",
-                                app_st.text(&shared_comps.config(*output.0)?.info.name)?,
-                                output.1 .0
-                            ))
-                        })
-                        .sum()?
-                ));
+                ui.label(app_st.text(&setting.name)?).on_hover_ui(|ui| {
+                    ui.strong(app_st.text_core("ui_generic_input").unwrap());
+                    ui.indent("output", |ui| {
+                        for (&id, &amount) in &setting.resource_io.input {
+                            ui.horizontal(|ui| {
+                                draw_icon_with_tooltip(
+                                    app_st,
+                                    ctx,
+                                    ui,
+                                    &shared_comps.config(id).unwrap().info,
+                                    vec2(24., 24.),
+                                    |i| i,
+                                    |_| (),
+                                )
+                                .unwrap();
+                                ui.label(amount.to_string());
+                            });
+                        }
+                    });
+                    ui.strong(app_st.text_core("ui_generic_output").unwrap());
+                    ui.indent("output", |ui| {
+                        for (&id, &amount) in &setting.resource_io.output {
+                            ui.horizontal(|ui| {
+                                draw_icon_with_tooltip(
+                                    app_st,
+                                    ctx,
+                                    ui,
+                                    &shared_comps.config(id).unwrap().info,
+                                    vec2(24., 24.),
+                                    |i| i,
+                                    |_| (),
+                                )
+                                .unwrap();
+                                ui.label(amount.to_string());
+                            });
+                        }
+                    });
+                });
             }
             Ok(())
         })
@@ -155,6 +165,7 @@ impl Widget for MainScreenProductionsTab {
         }
         self.production_menu.ui(env, ui)?;
         let app_st = env.app_state();
+        let ctx = env.get::<egui::Context>().unwrap();
         let shared_comps = env.shared_components();
         let mut sim_guard = app_st.lock_sim();
         let sim = sim_guard.as_mut().unwrap();
@@ -162,6 +173,7 @@ impl Widget for MainScreenProductionsTab {
             ui_production(
                 app_st,
                 shared_comps,
+                ctx,
                 ui,
                 production_index,
                 &mut sim.productions,
