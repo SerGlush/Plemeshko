@@ -9,6 +9,7 @@
 #![feature(try_find)]
 #![feature(min_specialization)]
 #![feature(trait_alias)]
+#![feature(is_some_and)]
 #![deny(elided_lifetimes_in_paths)]
 #![deny(clippy::undocumented_unsafe_blocks)]
 #![allow(clippy::mut_mutex_lock)] // false positives

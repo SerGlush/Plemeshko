@@ -36,7 +36,10 @@ impl Widget for NewGameScreen {
             .all(|c| c.is_ascii_alphanumeric() || c == '_');
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(!self.name.is_empty() && valid_name, egui::Button::new("Start"))
+                .add_enabled(
+                    !self.name.is_empty() && valid_name,
+                    egui::Button::new("Start"),
+                )
                 .clicked()
             {
                 env.get::<AppNewGameEvent>()

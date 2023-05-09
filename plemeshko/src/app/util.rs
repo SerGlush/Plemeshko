@@ -1,9 +1,12 @@
-use anyhow::Result;
-use egui::{ImageButton, Ui, Vec2, Color32, Image};
+use anyhow::{Ok, Result};
+use egui::{Color32, Image, ImageButton, Response, Ui, Vec2};
 
 use crate::state::{
     components::SharedComponents,
-    config::{Config, FatConfigId, Info}, AppState, has::HasTexts,
+    config::{Config, FatConfigId, Info},
+    has::HasTexts,
+    texture::FatTexturePartId,
+    AppState,
 };
 
 /// Consume iterator calling a fallible ui callback on each item.
@@ -110,6 +113,21 @@ pub fn on_using_modifiers<R>(
     }
 }
 
+pub fn draw_icon(
+    app_st: &AppState,
+    ctx: &egui::Context,
+    ui: &mut Ui,
+    icon: &FatTexturePartId,
+    siz: Vec2,
+    sty: impl FnOnce(Image) -> Image,
+) -> Result<Response> {
+    let mut button = Image::new(app_st.texture(icon.texture)?.texture_id(ctx), siz);
+    if let Some(uv) = icon.uv {
+        button = button.uv(uv);
+    }
+    Ok(ui.add(sty(button)))
+}
+
 pub fn draw_icon_with_tooltip(
     app_st: &AppState,
     ctx: &egui::Context,
@@ -119,8 +137,7 @@ pub fn draw_icon_with_tooltip(
     sty: impl FnOnce(Image) -> Image,
     ex_ui: impl FnOnce(&mut Ui),
 ) -> Result<()> {
-    let mut button =
-        Image::new(app_st.texture(info.icon.texture)?.texture_id(ctx), siz);
+    let mut button = Image::new(app_st.texture(info.icon.texture)?.texture_id(ctx), siz);
     if let Some(uv) = info.icon.uv {
         button = button.uv(uv);
     }

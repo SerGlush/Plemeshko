@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::{
     components::{ComponentsRef, SharedComponents},
-    config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Prepare},
+    config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Info, Prepare, RawInfo},
     serializable::Serializable,
-    text::{FatTextId, TextIdFactory},
+    text::TextIdFactory,
 };
 
 use super::{
@@ -15,6 +15,8 @@ use super::{
 
 #[derive(Deserialize)]
 pub struct RawProductionMethod {
+    #[serde(flatten)]
+    pub info: RawInfo,
     pub setting_groups: Vec<FatConfigLabel<SettingGroup>>,
     #[serde(default)]
     pub initially_unlocked: bool,
@@ -22,7 +24,7 @@ pub struct RawProductionMethod {
 
 #[derive(Debug)]
 pub struct ProductionMethod {
-    pub name: FatTextId,
+    pub info: Info,
     pub setting_groups: Vec<SettingGroupId>,
     pub initially_unlocked: bool,
 }
@@ -73,10 +75,10 @@ impl Prepare for RawProductionMethod {
         ctx: &mut ConfigsLoadingContext<'_>,
         tif: &mut TextIdFactory,
     ) -> anyhow::Result<ProductionMethod> {
-        let name = tif.create("name").in_component(ctx.this_component.id());
+        let info = self.info.prepare(ctx, tif)?;
         tif.with_lock(|tif| {
             Ok(ProductionMethod {
-                name,
+                info,
                 setting_groups: self.setting_groups.prepare(ctx, tif)?,
                 initially_unlocked: self.initially_unlocked,
             })

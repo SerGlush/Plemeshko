@@ -2,10 +2,7 @@ use serde::Deserialize;
 
 use crate::{
     sim::units::ResourceWeight,
-    state::{
-        config::{Config, FatConfigId, FatConfigLabel, Prepare},
-        text::FatTextId,
-    },
+    state::config::{Config, FatConfigId, FatConfigLabel, Info, Prepare, RawInfo},
 };
 
 use super::{
@@ -15,6 +12,8 @@ use super::{
 
 #[derive(Deserialize)]
 pub struct RawTransportMethod {
+    #[serde(flatten)]
+    pub info: RawInfo,
     pub group: FatConfigLabel<TransportGroup>,
     pub capacity: ResourceWeight,
     pub fuel: RawResourceIo,
@@ -25,7 +24,7 @@ pub struct RawTransportMethod {
 
 #[derive(Debug)]
 pub struct TransportMethod {
-    pub name: FatTextId,
+    pub info: Info,
     pub group: TransportGroupId,
     pub capacity: ResourceWeight,
     pub fuel: ResourceIo,
@@ -43,10 +42,10 @@ impl Prepare for RawTransportMethod {
         ctx: &mut crate::state::config::ConfigsLoadingContext<'_>,
         tif: &mut crate::state::text::TextIdFactory,
     ) -> anyhow::Result<Self::Prepared> {
-        let name = tif.create("name").in_component(ctx.this_component.id());
+        let info = self.info.prepare(ctx, tif)?;
         tif.with_lock(|tif| {
             Ok(TransportMethod {
-                name,
+                info,
                 group: self.group.prepare(ctx, tif)?,
                 capacity: self.capacity,
                 fuel: self.fuel.prepare(ctx, tif)?,

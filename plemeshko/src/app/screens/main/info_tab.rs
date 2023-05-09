@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::{Ok, Result};
-use egui::{Color32, vec2};
+use egui::{vec2, Color32};
 use fluent::FluentArgs;
 
 use crate::{
@@ -122,7 +122,8 @@ impl Widget for MainScreenInfoTab {
                         }
                         ui.label(res_info_text);
                         Ok(())
-                    }).inner?;
+                    })
+                    .inner?;
                 }
             }
             Ok(())

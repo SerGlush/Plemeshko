@@ -7,6 +7,13 @@
             "capacity": 400,
             "fuel": {},
             "initially_unlocked": true,
+            "icon": {
+                "texture": "icons",
+                "left": 0.875,
+                "top": 0,
+                "width": 0.125,
+                "height": 0.125
+            },
 
             "ui_priority": 0
         }

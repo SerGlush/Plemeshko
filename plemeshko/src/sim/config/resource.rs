@@ -7,8 +7,8 @@ use crate::{
     sim::units::{ResourceAmount, ResourceWeight},
     state::{
         components::ComponentsRef,
-        config::{Config, FatConfigId, FatConfigLabel, Prepare, Info, RawInfo},
-        serializable::Serializable
+        config::{Config, FatConfigId, FatConfigLabel, Info, Prepare, RawInfo},
+        serializable::Serializable,
     },
 };
 

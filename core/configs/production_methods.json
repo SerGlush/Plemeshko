@@ -6,7 +6,14 @@
             "setting_groups": [
                 "hunting-tool"
             ],
-            "initially_unlocked": true
+            "initially_unlocked": true,
+            "icon": {
+                "texture": "icons",
+                "left": 0.75,
+                "top": 0,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {
@@ -16,7 +23,14 @@
             "setting_groups": [
                 "fishing-location",
                 "fishing-tool"
-            ]
+            ],
+            "icon": {
+                "texture": "icons",
+                "left": 0.375,
+                "top": 0,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {
@@ -25,7 +39,14 @@
         "payload": {
             "setting_groups": [
                 "instrument-material"
-            ]
+            ],
+            "icon": {
+                "texture": "icons",
+                "left": 0.5,
+                "top": 0,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     },
     {
@@ -35,7 +56,14 @@
             "setting_groups": [
                 "resource-focus"
             ],
-            "initially_unlocked": true
+            "initially_unlocked": true,
+            "icon": {
+                "texture": "icons",
+                "left": 0.625,
+                "top": 0,
+                "width": 0.125,
+                "height": 0.125
+            }
         }
     }
 ]

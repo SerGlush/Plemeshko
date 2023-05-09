@@ -80,7 +80,7 @@ fn ui_production(
 
             for transport in production.transport().values().configs(shared_comps) {
                 let transport_group = shared_comps.config(transport.group)?;
-                ui.label(app_st.text(&transport.name)?)
+                ui.label(app_st.text(&transport.info.name)?)
                     .on_hover_text(format!(
                         "Transport Group: {}\nTransport Capacity: {}",
                         app_st.text(&transport_group.name)?,
@@ -98,7 +98,7 @@ fn ui_production(
     for selected_method in productions[production_index].methods() {
         let method = shared_comps.config(selected_method.id)?;
         ui.horizontal(|ui| {
-            ui.label(app_st.text(&method.name)?);
+            ui.label(app_st.text(&method.info.name)?);
             for setting in selected_method.settings.configs(shared_comps) {
                 ui.label(app_st.text(&setting.name)?);
             }

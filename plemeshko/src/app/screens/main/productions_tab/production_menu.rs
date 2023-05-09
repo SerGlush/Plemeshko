@@ -66,7 +66,7 @@ impl Widget for ProductionBuilder {
                 let selected_transport = shared_comps.config(value.0)?;
                 value.1 = false;
 
-                let selected_transport_name = app_st.text(&selected_transport.name)?;
+                let selected_transport_name = app_st.text(&selected_transport.info.name)?;
                 ComboBox::from_id_source(selected_transport_name.as_ref())
                     .selected_text(selected_transport_name.as_ref())
                     .show_ui(ui, |ui| {
@@ -76,7 +76,7 @@ impl Widget for ProductionBuilder {
                             .configs_with_ids(shared_comps)
                             .filter(|(id, _)| sim.research.is_transport_unlocked(*id))
                         {
-                            let transport_name = app_st.text(&transport.name)?;
+                            let transport_name = app_st.text(&transport.info.name)?;
 
                             if ui.button(transport_name).clicked() {
                                 value.0 = transport_id;
@@ -138,7 +138,7 @@ impl Widget for ProductionBuilder {
 
         draw_iter_indexed(ui, self.production_methods.iter_mut(), |ui, method| {
             ui.horizontal(|ui| {
-                let method_name = app_st.text(&shared_comps.config(method.id)?.name)?;
+                let method_name = app_st.text(&shared_comps.config(method.id)?.info.name)?;
                 ui.label(method_name.as_ref());
                 for selected_setting_id in &mut method.settings {
                     let selected_setting = shared_comps.config(*selected_setting_id)?;
@@ -178,7 +178,7 @@ impl Widget for ProductionBuilder {
                                 continue;
                             }
                             let method = shared_comps.config(method_id)?;
-                            if ui.button(app_st.text(&method.name)?).clicked() {
+                            if ui.button(app_st.text(&method.info.name)?).clicked() {
                                 let selected_method =
                                     FixedProductionMethod::new(shared_comps, method_id, None)?;
                                 self.production_methods.push(selected_method.clone());
