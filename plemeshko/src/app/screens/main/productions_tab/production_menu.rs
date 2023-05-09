@@ -85,7 +85,7 @@ impl ProductionBuilder {
                         || {
                             let selected_method =
                                 FixedProductionMethod::new(shared_comps, method_id, None)?;
-                            self.production_methods.push(selected_method.clone());
+                            self.production_methods.push(selected_method);
                             Ok(())
                         },
                     )?;

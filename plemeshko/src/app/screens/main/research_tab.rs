@@ -127,9 +127,7 @@ impl Widget for MainScreenResearchTab {
                 .default_pos(pos)
                 .show(ctx, |ui| {
                     ui.label(app_st.text(&technology.info.name)?);
-                    ui.weak(
-                        app_st.text(&technology.info.description)?,
-                    );
+                    ui.weak(app_st.text(&technology.info.description)?);
                     ui.separator();
                     ui.horizontal(|ui| {
                         for bonus in &technology.bonuses {
@@ -146,7 +144,7 @@ impl Widget for MainScreenResearchTab {
                                 ctx,
                                 ui,
                                 info,
-                                egui::vec2(24., 24.),
+                                egui::vec2(32., 32.),
                                 |i| i,
                                 |_| (),
                             )?;
