@@ -190,6 +190,8 @@ impl Widget for ProductionBuilder {
             Ok(())
         });
 
+        let mut unwanted_method: Option<FixedProductionMethod> = None;
+
         draw_iter_indexed(ui, self.production_methods.iter_mut(), |ui, method| {
             ui.horizontal(|ui| {
                 let method_name = app_st.text(&shared_comps.config(method.id)?.info.name)?;
@@ -216,10 +218,27 @@ impl Widget for ProductionBuilder {
                         .inner
                         .transpose()?;
                 }
+
+                if ui.button("X").clicked() {
+                    unwanted_method = Some(method.clone());
+                };
+
                 Ok(())
             })
             .inner
         })?;
+
+        match unwanted_method {
+            Some(needed_method) => {
+                self.production_methods.remove(
+                    self.production_methods
+                        .iter()
+                        .position(|method| method.id == needed_method.id)
+                        .unwrap(),
+                );
+            }
+            None => (),
+        }
 
         ui.menu_button(
             app_st.text_core("ui_main_productions_builder_add-production-method")?,
