@@ -83,8 +83,10 @@ fn ui_production(
                 let transport_group = shared_comps.config(transport.group)?;
                 ui.label(app_st.text(&transport.info.name)?)
                     .on_hover_text(format!(
-                        "Transport Group: {}\nTransport Capacity: {}",
+                        "{}: {}\n{}: {}",
+                        app_st.text_core("ui_main_productions_transport_tooltip1")?,
                         app_st.text(&transport_group.name)?,
+                        app_st.text_core("ui_main_productions_transport_tooltip2")?,
                         transport.capacity
                     ));
             }
@@ -101,7 +103,35 @@ fn ui_production(
         ui.horizontal(|ui| {
             ui.label(app_st.text(&method.info.name)?);
             for setting in selected_method.settings.configs(shared_comps) {
-                ui.label(app_st.text(&setting.name)?);
+                ui.label(app_st.text(&setting.name)?).on_hover_text(format!(
+                    "{}:{}\n{}:{}",
+                    app_st.text_core("ui_main_productions_setting_tooltip1")?,
+                    setting
+                        .resource_io
+                        .input
+                        .iter()
+                        .map(|input| {
+                            Ok(format!(
+                                "\n{}: {}",
+                                app_st.text(&shared_comps.config(*input.0)?.info.name)?,
+                                input.1 .0
+                            ))
+                        })
+                        .sum()?,
+                    app_st.text_core("ui_main_productions_setting_tooltip2")?,
+                    setting
+                        .resource_io
+                        .output
+                        .iter()
+                        .map(|output| {
+                            Ok(format!(
+                                "\n{}: {}",
+                                app_st.text(&shared_comps.config(*output.0)?.info.name)?,
+                                output.1 .0
+                            ))
+                        })
+                        .sum()?
+                ));
             }
             Ok(())
         })
