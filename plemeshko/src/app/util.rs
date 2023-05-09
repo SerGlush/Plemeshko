@@ -1,5 +1,5 @@
 use anyhow::{Ok, Result};
-use egui::{Color32, Image, ImageButton, Response, Ui, Vec2};
+use egui::{Image, ImageButton, Response, Ui, Vec2};
 
 use crate::state::{
     components::SharedComponents,
@@ -146,7 +146,7 @@ pub fn draw_icon_with_tooltip(
     let description = app_st.text(&info.description)?;
     response.on_hover_ui_at_pointer(|ui| {
         ui.label(name);
-        ui.colored_label(Color32::from_rgb(200, 200, 200), description);
+        ui.weak(description);
         ex_ui(ui);
     });
     Ok(())
