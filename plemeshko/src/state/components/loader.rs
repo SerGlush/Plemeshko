@@ -68,7 +68,7 @@ impl ComponentLoader {
 
         dir.push(COMPONENT_TEXTS_DIR);
         let texts = if std::fs::try_exists(&dir)
-            .with_context(|| "Checking existence of component's texts directory.")?
+            .context("Checking existence of component's texts directory.")?
         {
             TextRepository::from_directory(&dir, langid!("en"))?
         } else {
@@ -78,7 +78,7 @@ impl ComponentLoader {
 
         dir.push(COMPONENT_TEXTURES_DIR);
         let textures = if std::fs::try_exists(&dir)
-            .with_context(|| "Checking existence of component's textures directory.")?
+            .context("Checking existence of component's textures directory.")?
         {
             TextureRepository::from_directory(&dir)?
         } else {
@@ -90,7 +90,7 @@ impl ComponentLoader {
         let configs = {
             let mut builder = ConfigRepositoryBuilder::new(&self.config_type_registry)?;
             if std::fs::try_exists(&dir)
-                .with_context(|| "Checking existence of component's configs directory.")?
+                .context("Checking existence of component's configs directory.")?
             {
                 builder.load_directory(&self.config_type_registry, &dir)?;
             }

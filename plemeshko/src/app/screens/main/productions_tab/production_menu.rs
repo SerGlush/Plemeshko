@@ -190,7 +190,7 @@ impl Widget for ProductionBuilder {
             Ok(())
         });
 
-        let mut unwanted_method: Option<FixedProductionMethod> = None;
+        let mut unwanted_method: Option<ProductionMethodId> = None;
 
         draw_iter_indexed(ui, self.production_methods.iter_mut(), |ui, method| {
             ui.horizontal(|ui| {
@@ -220,7 +220,7 @@ impl Widget for ProductionBuilder {
                 }
 
                 if ui.button("X").clicked() {
-                    unwanted_method = Some(method.clone());
+                    unwanted_method = Some(method.id);
                 };
 
                 Ok(())
@@ -232,7 +232,7 @@ impl Widget for ProductionBuilder {
             self.production_methods.remove(
                 self.production_methods
                     .iter()
-                    .position(|method| method.id == needed_method.id)
+                    .position(|method| method.id == needed_method)
                     .unwrap(),
             );
         }

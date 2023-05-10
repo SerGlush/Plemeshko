@@ -128,7 +128,7 @@ impl<C: Config> Prepare for FatConfigLabel<C> {
                 let cfg_id = if ctx.is_loaded::<C>() {
                     ctx.st
                         .id_from_raw(&self.0 .1)
-                        .with_context(|| "Resolving reference to config of a type already loaded")?
+                        .context("Resolving reference to config of a type already loaded")?
                 } else {
                     ctx.st.declare_id(Cow::Owned(self.into_config()))?
                 };

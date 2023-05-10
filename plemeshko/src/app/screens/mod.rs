@@ -87,7 +87,7 @@ impl App {
             let mut sim_guard = st.shared.sim.lock().unwrap();
             *sim_guard = Some(
                 crate::sim::Sim::new(&mut st.shared.components.write().unwrap())
-                    .with_context(|| "Creating new game")?,
+                    .context("Creating new game")?,
             );
             st.session = Some(game_name.clone());
         }

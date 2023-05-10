@@ -83,7 +83,7 @@ fn parse_adding_to_any_store<C: Config>(
             )
         })
         .and_then(|store| {
-            let config = serde_json::from_str(raw_cfg.get()).with_context(|| "Parsing failed")?;
+            let config = serde_json::from_str(raw_cfg.get()).context("Parsing failed")?;
             match store.try_insert(ConfigLabel::new(label), config) {
                 Ok(_) => Ok(()),
                 Err(e) => Err(anyhow!(
