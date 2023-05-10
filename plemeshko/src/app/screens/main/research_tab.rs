@@ -9,7 +9,7 @@ use egui::{Color32, Pos2, ProgressBar, Ui, WidgetText};
 use crate::{
     app::{
         env::Env,
-        util::draw_icon_with_tooltip,
+        util::{draw_icon, draw_icon_with_tooltip},
         widgets::{Tab, Widget},
     },
     sim::{
@@ -57,13 +57,14 @@ impl Widget for MainScreenResearchTab {
 
         let mut current_research_text = app_st.text_core("ui_main_research_current")?.into_owned();
         if let Some((id, progress)) = sim.research.current() {
-            write!(
-                current_research_text,
-                ": {}",
-                app_st.text(&shared_comps.config(id)?.info.name)?
-            )?;
+            let info = &shared_comps.config(id)?.info;
+            write!(current_research_text, ": {}", app_st.text(&info.name)?)?;
             ui.horizontal(|ui| {
-                ui.label(current_research_text);
+                ui.label(current_research_text)
+                    .on_hover_ui_at_pointer(|ui| {
+                        draw_icon(app_st, ctx, ui, &info.icon, egui::vec2(32.0, 32.0), |i| i)
+                            .unwrap();
+                    });
                 ui.add(ProgressBar::new(
                     progress as f32 / shared_comps.config(id)?.cost as f32,
                 ));
