@@ -126,7 +126,13 @@ impl Sim {
         }
 
         for i in 0..self.productions.len() {
-            self.productions[i].step(env, &mut self.depot)?;
+            self.productions[i].step_input(env, &mut self.depot)?;
+        }
+        for i in 0..self.productions.len() {
+            self.productions[i].step_process();
+        }
+        for i in 0..self.productions.len() {
+            self.productions[i].step_output(env, &mut self.depot)?;
         }
 
         self.research.step(&env.components)?;

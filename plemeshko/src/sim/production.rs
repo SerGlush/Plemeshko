@@ -164,7 +164,7 @@ impl Production {
         self.last_activated
     }
 
-    fn step_input(
+    pub fn step_input(
         &mut self,
         shared_st: &SharedState,
         depot: &mut ResourceMap,
@@ -176,12 +176,7 @@ impl Production {
         for (res_id, &single_input) in self.single_io.input.iter() {
             let req_input = single_input * self.active() as i64;
             let res = shared_comps.config(*res_id)?;
-            let already_stored = self
-                .state
-                .storage
-                .get(res_id)
-                .map(Clone::clone)
-                .unwrap_or_default();
+            let already_stored = self.state.storage.get(res_id).copied().unwrap_or_default();
             if already_stored >= req_input {
                 continue;
             }
@@ -258,7 +253,7 @@ impl Production {
         Ok(())
     }
 
-    fn step_process(&mut self) {
+    pub fn step_process(&mut self) {
         let activated = self
             .state
             .storage
@@ -280,7 +275,7 @@ impl Production {
     }
 
     // todo: fair output scheduler
-    fn step_output(
+    pub fn step_output(
         &mut self,
         shared_st: &SharedState,
         depot: &mut ResourceMap,
@@ -354,11 +349,11 @@ impl Production {
         Ok(())
     }
 
-    pub fn step(&mut self, env: &SharedState, depot: &mut ResourceMap) -> anyhow::Result<()> {
-        self.step_input(env, depot)?;
-        self.step_process();
-        self.step_output(env, depot)
-    }
+    // pub fn step(&mut self, env: &SharedState, depot: &mut ResourceMap) -> anyhow::Result<()> {
+    //     self.step_input(env, depot)?;
+    //     self.step_process();
+    //     self.step_output(env, depot)
+    // }
 }
 
 impl Serializable for ProductionSnapshot {

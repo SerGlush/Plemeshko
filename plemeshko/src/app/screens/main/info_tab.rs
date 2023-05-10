@@ -62,7 +62,7 @@ impl Widget for MainScreenInfoTab {
                 let mut population_count_text = sim
                     .depot
                     .get(&app_st.shared.human_id)
-                    .map(Clone::clone)
+                    .copied()
                     .unwrap_or_default()
                     .to_string();
                 if let Some(change) = self.depot_change.get(&app_st.shared.human_id) {
