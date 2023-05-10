@@ -4,16 +4,16 @@ production-method-group_resource-gathering_name = Сбор ресурсов
 
 production-method_hunting-animals_name = Добыча пищи охотой
 production-method_hunting-animals_description =
-    Hunting is the practice of pursuing and killing wild animals for food.
+    Охота ради еды - это процесс поиска и убийства животных для получения пищи. Охота была одним из основных способов выживания для древних людей, которые охотились на животных, чтобы получить мясо, кожу, шерсть и другие ресурсы.
 
 production-method_handicraft-production_name = Ручное производство
 production-method_handicraft-production_description =
-    Handicraft production refers to the creation of handmade items using traditional techniques and tools. It involves the use of raw materials such as wood, clay, metal, fabric, and paper to create unique and artistic products.
+    Ручное производство - это процесс создания продукта с помощью ручных инструментов и техник, без использования автоматических машин и оборудования. Ручное производство может быть очень трудоемким и требует большого мастерства и опыта.
 
 production-method_nature-gathering_name = Сбор ресурсов
 production-method_nature-gathering_description =
-    Gathering natural resources refers to the process of collecting materials from the environment that are used for various purposes such as food, fuel, shelter, and clothing. This process involves identifying the location of the resources, extracting them from their natural habitat, and processing them to make them usable.
+    Сбор натуральных ресурсов - это процесс добычи и сбора природных материалов, которые используются для производства различных товаров и услуг. Этот процесс может включать в себя различные методы, в зависимости от типа ресурсов и места их добычи.
 
 production-method_fishing-fish_name = Рыбалка
 production-method_fishing-fish_description =
-    Fishing is the activity of catching fish from water bodies such as rivers, lakes, oceans, and streams. It is a popular recreational activity and also a means of livelihood for many people around the world. Fishing can be done using various methods such as angling, netting, trapping, and spearing.
+    Рыбалка это ловля рыбы из водоёмов, таких как реки, озера и океаны. В зависимости от места и условий ловли, используются различные методы рыбалки.
