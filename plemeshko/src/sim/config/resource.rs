@@ -42,7 +42,7 @@ pub struct RawResourceIo {
     pub output: RawResourceMap,
 }
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct ResourceIo {
     pub input: ResourceMap,
     pub output: ResourceMap,

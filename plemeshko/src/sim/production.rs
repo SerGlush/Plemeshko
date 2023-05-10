@@ -148,6 +148,10 @@ impl Production {
         self.state.active = active;
     }
 
+    pub fn io(&self) -> &ResourceIo {
+        &self.single_io
+    }
+
     fn step_input(
         &mut self,
         shared_st: &SharedState,

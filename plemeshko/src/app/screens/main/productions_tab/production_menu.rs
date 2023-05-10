@@ -6,7 +6,9 @@ use egui::{vec2, ComboBox, Ui};
 use crate::{
     app::{
         env::Env,
-        util::{draw_icon_btn_with_tooltip, draw_iter_indexed, ConfigIteratorExt},
+        util::{
+            draw_icon_btn_with_tooltip, draw_iter_indexed, draw_resource_io_tt, ConfigIteratorExt,
+        },
         widgets::{PersistentWindowContent, Widget, WindowCloseEvent},
     },
     sim::{
@@ -37,6 +39,10 @@ pub struct ProductionBuilder {
 impl ProductionBuilder {
     pub fn new() -> Self {
         ProductionBuilder::default()
+    }
+
+    pub fn ready(&self) -> bool {
+        !self.name.is_empty() && !self.production_methods.is_empty()
     }
 
     pub fn finish(&self, shared_comps: &SharedComponents) -> Result<Production> {
@@ -200,23 +206,35 @@ impl Widget for ProductionBuilder {
                     let selected_setting = shared_comps.config(*selected_setting_id)?;
                     let setting_group = shared_comps.config(selected_setting.group)?;
                     let selected_setting_name = app_st.text(&selected_setting.name)?;
-                    ComboBox::from_id_source(&selected_setting_name)
+                    let cb_response = ComboBox::from_id_source(&selected_setting_name)
                         .width(200.0)
                         .selected_text(selected_setting_name)
                         .show_ui(ui, |ui| {
                             for &setting_id in &setting_group.settings {
                                 let setting = shared_comps.config(setting_id)?;
-                                if ui
-                                    .selectable_label(false, app_st.text(&setting.name)?)
-                                    .clicked()
-                                {
+                                let response =
+                                    ui.selectable_label(false, app_st.text(&setting.name)?);
+                                if response.clicked() {
                                     *selected_setting_id = setting_id;
                                 }
+                                draw_resource_io_tt(
+                                    app_st,
+                                    shared_comps,
+                                    ctx,
+                                    response,
+                                    &setting.resource_io,
+                                );
                             }
                             Ok(())
-                        })
-                        .inner
-                        .transpose()?;
+                        });
+                    cb_response.inner.transpose()?;
+                    draw_resource_io_tt(
+                        app_st,
+                        shared_comps,
+                        ctx,
+                        cb_response.response,
+                        &selected_setting.resource_io,
+                    );
                 }
 
                 if ui.button("X").clicked() {
@@ -258,7 +276,10 @@ impl Widget for ProductionBuilder {
         );
 
         if ui
-            .button(app_st.text_core("ui_main_productions_builder_finish")?)
+            .add_enabled(
+                self.ready(),
+                egui::Button::new(app_st.text_core("ui_main_productions_builder_finish")?),
+            )
             .clicked()
         {
             sim.productions.push(self.finish(shared_comps)?);

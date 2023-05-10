@@ -1,10 +1,15 @@
+use std::borrow::Cow;
+
 use anyhow::{Ok, Result};
 use egui::{vec2, Button};
+use tap::Conv;
 
 use crate::{
     app::{
         env::Env,
-        util::{draw_icon_with_tooltip, on_using_modifiers, ConfigIteratorExt},
+        util::{
+            draw_resource_io_tt, draw_resource_io_tt_lazy, on_using_modifiers, ConfigIteratorExt,
+        },
         widgets::{PersistentWindow, Tab, Widget},
     },
     sim::production::Production,
@@ -44,7 +49,21 @@ fn ui_production(
         .horizontal(|ui| {
             let production = &mut productions[production_index];
 
-            ui.strong(format!("{}:", production.name()));
+            let prodname_response = ui.strong(format!("{}:", production.name()));
+            let prodname_tt_full = prodname_response.ctx.input().modifiers.shift_only();
+            draw_resource_io_tt_lazy(app_st, shared_comps, ctx, prodname_response, || {
+                if !prodname_tt_full {
+                    return Cow::Borrowed(production.io());
+                }
+                let mut io = production.io().clone();
+                for (_, amount) in io.input.iter_mut() {
+                    amount.0 *= production.active().conv::<i64>();
+                }
+                for (_, amount) in io.output.iter_mut() {
+                    amount.0 *= production.active().conv::<i64>();
+                }
+                Cow::Owned(io)
+            });
             on_using_modifiers(
                 &ui.add(Button::new("+").min_size(vec2(16.0, 16.0))),
                 egui::Response::clicked,
@@ -85,9 +104,9 @@ fn ui_production(
                 ui.label(app_st.text(&transport.info.name)?)
                     .on_hover_text(format!(
                         "{}: {}\n{}: {}",
-                        app_st.text_core("ui_main_productions_transport_tooltip1")?,
+                        app_st.text_core("ui_generic_transport-group")?,
                         app_st.text(&transport_group.name)?,
-                        app_st.text_core("ui_main_productions_transport_tooltip2")?,
+                        app_st.text_core("ui_generic_transport-capacity")?,
                         transport.capacity
                     ));
             }
@@ -104,44 +123,8 @@ fn ui_production(
         ui.horizontal(|ui| {
             ui.label(app_st.text(&method.info.name)?);
             for setting in selected_method.settings.configs(shared_comps) {
-                ui.label(app_st.text(&setting.name)?).on_hover_ui(|ui| {
-                    ui.strong(app_st.text_core("ui_generic_input").unwrap());
-                    ui.indent("output", |ui| {
-                        for (&id, &amount) in &setting.resource_io.input {
-                            ui.horizontal(|ui| {
-                                draw_icon_with_tooltip(
-                                    app_st,
-                                    ctx,
-                                    ui,
-                                    &shared_comps.config(id).unwrap().info,
-                                    vec2(24., 24.),
-                                    |i| i,
-                                    |_| (),
-                                )
-                                .unwrap();
-                                ui.label(amount.to_string());
-                            });
-                        }
-                    });
-                    ui.strong(app_st.text_core("ui_generic_output").unwrap());
-                    ui.indent("output", |ui| {
-                        for (&id, &amount) in &setting.resource_io.output {
-                            ui.horizontal(|ui| {
-                                draw_icon_with_tooltip(
-                                    app_st,
-                                    ctx,
-                                    ui,
-                                    &shared_comps.config(id).unwrap().info,
-                                    vec2(24., 24.),
-                                    |i| i,
-                                    |_| (),
-                                )
-                                .unwrap();
-                                ui.label(amount.to_string());
-                            });
-                        }
-                    });
-                });
+                let response = ui.label(app_st.text(&setting.name)?);
+                draw_resource_io_tt(app_st, shared_comps, ctx, response, &setting.resource_io);
             }
             Ok(())
         })

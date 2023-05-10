@@ -37,7 +37,7 @@ pub fn initialize_log() -> Result<()> {
             .info(fern::colors::Color::Cyan)
             .warn(fern::colors::Color::Yellow)
             .error(fern::colors::Color::Red);
-        let fern_dispatch = fern::Dispatch::new().level(log::LevelFilter::Info).format(
+        let fern_dispatch = fern::Dispatch::new().level(log::LevelFilter::Warn).format(
             move |out, message, record| {
                 let time = time::OffsetDateTime::from(std::time::SystemTime::now());
                 out.finish(format_args!(

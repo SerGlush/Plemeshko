@@ -1,12 +1,17 @@
+use std::borrow::Cow;
+
 use anyhow::{Ok, Result};
 use egui::{Image, ImageButton, Response, Ui, Vec2};
 
-use crate::state::{
-    components::SharedComponents,
-    config::{Config, FatConfigId, Info},
-    has::HasTexts,
-    texture::FatTexturePartId,
-    AppState,
+use crate::{
+    sim::config::resource::ResourceIo,
+    state::{
+        components::SharedComponents,
+        config::{Config, FatConfigId, Info},
+        has::HasTexts,
+        texture::FatTexturePartId,
+        AppState,
+    },
 };
 
 /// Consume iterator calling a fallible ui callback on each item.
@@ -178,4 +183,60 @@ pub fn draw_icon_btn_with_tooltip(
         click()?;
     }
     Ok(())
+}
+
+pub fn draw_resource_io_tt_lazy<'a>(
+    app_st: &AppState,
+    shared_comps: &SharedComponents,
+    ctx: &egui::Context,
+    response: egui::Response,
+    rio: impl FnOnce() -> Cow<'a, ResourceIo> + 'a,
+) -> egui::Response {
+    response.on_hover_ui(|ui| {
+        let rio = rio();
+        ui.strong(app_st.text_core("ui_generic_input").unwrap());
+        ui.indent("output", |ui| {
+            for (&id, &amount) in &rio.input {
+                ui.horizontal(|ui| {
+                    draw_icon(
+                        app_st,
+                        ctx,
+                        ui,
+                        &shared_comps.config(id).unwrap().info.icon,
+                        egui::vec2(24., 24.),
+                        |i| i,
+                    )
+                    .unwrap();
+                    ui.label(amount.to_string());
+                });
+            }
+        });
+        ui.strong(app_st.text_core("ui_generic_output").unwrap());
+        ui.indent("output", |ui| {
+            for (&id, &amount) in &rio.output {
+                ui.horizontal(|ui| {
+                    draw_icon(
+                        app_st,
+                        ctx,
+                        ui,
+                        &shared_comps.config(id).unwrap().info.icon,
+                        egui::vec2(24., 24.),
+                        |i| i,
+                    )
+                    .unwrap();
+                    ui.label(amount.to_string());
+                });
+            }
+        });
+    })
+}
+
+pub fn draw_resource_io_tt(
+    app_st: &AppState,
+    shared_comps: &SharedComponents,
+    ctx: &egui::Context,
+    response: egui::Response,
+    rio: &ResourceIo,
+) -> egui::Response {
+    draw_resource_io_tt_lazy(app_st, shared_comps, ctx, response, || Cow::Borrowed(rio))
 }
