@@ -1,23 +1,25 @@
 use std::borrow::Cow;
 
 use anyhow::{Ok, Result};
-use egui::{vec2, Button};
+use egui::{vec2, Button, Color32, RichText};
 use tap::Conv;
 
 use crate::{
     app::{
         env::Env,
         util::{
-            draw_resource_io_tt, draw_resource_io_tt_lazy, on_using_modifiers, ConfigIteratorExt,
+            draw_icon, draw_resource_io_tt, draw_resource_io_tt_lazy, on_using_modifiers,
+            ConfigIteratorExt,
         },
         widgets::{PersistentWindow, Tab, Widget},
     },
-    sim::production::Production,
+    sim::{config::resource::ResourceMap, production::Production},
     state::{
         components::SharedComponents,
         has::{HasSimMutex, HasTexts},
         AppState,
     },
+    util::cor::Cor,
 };
 
 use self::production_menu::ProductionBuilder;
@@ -43,6 +45,7 @@ fn ui_production(
     ui: &mut egui::Ui,
     production_index: usize,
     productions: &mut Vec<Production>,
+    depot: &mut ResourceMap,
 ) -> Result<bool> {
     ui.separator();
     let removed = ui
@@ -68,18 +71,56 @@ fn ui_production(
                 }
                 Cow::Borrowed(production.last_io())
             });
-            on_using_modifiers(
-                &ui.add(Button::new("+").min_size(vec2(16.0, 16.0))),
-                egui::Response::clicked,
-                |m| {
-                    let delta = m.elim(1, 10, 100);
-                    let new_active = production.active() + delta;
-                    if new_active > production.count() {
-                        production.set_count(new_active);
-                    }
-                    production.set_active(new_active);
+
+            let inactive = production.count() - production.active();
+            let can_grow = depot.cor_has_all_times(
+                production.cost(),
+                if inactive < 100 {
+                    100 - inactive as i64
+                } else {
+                    0
                 },
-            );
+            ) + inactive as i64;
+            let grow: u32 = match (
+                ctx.input().modifiers.command_only(),
+                ctx.input().modifiers.shift_only(),
+            ) {
+                (true, false) => 100,
+                (false, true) => 10,
+                _ => 1,
+            };
+            let (color, enabled) = if can_grow >= grow as i64 {
+                (Color32::WHITE, true)
+            } else {
+                (Color32::from_rgb(255, 200, 200), false)
+            };
+            let grow_response =
+                ui.add(Button::new(RichText::new("+").color(color)).min_size(vec2(16.0, 16.0)));
+            if enabled && grow_response.clicked() {
+                let new_active = production.active() + grow;
+                if new_active > production.count() {
+                    production.set_count(new_active);
+                }
+                production.set_active(new_active);
+                if inactive < grow {
+                    depot.cor_sub_all_times_unchecked(production.cost(), (grow - inactive) as i64);
+                }
+            }
+            grow_response.on_hover_ui(|ui| {
+                for (&id, &amount) in production.cost() {
+                    ui.horizontal(|ui| {
+                        let icon = &shared_comps.config(id).unwrap().info.icon;
+                        let tint = if depot.cor_has_times(&id, amount) >= grow as i64 {
+                            Color32::WHITE
+                        } else {
+                            Color32::from_rgb(255, 200, 200)
+                        };
+                        draw_icon(app_st, ctx, ui, icon, vec2(24., 24.), |i| i.tint(tint)).unwrap();
+                        ui.label(amount.to_string());
+                    });
+                }
+            });
+
             ui.label(format!(
                 "{}/{}/{}",
                 production.last_activated(),
@@ -170,6 +211,7 @@ impl Widget for MainScreenProductionsTab {
                 ui,
                 production_index,
                 &mut sim.productions,
+                &mut sim.depot,
             )?;
             if !removed {
                 production_index += 1;

@@ -56,6 +56,7 @@ pub struct Production {
     single_io: ResourceIo,
     last_io: ResourceIo,
     last_activated: i64,
+    cost: ResourceMap,
 }
 
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
@@ -87,6 +88,7 @@ impl Production {
     ) -> anyhow::Result<Self> {
         let mut single_input = HashMap::<ResourceId, ResourceAmount>::new();
         let mut single_output = HashMap::<ResourceId, ResourceAmount>::new();
+        let mut cost = ResourceMap::new();
         for selected_method in snapshot.selected_methods.iter() {
             for &setting_id in selected_method.settings.iter() {
                 let setting = shared_comps.config(setting_id)?;
@@ -102,6 +104,7 @@ impl Production {
                         .or_default()
                         .add_assign(*delta);
                 }
+                cost.cor_put_all(&setting.cost);
             }
         }
 
@@ -113,6 +116,7 @@ impl Production {
             },
             last_io: Default::default(),
             last_activated: 0,
+            cost,
         })
     }
 
@@ -162,6 +166,10 @@ impl Production {
 
     pub fn last_activated(&self) -> i64 {
         self.last_activated
+    }
+
+    pub fn cost(&self) -> &ResourceMap {
+        &self.cost
     }
 
     pub fn step_input(
