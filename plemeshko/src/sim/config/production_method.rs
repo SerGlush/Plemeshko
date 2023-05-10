@@ -14,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    resource::ResourceMap,
+    resource::{ResourceIo, ResourceMap},
     setting::{Setting, SettingId},
     setting_group::{SettingGroup, SettingGroupId},
 };
@@ -72,14 +72,17 @@ impl FixedProductionMethod {
         })
     }
 
-    pub fn accumulate_cost(
+    pub fn accumulate(
         &self,
         shared_comps: &SharedComponents,
         cost: &mut ResourceMap,
+        io: &mut ResourceIo,
     ) -> Result<()> {
         for &setting_id in self.settings.iter() {
             let setting = shared_comps.config(setting_id)?;
             cost.cor_put_all(&setting.cost);
+            io.input.cor_put_all(&setting.resource_io.input);
+            io.output.cor_put_all(&setting.resource_io.output);
         }
         Ok(())
     }

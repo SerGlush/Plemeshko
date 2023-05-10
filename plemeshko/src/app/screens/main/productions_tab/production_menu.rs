@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::identity};
 
 use anyhow::{Ok, Result};
 use egui::{vec2, Color32, ComboBox, Ui};
@@ -16,7 +16,7 @@ use crate::{
         config::{
             production_method::{FixedProductionMethod, ProductionMethodId},
             production_method_group::ProductionMethodGroup,
-            resource::{Resource, ResourceMap},
+            resource::{Resource, ResourceIo, ResourceMap},
             transport_group::TransportGroupId,
             transport_method::TransportMethodId,
         },
@@ -304,34 +304,64 @@ impl Widget for ProductionBuilder {
         );
 
         let mut total_cost = ResourceMap::new();
+        let mut total_io = ResourceIo::new();
         for production_method in &self.production_methods {
-            production_method.accumulate_cost(shared_comps, &mut total_cost)?;
+            production_method.accumulate(shared_comps, &mut total_cost, &mut total_io)?;
         }
+        let mut total_input: Vec<_> = total_io.input.into_iter().collect();
+        total_input.sort_by_key(|(id, _)| *id);
+        let mut total_output: Vec<_> = total_io.output.into_iter().collect();
+        total_output.sort_by_key(|(id, _)| *id);
+
         let mut enough_resources = true;
         ui.separator();
-        if !total_cost.is_empty() {
-            ui.strong(app_st.text_core("ui_generic_cost")?);
-            ui.indent("total cost", |ui| {
-                for (&id, &cost_amount) in &total_cost {
-                    let resource = shared_comps.config(id)?;
-                    let stored_amount = sim.depot.get(&id).copied().unwrap_or_default();
-                    let tint = if cost_amount <= stored_amount {
-                        Color32::WHITE
-                    } else {
-                        enough_resources = false;
-                        Color32::from_rgb(240, 160, 160)
-                    };
-                    ui.horizontal(|ui| {
-                        draw_icon_with_tooltip(
-                            app_st,
-                            ctx,
-                            ui,
-                            &resource.info,
-                            vec2(32., 32.),
-                            |i| i.tint(tint),
-                            |_| (),
-                        )?;
-                        ui.colored_label(tint, cost_amount.to_string());
+        ui.horizontal(|ui| {
+            let half_width = ui.available_width() / 2.;
+            ui.vertical(|ui| {
+                if !total_input.is_empty() {
+                    ui.strong(app_st.text_core("ui_generic_input")?);
+                    ui.indent("total input", |ui| {
+                        for (id, amount) in total_input {
+                            let info = &shared_comps.config(id)?.info;
+                            ui.horizontal(|ui| {
+                                draw_icon_with_tooltip(
+                                    app_st,
+                                    ctx,
+                                    ui,
+                                    info,
+                                    vec2(32., 32.),
+                                    identity,
+                                    |_| (),
+                                )?;
+                                ui.label(amount.to_string());
+                                Ok(())
+                            })
+                            .inner?;
+                        }
+                        Ok(())
+                    })
+                    .inner?;
+                }
+                if !total_output.is_empty() {
+                    ui.strong(app_st.text_core("ui_generic_output")?);
+                    ui.indent("total output", |ui| {
+                        for (id, amount) in total_output {
+                            let info = &shared_comps.config(id)?.info;
+                            ui.horizontal(|ui| {
+                                draw_icon_with_tooltip(
+                                    app_st,
+                                    ctx,
+                                    ui,
+                                    info,
+                                    vec2(32., 32.),
+                                    identity,
+                                    |_| (),
+                                )?;
+                                ui.label(amount.to_string());
+                                Ok(())
+                            })
+                            .inner?;
+                        }
                         Ok(())
                     })
                     .inner?;
@@ -339,21 +369,68 @@ impl Widget for ProductionBuilder {
                 Ok(())
             })
             .inner?;
-        }
+            ui.allocate_exact_size(
+                vec2(ui.available_width() - half_width, 1.),
+                egui::Sense::hover(),
+            );
+            ui.vertical(|ui| {
+                if !total_cost.is_empty() {
+                    ui.strong(app_st.text_core("ui_generic_cost")?);
+                    ui.indent("total cost", |ui| {
+                        for (&id, &cost_amount) in &total_cost {
+                            let resource = shared_comps.config(id)?;
+                            let stored_amount = sim.depot.get(&id).copied().unwrap_or_default();
+                            let tint = if cost_amount <= stored_amount {
+                                Color32::WHITE
+                            } else {
+                                enough_resources = false;
+                                Color32::from_rgb(240, 160, 160)
+                            };
+                            ui.horizontal(|ui| {
+                                draw_icon_with_tooltip(
+                                    app_st,
+                                    ctx,
+                                    ui,
+                                    &resource.info,
+                                    vec2(32., 32.),
+                                    |i| i.tint(tint),
+                                    |_| (),
+                                )?;
+                                ui.colored_label(tint, cost_amount.to_string());
+                                Ok(())
+                            })
+                            .inner?;
+                        }
+                        Ok(())
+                    })
+                    .inner?;
+                }
+                Ok(())
+            })
+            .inner
+        })
+        .inner?;
 
-        if ui
-            .add_enabled(
-                enough_resources && self.ready(),
-                egui::Button::new(app_st.text_core("ui_main_productions_builder_finish")?),
-            )
-            .clicked()
-        {
-            sim.depot.cor_sub_all_unchecked(&total_cost);
-            sim.productions.push(self.finish(shared_comps)?);
-            env.get::<WindowCloseEvent<ProductionBuilder>>()
-                .map(WindowCloseEvent::emit);
-            *self = Default::default();
-        }
+        ui.horizontal(|ui| {
+            if ui
+                .add_enabled(
+                    enough_resources && self.ready(),
+                    egui::Button::new(app_st.text_core("ui_main_productions_builder_finish")?),
+                )
+                .clicked()
+            {
+                sim.depot.cor_sub_all_unchecked(&total_cost);
+                sim.productions.push(self.finish(shared_comps)?);
+                env.get::<WindowCloseEvent<ProductionBuilder>>()
+                    .map(WindowCloseEvent::emit);
+                *self = Default::default();
+            }
+            if ui.button(app_st.text_core("ui_generic_clear")?).clicked() {
+                self.production_methods.clear();
+            }
+            Ok(())
+        })
+        .inner?;
         Ok(())
     }
 }

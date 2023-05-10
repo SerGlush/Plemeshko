@@ -48,6 +48,12 @@ pub struct ResourceIo {
     pub output: ResourceMap,
 }
 
+impl ResourceIo {
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
 impl Prepare for RawResource {
     type Prepared = Resource;
 

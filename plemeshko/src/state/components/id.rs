@@ -23,7 +23,7 @@ pub struct RawFatLabel(
 
 pub(super) type RawComponentId = u16;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct ComponentId(pub(super) RawComponentId);
 

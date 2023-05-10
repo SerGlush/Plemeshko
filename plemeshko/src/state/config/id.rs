@@ -36,12 +36,12 @@ pub struct FatConfigLabel<C>(RawFatLabel, PhantomData<C>);
 pub(super) type RawConfigId = u32;
 
 #[derive(Educe)]
-#[educe(Hash, PartialEq, Eq, Debug, Clone, Copy)]
+#[educe(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct ConfigId<C>(pub(super) RawConfigId, PhantomData<C>);
 
 #[derive(Educe)]
-#[educe(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[educe(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FatConfigId<C>(pub ComponentId, pub ConfigId<C>);
 
 impl<C> ConfigLabel<C> {

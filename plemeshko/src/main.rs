@@ -13,6 +13,7 @@
 #![deny(elided_lifetimes_in_paths)]
 #![deny(clippy::undocumented_unsafe_blocks)]
 #![allow(clippy::mut_mutex_lock)] // false positives
+#![allow(clippy::too_many_arguments)]
 #![allow(dead_code)]
 
 use std::time::Instant;

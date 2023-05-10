@@ -6,3 +6,4 @@ ui_generic_output = Output
 ui_generic_transport-group = Type
 ui_generic_transport-capacity = Capacity
 ui_generic_cost = Cost
+ui_generic_clear = Clear
