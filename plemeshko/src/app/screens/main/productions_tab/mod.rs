@@ -106,20 +106,23 @@ fn ui_production(
                     depot.cor_sub_all_times_unchecked(production.cost(), (grow - inactive) as i64);
                 }
             }
-            grow_response.on_hover_ui(|ui| {
-                for (&id, &amount) in production.cost() {
-                    ui.horizontal(|ui| {
-                        let icon = &shared_comps.config(id).unwrap().info.icon;
-                        let tint = if depot.cor_has_times(&id, amount) >= grow as i64 {
-                            Color32::WHITE
-                        } else {
-                            Color32::from_rgb(255, 200, 200)
-                        };
-                        draw_icon(app_st, ctx, ui, icon, vec2(24., 24.), |i| i.tint(tint)).unwrap();
-                        ui.label(amount.to_string());
-                    });
-                }
-            });
+            if !production.cost().is_empty() {
+                grow_response.on_hover_ui(|ui| {
+                    for (&id, &amount) in production.cost() {
+                        ui.horizontal(|ui| {
+                            let icon = &shared_comps.config(id).unwrap().info.icon;
+                            let tint = if depot.cor_has_times(&id, amount) >= grow as i64 {
+                                Color32::WHITE
+                            } else {
+                                Color32::from_rgb(255, 200, 200)
+                            };
+                            draw_icon(app_st, ctx, ui, icon, vec2(24., 24.), |i| i.tint(tint))
+                                .unwrap();
+                            ui.label(amount.to_string());
+                        });
+                    }
+                });
+            }
 
             ui.label(format!(
                 "{}/{}/{}",
