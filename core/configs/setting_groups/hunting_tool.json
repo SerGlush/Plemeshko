@@ -31,7 +31,6 @@
     },
     {
         "tag": "setting-group",
-        "label": "hunting-tool",
-        "payload": {}
+        "label": "hunting-tool"
     }
 ]

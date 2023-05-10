@@ -28,7 +28,9 @@ impl ComponentsChangedToken {
         ComponentsChangedToken(())
     }
 
-    pub fn consume(&self, _other: Self) {}
+    pub fn consume(&self, other: Self) {
+        std::mem::forget(other)
+    }
 }
 
 impl Drop for ComponentsChangedToken {

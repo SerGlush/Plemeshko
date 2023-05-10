@@ -22,6 +22,7 @@ pub struct RawConfig {
     pub tag: String,
     pub label: String,
     // todo: something similar to `#[serde(flatten)]` (or custom deserializer?) can remove unnecessary nesting
+    #[serde(default = "deser_default_json_object")]
     pub payload: Box<RawValue>,
 }
 
@@ -159,4 +160,8 @@ impl<'a> ConfigsLoadingContext<'a> {
     pub fn is_loaded<C: 'static>(&self) -> bool {
         self.loaded.contains(&TypeId::of::<C>())
     }
+}
+
+fn deser_default_json_object() -> Box<RawValue> {
+    RawValue::from_string("{}".to_owned()).unwrap()
 }

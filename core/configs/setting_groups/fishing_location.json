@@ -21,7 +21,6 @@
     },
     {
         "tag": "setting-group",
-        "label": "fishing-location",
-        "payload": {}
+        "label": "fishing-location"
     }
 ]

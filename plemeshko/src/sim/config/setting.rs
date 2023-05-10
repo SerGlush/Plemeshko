@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    resource::{RawResourceIo, ResourceIo},
+    resource::{RawResourceIo, RawResourceMap, ResourceIo, ResourceMap},
     setting_group::{SettingGroup, SettingGroupId},
 };
 
@@ -21,6 +21,8 @@ pub struct RawSetting {
     #[serde(flatten)]
     pub resource_io: RawResourceIo,
     #[serde(default)]
+    pub cost: RawResourceMap,
+    #[serde(default)]
     pub time_to_complete: Ticks,
 }
 
@@ -29,6 +31,7 @@ pub struct Setting {
     pub name: FatTextId,
     pub group: SettingGroupId,
     pub resource_io: ResourceIo,
+    pub cost: ResourceMap,
     pub time_to_complete: Ticks,
 }
 
@@ -54,6 +57,7 @@ impl Prepare for RawSetting {
                 name,
                 group: self.group.prepare(ctx, tif)?,
                 resource_io: self.resource_io.prepare(ctx, tif)?,
+                cost: self.cost.prepare(ctx, tif)?,
                 time_to_complete: self.time_to_complete,
             })
         })
