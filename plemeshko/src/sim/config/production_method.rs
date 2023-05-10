@@ -1,14 +1,20 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::state::{
-    components::{ComponentsRef, SharedComponents},
-    config::{Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Info, Prepare, RawInfo},
-    serializable::Serializable,
-    text::TextIdFactory,
+use crate::{
+    state::{
+        components::{ComponentsRef, SharedComponents},
+        config::{
+            Config, ConfigsLoadingContext, FatConfigId, FatConfigLabel, Info, Prepare, RawInfo,
+        },
+        serializable::Serializable,
+        text::TextIdFactory,
+    },
+    util::cor::Cor,
 };
 
 use super::{
+    resource::ResourceMap,
     setting::{Setting, SettingId},
     setting_group::{SettingGroup, SettingGroupId},
 };
@@ -64,6 +70,18 @@ impl FixedProductionMethod {
                 })
                 .try_collect()?,
         })
+    }
+
+    pub fn accumulate_cost(
+        &self,
+        shared_comps: &SharedComponents,
+        cost: &mut ResourceMap,
+    ) -> Result<()> {
+        for &setting_id in self.settings.iter() {
+            let setting = shared_comps.config(setting_id)?;
+            cost.cor_put_all(&setting.cost);
+        }
+        Ok(())
     }
 }
 

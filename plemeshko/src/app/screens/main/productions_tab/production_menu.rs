@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
 use anyhow::{Ok, Result};
-use egui::{vec2, ComboBox, Ui};
+use egui::{vec2, Color32, ComboBox, Ui};
 
 use crate::{
     app::{
         env::Env,
         util::{
-            draw_icon_btn_with_tooltip, draw_iter_indexed, draw_resource_io_tt, ConfigIteratorExt,
+            draw_icon_btn_with_tooltip, draw_icon_with_tooltip, draw_iter_indexed,
+            draw_resource_io, draw_resource_map_labeled, ConfigIteratorExt,
         },
         widgets::{PersistentWindowContent, Widget, WindowCloseEvent},
     },
@@ -15,7 +16,7 @@ use crate::{
         config::{
             production_method::{FixedProductionMethod, ProductionMethodId},
             production_method_group::ProductionMethodGroup,
-            resource::Resource,
+            resource::{Resource, ResourceMap},
             transport_group::TransportGroupId,
             transport_method::TransportMethodId,
         },
@@ -27,6 +28,7 @@ use crate::{
         has::{HasSimMutex, HasTexts},
         AppState,
     },
+    util::cor::Cor,
 };
 
 #[derive(Default, Clone)]
@@ -217,24 +219,50 @@ impl Widget for ProductionBuilder {
                                 if response.clicked() {
                                     *selected_setting_id = setting_id;
                                 }
-                                draw_resource_io_tt(
-                                    app_st,
-                                    shared_comps,
-                                    ctx,
-                                    response,
-                                    &setting.resource_io,
-                                );
+                                response.on_hover_ui(|ui| {
+                                    draw_resource_io(
+                                        app_st,
+                                        shared_comps,
+                                        ctx,
+                                        ui,
+                                        &setting.resource_io,
+                                    )
+                                    .unwrap();
+                                    draw_resource_map_labeled(
+                                        app_st,
+                                        shared_comps,
+                                        ctx,
+                                        ui,
+                                        &setting.cost,
+                                        app_st.text_core("ui_generic_cost").unwrap(),
+                                        true,
+                                    )
+                                    .unwrap();
+                                });
                             }
                             Ok(())
                         });
                     cb_response.inner.transpose()?;
-                    draw_resource_io_tt(
-                        app_st,
-                        shared_comps,
-                        ctx,
-                        cb_response.response,
-                        &selected_setting.resource_io,
-                    );
+                    cb_response.response.on_hover_ui(|ui| {
+                        draw_resource_io(
+                            app_st,
+                            shared_comps,
+                            ctx,
+                            ui,
+                            &selected_setting.resource_io,
+                        )
+                        .unwrap();
+                        draw_resource_map_labeled(
+                            app_st,
+                            shared_comps,
+                            ctx,
+                            ui,
+                            &selected_setting.cost,
+                            app_st.text_core("ui_generic_cost").unwrap(),
+                            true,
+                        )
+                        .unwrap();
+                    });
                 }
 
                 if ui.button("X").clicked() {
@@ -275,13 +303,52 @@ impl Widget for ProductionBuilder {
             },
         );
 
+        let mut total_cost = ResourceMap::new();
+        for production_method in &self.production_methods {
+            production_method.accumulate_cost(shared_comps, &mut total_cost)?;
+        }
+        let mut enough_resources = true;
+        ui.separator();
+        if !total_cost.is_empty() {
+            ui.strong(app_st.text_core("ui_generic_cost")?);
+            ui.indent("total cost", |ui| {
+                for (&id, &cost_amount) in &total_cost {
+                    let resource = shared_comps.config(id)?;
+                    let stored_amount = sim.depot.get(&id).copied().unwrap_or_default();
+                    let tint = if cost_amount <= stored_amount {
+                        Color32::WHITE
+                    } else {
+                        enough_resources = false;
+                        Color32::from_rgb(240, 160, 160)
+                    };
+                    ui.horizontal(|ui| {
+                        draw_icon_with_tooltip(
+                            app_st,
+                            ctx,
+                            ui,
+                            &resource.info,
+                            vec2(32., 32.),
+                            |i| i.tint(tint),
+                            |_| (),
+                        )?;
+                        ui.colored_label(tint, cost_amount.to_string());
+                        Ok(())
+                    })
+                    .inner?;
+                }
+                Ok(())
+            })
+            .inner?;
+        }
+
         if ui
             .add_enabled(
-                self.ready(),
+                enough_resources && self.ready(),
                 egui::Button::new(app_st.text_core("ui_main_productions_builder_finish")?),
             )
             .clicked()
         {
+            sim.depot.cor_sub_all_unchecked(&total_cost);
             sim.productions.push(self.finish(shared_comps)?);
             env.get::<WindowCloseEvent<ProductionBuilder>>()
                 .map(WindowCloseEvent::emit);

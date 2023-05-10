@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
 use anyhow::{Ok, Result};
-use egui::{Image, ImageButton, Response, Ui, Vec2};
+use egui::{Image, ImageButton, Response, RichText, Ui, Vec2};
 
 use crate::{
-    sim::config::resource::ResourceIo,
+    sim::config::resource::{ResourceIo, ResourceMap},
     state::{
         components::SharedComponents,
         config::{Config, FatConfigId, Info},
@@ -185,6 +185,79 @@ pub fn draw_icon_btn_with_tooltip(
     Ok(())
 }
 
+pub fn draw_resource_map(
+    app_st: &AppState,
+    shared_comps: &SharedComponents,
+    ctx: &egui::Context,
+    ui: &mut Ui,
+    rm: &ResourceMap,
+) -> Result<()> {
+    for (&id, &amount) in rm {
+        ui.horizontal(|ui| {
+            draw_icon(
+                app_st,
+                ctx,
+                ui,
+                &shared_comps.config(id)?.info.icon,
+                egui::vec2(24., 24.),
+                |i| i,
+            )?;
+            ui.label(amount.to_string());
+            Ok(())
+        })
+        .inner?;
+    }
+    Ok(())
+}
+
+pub fn draw_resource_map_labeled(
+    app_st: &AppState,
+    shared_comps: &SharedComponents,
+    ctx: &egui::Context,
+    ui: &mut Ui,
+    rm: &ResourceMap,
+    label: impl Into<RichText>,
+    skip_empty: bool,
+) -> Result<()> {
+    if skip_empty && rm.is_empty() {
+        return Ok(());
+    }
+    ui.strong(label);
+    ui.indent("output", |ui| {
+        draw_resource_map(app_st, shared_comps, ctx, ui, rm)
+    })
+    .inner
+}
+
+pub fn draw_resource_io_lazy<'a>(
+    app_st: &AppState,
+    shared_comps: &SharedComponents,
+    ctx: &egui::Context,
+    ui: &mut Ui,
+    rio: impl FnOnce() -> Cow<'a, ResourceIo> + 'a,
+) -> Result<()> {
+    let rio = rio();
+    draw_resource_map_labeled(
+        app_st,
+        shared_comps,
+        ctx,
+        ui,
+        &rio.input,
+        app_st.text_core("ui_generic_input")?,
+        true,
+    )?;
+    draw_resource_map_labeled(
+        app_st,
+        shared_comps,
+        ctx,
+        ui,
+        &rio.output,
+        app_st.text_core("ui_generic_output")?,
+        true,
+    )?;
+    Ok(())
+}
+
 pub fn draw_resource_io_tt_lazy<'a>(
     app_st: &AppState,
     shared_comps: &SharedComponents,
@@ -193,42 +266,18 @@ pub fn draw_resource_io_tt_lazy<'a>(
     rio: impl FnOnce() -> Cow<'a, ResourceIo> + 'a,
 ) -> egui::Response {
     response.on_hover_ui(|ui| {
-        let rio = rio();
-        ui.strong(app_st.text_core("ui_generic_input").unwrap());
-        ui.indent("output", |ui| {
-            for (&id, &amount) in &rio.input {
-                ui.horizontal(|ui| {
-                    draw_icon(
-                        app_st,
-                        ctx,
-                        ui,
-                        &shared_comps.config(id).unwrap().info.icon,
-                        egui::vec2(24., 24.),
-                        |i| i,
-                    )
-                    .unwrap();
-                    ui.label(amount.to_string());
-                });
-            }
-        });
-        ui.strong(app_st.text_core("ui_generic_output").unwrap());
-        ui.indent("output", |ui| {
-            for (&id, &amount) in &rio.output {
-                ui.horizontal(|ui| {
-                    draw_icon(
-                        app_st,
-                        ctx,
-                        ui,
-                        &shared_comps.config(id).unwrap().info.icon,
-                        egui::vec2(24., 24.),
-                        |i| i,
-                    )
-                    .unwrap();
-                    ui.label(amount.to_string());
-                });
-            }
-        });
+        draw_resource_io_lazy(app_st, shared_comps, ctx, ui, rio).unwrap();
     })
+}
+
+pub fn draw_resource_io(
+    app_st: &AppState,
+    shared_comps: &SharedComponents,
+    ctx: &egui::Context,
+    ui: &mut Ui,
+    rio: &ResourceIo,
+) -> Result<()> {
+    draw_resource_io_lazy(app_st, shared_comps, ctx, ui, || Cow::Borrowed(rio))
 }
 
 pub fn draw_resource_io_tt(

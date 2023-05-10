@@ -16,6 +16,9 @@
             "group": "fishing-location",
             "output": {
                 "food": 60
+            },
+            "cost": {
+                "wood-log": 50
             }
         }
     },

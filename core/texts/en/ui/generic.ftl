@@ -5,3 +5,4 @@ ui_generic_input = Input
 ui_generic_output = Output
 ui_generic_transport-group = Type
 ui_generic_transport-capacity = Capacity
+ui_generic_cost = Cost
