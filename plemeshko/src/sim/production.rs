@@ -54,6 +54,8 @@ pub struct ProductionSnapshot {
 pub struct Production {
     state: ProductionSnapshot,
     single_io: ResourceIo,
+    last_io: ResourceIo,
+    last_activated: i64,
 }
 
 // todo: storage can be initialized with zeroes for known i/o; at all accesses presence of known keys can be then guaranteed
@@ -109,6 +111,8 @@ impl Production {
                 output: single_output,
                 input: single_input,
             },
+            last_io: Default::default(),
+            last_activated: 0,
         })
     }
 
@@ -148,8 +152,16 @@ impl Production {
         self.state.active = active;
     }
 
-    pub fn io(&self) -> &ResourceIo {
+    pub fn single_io(&self) -> &ResourceIo {
         &self.single_io
+    }
+
+    pub fn last_io(&self) -> &ResourceIo {
+        &self.last_io
+    }
+
+    pub fn last_activated(&self) -> i64 {
+        self.last_activated
     }
 
     fn step_input(
@@ -251,8 +263,19 @@ impl Production {
             .state
             .storage
             .cor_sub_all_times(&self.single_io.input, self.state.active as i64);
+
         self.state
             .storage
+            .cor_put_all_times(&self.single_io.output, activated);
+
+        self.last_activated = activated;
+        self.last_io.input.clear();
+        self.last_io
+            .input
+            .cor_put_all_times(&self.single_io.input, activated);
+        self.last_io.output.clear();
+        self.last_io
+            .output
             .cor_put_all_times(&self.single_io.output, activated);
     }
 

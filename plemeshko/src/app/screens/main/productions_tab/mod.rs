@@ -50,19 +50,23 @@ fn ui_production(
             let production = &mut productions[production_index];
 
             let prodname_response = ui.strong(format!("{}:", production.name()));
-            let prodname_tt_full = prodname_response.ctx.input().modifiers.shift_only();
+            let prodname_tt_shift = prodname_response.ctx.input().modifiers.shift_only();
+            let prodname_tt_cmd = prodname_response.ctx.input().modifiers.command_only();
             draw_resource_io_tt_lazy(app_st, shared_comps, ctx, prodname_response, || {
-                if !prodname_tt_full {
-                    return Cow::Borrowed(production.io());
+                if prodname_tt_shift {
+                    return Cow::Borrowed(production.single_io());
                 }
-                let mut io = production.io().clone();
-                for (_, amount) in io.input.iter_mut() {
-                    amount.0 *= production.active().conv::<i64>();
+                if prodname_tt_cmd {
+                    let mut io = production.single_io().clone();
+                    for (_, amount) in io.input.iter_mut() {
+                        amount.0 *= production.active().conv::<i64>();
+                    }
+                    for (_, amount) in io.output.iter_mut() {
+                        amount.0 *= production.active().conv::<i64>();
+                    }
+                    return Cow::Owned(io);
                 }
-                for (_, amount) in io.output.iter_mut() {
-                    amount.0 *= production.active().conv::<i64>();
-                }
-                Cow::Owned(io)
+                Cow::Borrowed(production.last_io())
             });
             on_using_modifiers(
                 &ui.add(Button::new("+").min_size(vec2(16.0, 16.0))),
@@ -76,7 +80,12 @@ fn ui_production(
                     production.set_active(new_active);
                 },
             );
-            ui.label(format!("{}/{}", production.active(), production.count()));
+            ui.label(format!(
+                "{}/{}/{}",
+                production.last_activated(),
+                production.active(),
+                production.count()
+            ));
 
             on_using_modifiers(
                 &ui.add(Button::new("-").min_size(vec2(16.0, 16.0))),
