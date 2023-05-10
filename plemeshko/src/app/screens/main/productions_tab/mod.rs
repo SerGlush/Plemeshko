@@ -43,7 +43,7 @@ fn ui_production(
     ui: &mut egui::Ui,
     production_index: usize,
     productions: &mut Vec<Production>,
-) -> Result<()> {
+) -> Result<bool> {
     ui.separator();
     let removed = ui
         .horizontal(|ui| {
@@ -115,7 +115,7 @@ fn ui_production(
         .inner?;
 
     if removed {
-        return Ok(());
+        return Ok(true);
     }
 
     for selected_method in productions[production_index].methods() {
@@ -130,7 +130,7 @@ fn ui_production(
         })
         .inner?;
     }
-    Ok(())
+    Ok(false)
 }
 
 impl Widget for MainScreenProductionsTab {
@@ -152,8 +152,9 @@ impl Widget for MainScreenProductionsTab {
         let shared_comps = env.shared_components();
         let mut sim_guard = app_st.lock_sim();
         let sim = sim_guard.as_mut().unwrap();
-        for production_index in 0..sim.productions.len() {
-            ui_production(
+        let mut production_index = 0;
+        while production_index < sim.productions.len() {
+            let removed = ui_production(
                 app_st,
                 shared_comps,
                 ctx,
@@ -161,6 +162,9 @@ impl Widget for MainScreenProductionsTab {
                 production_index,
                 &mut sim.productions,
             )?;
+            if !removed {
+                production_index += 1;
+            }
         }
         Ok(())
     }
